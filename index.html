@@ -1,0 +1,1564 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#04060B">
+<meta name="description" content="A brain-shaped field of neuron somata and neurites, ray marched per pixel with a camera in continuous flight.">
+<title>Cortical Flythrough</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@400;600;700&display=swap">
+<style>
+  :root{
+    --ink:#04060B;
+    --field:#0A1018;
+    --fiber:#2FD9C0;
+    --soma:#FFC98A;
+    --spike:#9B7BFF;
+    --chrome:#C6D3DC;
+    --dim:#6A7A88;
+    --line:rgba(47,217,192,.22);
+    --panel:rgba(6,10,16,.62);
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --cond:"IBM Plex Sans Condensed","Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    background:var(--ink);
+    color:var(--chrome);
+    font-family:var(--cond);
+    overflow:hidden;
+    -webkit-text-size-adjust:100%;
+  }
+  #stage{position:fixed;inset:0;width:100%;height:100%;display:block;background:var(--ink);touch-action:none}
+
+  .hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(14px,3vw,28px)}
+  .hud.hidden{opacity:0;visibility:hidden;transition:opacity .25s ease}
+  .hud > *{pointer-events:none}
+  .hud button,.hud input,.hud a{pointer-events:auto}
+
+  .panel{position:relative;background:var(--panel);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid var(--line);padding:12px 14px}
+  .panel::before,.panel::after{content:"";position:absolute;width:7px;height:7px;border:1px solid var(--fiber);opacity:.55}
+  .panel::before{top:-1px;left:-1px;border-right:0;border-bottom:0}
+  .panel::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+
+  .eyebrow{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--fiber);opacity:.85;margin:0 0 6px}
+  h1{font-family:var(--cond);font-weight:700;font-size:clamp(25px,4.6vw,38px);line-height:.98;letter-spacing:-.015em;margin:0;text-wrap:balance;color:#EAF3F6}
+  .lede{margin:8px 0 0;max-width:30ch;font-size:13px;line-height:1.5;color:var(--dim)}
+  .ident{max-width:min(372px,86vw)}
+
+  .foot{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap}
+
+  .telemetry{min-width:196px}
+  .telemetry dl{display:grid;grid-template-columns:auto auto;gap:3px 16px;margin:0;font-family:var(--mono);font-size:11px}
+  .telemetry dt{color:var(--dim);letter-spacing:.08em;text-transform:uppercase;font-size:9.5px;align-self:center}
+  .telemetry dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;color:var(--chrome)}
+  .telemetry dd b{font-weight:500;color:var(--fiber)}
+  .telemetry dd i{font-style:normal;color:var(--dim);font-size:9.5px;margin-left:2px}
+  .rule{height:1px;background:var(--line);margin:8px 0}
+  .scalebar{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:.06em}
+  .scalebar span:first-child{display:block;width:44px;height:5px;border:1px solid var(--line);border-top:0;border-bottom-color:var(--fiber)}
+  #tNat{margin-left:auto;color:var(--fiber)}
+  .note{font-family:var(--mono);font-size:9px;letter-spacing:.06em;color:var(--dim);opacity:.75;margin:6px 0 0}
+
+  .console{display:flex;flex-direction:column;gap:11px;min-width:min(292px,88vw);max-height:calc(100vh - 128px);overflow-y:auto;overscroll-behavior:contain;pointer-events:auto}
+  .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+  .seg{display:flex;border:1px solid var(--line)}
+  .seg button{flex:1;appearance:none;background:transparent;border:0;border-right:1px solid var(--line);color:var(--dim);font-family:var(--cond);font-weight:600;font-size:12px;letter-spacing:.06em;padding:9px 4px;cursor:pointer;transition:color .15s,background .15s}
+  .seg button:last-child{border-right:0}
+  .seg button[aria-pressed="true"]{background:rgba(47,217,192,.13);color:var(--fiber)}
+  .seg button:hover{color:var(--chrome)}
+
+  .slider{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 10px}
+  .slider output{font-family:var(--mono);font-size:10.5px;white-space:nowrap;color:var(--fiber);font-variant-numeric:tabular-nums}
+  .slider input{grid-column:1/-1}
+  .slider[hidden]{display:none}
+  input[type=range]{appearance:none;-webkit-appearance:none;width:100%;height:22px;background:transparent;cursor:pointer;margin:0}
+  input[type=range]::-webkit-slider-runnable-track{height:2px;background:linear-gradient(90deg,var(--fiber) var(--pct,50%),rgba(198,211,220,.18) var(--pct,50%))}
+  input[type=range]::-moz-range-track{height:2px;background:rgba(198,211,220,.18)}
+  input[type=range]::-moz-range-progress{height:2px;background:var(--fiber)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:16px;margin-top:-7px;background:var(--fiber);border:0;border-radius:1px}
+  input[type=range]::-moz-range-thumb{width:10px;height:16px;background:var(--fiber);border:0;border-radius:1px}
+
+  .transport{display:flex;gap:8px}
+  .transport button{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;appearance:none;background:transparent;border:1px solid var(--line);color:var(--dim);font-family:var(--cond);font-weight:600;font-size:12px;letter-spacing:.06em;padding:10px 6px;cursor:pointer;transition:background .15s,color .15s}
+  .transport button::before{content:"";width:6px;height:6px;flex:none;background:var(--dim);opacity:.5;transition:background .15s,opacity .15s,box-shadow .15s}
+  .transport button[aria-pressed="true"]{background:rgba(47,217,192,.13);color:var(--fiber)}
+  .transport button[aria-pressed="true"]::before{background:var(--fiber);opacity:1;box-shadow:0 0 7px var(--fiber)}
+  .transport.wrap{flex-wrap:wrap}
+  .transport.wrap button{flex:1 1 44%;padding:9px 4px;font-size:11px}
+  .transport button:hover{color:var(--chrome)}
+  .swatches{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;align-items:center}
+  .swatches[hidden]{display:none}
+  input[type=color]{appearance:none;-webkit-appearance:none;width:100%;height:26px;padding:0;border:1px solid var(--line);background:transparent;cursor:pointer}
+  input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
+  input[type=color]::-webkit-color-swatch{border:0}
+  input[type=color]::-moz-color-swatch{border:0}
+  .transport button[aria-pressed="true"]:hover{color:var(--fiber);background:rgba(47,217,192,.19)}
+  .hint{font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:.05em;margin:0}
+
+  :focus-visible{outline:1px solid var(--fiber);outline-offset:2px}
+
+  .corner{position:fixed;right:clamp(12px,3vw,28px);top:clamp(12px,3vw,28px);display:flex;gap:8px;transition:opacity .2s ease}
+  .corner button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;pointer-events:auto;appearance:none;background:var(--panel);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid var(--line);color:var(--fiber);font-family:var(--mono);font-size:10px;letter-spacing:.12em;padding:0 13px;cursor:pointer;transition:background .15s}
+  .corner button:hover{background:rgba(47,217,192,.12)}
+  .corner svg{width:17px;height:17px;display:block;flex:none}
+  .corner svg[hidden]{display:none}
+  .corner[hidden]{display:none}
+  #fsToggle{width:44px;padding:0}
+  #fsToggle[hidden]{display:none}
+  .hud.hidden ~ .corner{opacity:.42}
+  .hud.hidden ~ .corner:hover,.hud.hidden ~ .corner:focus-within{opacity:1}
+
+  .fault{position:fixed;inset:0;display:none;place-items:center;padding:24px;text-align:center;background:var(--ink)}
+  .fault p{font-family:var(--mono);font-size:12px;color:var(--dim);line-height:1.7;max-width:38ch}
+
+  @media (max-width:760px){
+    .hud{padding:12px;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+    .lede,.note{display:none}
+    .foot{flex-direction:column;align-items:stretch;gap:10px}
+    .panel{padding:10px 12px}
+    .ident{max-width:none;margin-right:104px}
+    .ident.solo{margin-right:56px}
+    #uiToggle{padding:0;width:44px}
+    #uiToggleLbl{display:none}
+    .eyebrow{font-size:8.5px;margin-bottom:4px}
+    .telemetry{min-width:0}
+    .telemetry dl{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:1fr;grid-template-rows:auto auto;gap:2px 8px}
+    .telemetry dt{font-size:8.5px}
+    .telemetry dd{text-align:left;font-size:12px}
+    .telemetry .wide{display:none}
+    .rule{margin:7px 0}
+    .console{min-width:0;gap:9px;max-height:calc(100vh - 258px)}
+    .seg button{padding:11px 4px}
+    .transport button{padding:11px 6px}
+  }
+  @media (min-width:761px){
+    /* both bottom panels sit 100px higher; the console has to give up that
+       much height too, or it overflows and the offset has nothing to push */
+    .foot{margin-bottom:100px}
+    .console{max-height:calc(100vh - 340px)}
+  }
+  @media (max-height:520px){ .ident h1{font-size:22px} .telemetry .wide{display:none} }
+  @media (prefers-reduced-motion:reduce){ .hud.hidden{transition:none} }
+</style>
+
+</head>
+<body>
+<canvas id="stage" aria-label="Ray-marched field of neuron cell bodies and neurites in a brain-shaped volume, with the camera in flight"></canvas>
+
+<div class="hud" id="hud">
+  <header class="ident panel">
+    <p class="eyebrow">Ray-marched SDF · synthetic field</p>
+    <h1>Cortical Flythrough</h1>
+    <p class="lede">Somata and neurites solved per pixel as a single distance function — no mesh, no scan. The camera flies a continuous path; every fiber is the equation resolving in front of it.</p>
+  </header>
+
+  <div class="foot">
+    <section class="telemetry panel" aria-label="Flight telemetry">
+      <dl>
+        <dt class="wide">Path</dt><dd class="wide"><b id="tPath">Orbit</b></dd>
+        <dt>Range</dt><dd><span id="tRange">3.05</span><i>r</i></dd>
+        <dt>Azimuth</dt><dd><span id="tAz">0.0</span><i>°</i></dd>
+        <dt class="wide">Elevation</dt><dd class="wide"><span id="tEl">11.5</span><i>°</i></dd>
+        <dt class="wide">Soma Ø</dt><dd class="wide"><span id="tSoma">10.4</span><i>µm</i></dd>
+        <dt class="wide">Neurite Ø</dt><dd class="wide"><span id="tFib">3.4</span><i>µm</i></dd>
+        <dt class="wide">Spikes</dt><dd class="wide"><span id="tHz">6.0</span><i>Hz</i></dd>
+        <dt class="wide">Field</dt><dd class="wide"><b id="tMorph">Morph</b></dd>
+        <dt class="wide">Steps/px</dt><dd class="wide"><span id="tSteps">88</span></dd>
+        <dt>Rate</dt><dd><span id="tFps">60</span><i>fps</i></dd>
+        <dt>Render</dt><dd><span id="tRes">0×0</span></dd>
+      </dl>
+      <div class="rule"></div>
+      <div class="scalebar"><span></span><span id="tScale">19 µm</span><span id="tNat">1.00× native</span></div>
+      <p class="note">Synthetic field — not anatomical data</p>
+    </section>
+
+    <section class="console panel" aria-label="Flight console">
+      <div>
+        <p class="lbl" id="sceneLbl">Object</p>
+        <div class="seg" role="group" aria-labelledby="sceneLbl">
+          <button type="button" data-scene="0" aria-pressed="true">Brain</button>
+          <button type="button" data-scene="1" aria-pressed="false">Neuron</button>
+          <button type="button" data-scene="2" aria-pressed="false" title="LiquidChrome">Chrome</button>
+        </div>
+      </div>
+      <div>
+        <p class="lbl" id="pathLbl">Flight path</p>
+        <div class="seg" role="group" aria-labelledby="pathLbl">
+          <button type="button" data-mode="0" aria-pressed="true">Orbit</button>
+          <button type="button" data-mode="1" aria-pressed="false">Fly-through</button>
+          <button type="button" data-mode="2" aria-pressed="false">Drift</button>
+        </div>
+      </div>
+      <div data-only="2" hidden>
+        <p class="lbl" id="lcLbl">Construction</p>
+        <div class="transport wrap" role="group" aria-labelledby="lcLbl">
+          <button type="button" data-lc="0" aria-pressed="true" title="A 20 × 20 × 0.5 slab">1 Slab</button>
+          <button type="button" data-lc="1" aria-pressed="true" title="Perlin relief along the thin axis">2 Relief</button>
+          <button type="button" data-lc="2" aria-pressed="true" title="An undeformed copy in the same place">3 Copy</button>
+          <button type="button" data-lc="3" aria-pressed="true" title="Keep only where the two overlap">4 Intersect</button>
+          <button type="button" data-lc="4" aria-pressed="true" title="Twirl the result">5 Twirl</button>
+        </div>
+      </div>
+      <div class="slider" data-only="2" hidden>
+        <label class="lbl" for="lcRelief">Relief</label><output id="lcReliefOut">0.60</output>
+        <input id="lcRelief" type="range" min="0" max="90" step="1" value="60">
+      </div>
+      <div class="slider" data-only="2" hidden>
+        <label class="lbl" for="lcFreq">Terrain scale</label><output id="lcFreqOut">4.20</output>
+        <input id="lcFreq" type="range" min="60" max="1100" step="10" value="420">
+      </div>
+      <div class="slider" data-only="2" hidden>
+        <label class="lbl" for="lcThick">Slab thickness</label><output id="lcThickOut">0.22</output>
+        <input id="lcThick" type="range" min="6" max="240" step="2" value="22">
+      </div>
+      <div class="slider" data-only="2" hidden>
+        <label class="lbl" for="lcTwirl">Twirl</label><output id="lcTwirlOut">1.70 rad</output>
+        <input id="lcTwirl" type="range" min="0" max="300" step="5" value="170">
+      </div>
+      <div class="slider" id="densRow" data-only="0">
+        <label class="lbl" for="density">Cell density</label><output id="densityOut">19 µm pitch</output>
+        <input id="density" type="range" min="9" max="22" step="0.5" value="15">
+      </div>
+      <div>
+        <p class="lbl" id="warpLbl">Domain warp</p>
+        <div class="transport" role="group" aria-labelledby="warpLbl">
+          <button type="button" data-warp="0" aria-pressed="true" title="Noise displacement of the whole space">Noise</button>
+          <button type="button" data-warp="1" aria-pressed="false" title="Whirl the space about Y">Twist</button>
+          <button type="button" data-warp="2" aria-pressed="false" title="Bend the space about Z">Bend</button>
+        </div>
+      </div>
+      <div class="slider">
+        <label class="lbl" for="warpAmt">Warp strength</label><output id="warpAmtOut">0.70</output>
+        <input id="warpAmt" type="range" min="0" max="100" step="1" value="70">
+      </div>
+      <div class="slider">
+        <label class="lbl" for="warpFreq">Warp scale</label><output id="warpFreqOut">3.55 /unit</output>
+        <input id="warpFreq" type="range" min="30" max="400" step="5" value="355">
+      </div>
+      <div>
+        <p class="lbl" id="resLbl">Resolution</p>
+        <div class="seg" role="group" aria-labelledby="resLbl">
+          <button type="button" data-res="0" aria-pressed="true">Auto</button>
+          <button type="button" data-res="1" aria-pressed="false">Half</button>
+          <button type="button" data-res="2" aria-pressed="false">Native</button>
+        </div>
+      </div>
+      <div>
+        <p class="lbl" id="aaLbl">Antialiasing</p>
+        <div class="seg" role="group" aria-labelledby="aaLbl">
+          <button type="button" data-aa="0" aria-pressed="false">Off</button>
+          <button type="button" data-aa="1" aria-pressed="true">FXAA</button>
+          <button type="button" data-aa="2" aria-pressed="false">SSAA ×4</button>
+        </div>
+      </div>
+      <div class="slider" id="thickRow" data-only="1" hidden>
+        <label class="lbl" for="thick">Line width</label><output id="thickOut">11.2 µm</output>
+        <input id="thick" type="range" min="6" max="70" step="1" value="28">
+      </div>
+      <div class="slider" data-only="01">
+        <label class="lbl" for="spike">Spike rate</label><output id="spikeOut">6.0 Hz</output>
+        <input id="spike" type="range" min="0" max="100" step="1" value="55">
+      </div>
+      <div class="swatches">
+        <label class="lbl" for="colA">Structure</label><label class="lbl" for="colB">Accent</label>
+        <input type="color" id="colA" value="#2FD9C0" aria-label="Structure colour">
+        <input type="color" id="colB" value="#FFC98A" aria-label="Accent colour">
+      </div>
+      <div class="transport">
+        <button type="button" id="playBtn" aria-pressed="true" title="Camera flight (space)">Flight</button>
+        <button type="button" id="morphBtn" aria-pressed="true" title="Animate the field (M)">Morph</button>
+      </div>
+      <p class="hint" id="hint">Drag to steer · scroll or pinch to range in · space, M, A, F, H, U</p>
+    </section>
+  </div>
+</div>
+<div class="corner">
+<button type="button" id="fsToggle" aria-pressed="false" title="Full screen (F)" aria-label="Full screen">
+  <svg id="icoFull" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M8.6 3.4H3.4v5.2M15.4 3.4h5.2v5.2M20.6 15.4v5.2h-5.2M3.4 15.4v5.2h5.2"/>
+  </svg>
+  <svg id="icoExit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+    <path d="M3.4 8.6h5.2V3.4M20.6 8.6h-5.2V3.4M15.4 20.6v-5.2h5.2M8.6 20.6v-5.2H3.4"/>
+  </svg>
+</button>
+<button type="button" id="uiToggle" aria-pressed="false" aria-controls="hud" title="Hide panels (H)">
+  <svg id="icoOpen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M1.8 12S5.9 4.9 12 4.9 22.2 12 22.2 12 18.1 19.1 12 19.1 1.8 12 1.8 12Z"/><circle cx="12" cy="12" r="3.1"/>
+  </svg>
+  <svg id="icoShut" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+    <path d="M9.9 5.2A9.4 9.4 0 0 1 12 4.9c6.1 0 10.2 7.1 10.2 7.1a18 18 0 0 1-3.1 4M6.3 6.8A18 18 0 0 0 1.8 12S5.9 19.1 12 19.1a9.6 9.6 0 0 0 4-.85"/><path d="M10 10a2.8 2.8 0 0 0 4 4"/><path d="M2.6 2.6l18.8 18.8"/>
+  </svg>
+  <span id="uiToggleLbl">Hide panels</span>
+</button>
+</div>
+
+<div class="fault" id="fault"><p>This view needs WebGL. The field is marched on the GPU one ray per pixel, so there is no fallback image to show — try a browser with hardware acceleration enabled.</p></div>
+
+<script type="x-shader/x-fragment" id="fs">
+precision highp float;
+
+#ifndef MARCH_MAX
+#define MARCH_MAX 160
+#endif
+
+uniform vec2  uRes;
+uniform float uTime;
+uniform vec3  uEye;
+uniform vec3  uTgt;
+uniform float uRoll;
+uniform float uScale;
+uniform float uSpike;
+uniform float uSteps;
+uniform float uFov;
+uniform float uShift;
+uniform float uMorph;
+uniform float uPulse;
+uniform float uScene;
+uniform float uThick;
+uniform float uWarpAmt;   // global warp strength
+uniform float uWarpFreq;  // noise warp frequency
+uniform vec3  uWarpOn;    // per-deformation switches: x noise, y twist, z bend
+uniform vec3  uColA;      // structure colour of the active object
+uniform vec3  uColB;      // accent colour of the active object
+uniform vec4  uLcOn;      // LiquidChrome steps 1-4: slab, relief, copy, intersect
+uniform float uLcTwirl;   // step 5, radians at the centre; 0 when the step is off
+uniform float uLcRelief;
+uniform float uLcFreq;
+uniform float uLcThick;   // half-thickness of the slab
+
+const vec3 SPIKE = vec3(0.608, 0.482, 1.000);
+const vec3 RIM   = vec3(0.620, 0.898, 1.000);
+
+float gy(vec3 p){ return dot(sin(p), cos(p.yzx)); }
+
+vec3 hash33(vec3 p){
+  p = fract(p * vec3(0.1031, 0.1030, 0.0973));
+  p += dot(p, p.yxz + 33.33);
+  return fract((p.xxy + p.yxx) * p.zyx);
+}
+
+float smin(float a, float b, float k){
+  float h = clamp(0.5 + 0.5*(b-a)/k, 0.0, 1.0);
+  return mix(b, a, h) - k*h*(1.0-h);
+}
+float smax(float a, float b, float k){
+  float h = clamp(0.5 - 0.5*(b-a)/k, 0.0, 1.0);
+  return mix(b, a, h) + k*h*(1.0-h);
+}
+
+float sdEll(vec3 p, vec3 r){
+  float k0 = length(p/r);
+  float k1 = length(p/(r*r));
+  return k0*(k0-1.0)/max(k1, 1e-5);
+}
+
+#ifdef SCENE_BRAIN
+float shell(vec3 p){
+  vec3 q = p; q.x = abs(q.x) - 0.50;
+  float d = sdEll(q, vec3(0.56 * (1.0 - 0.13*q.z), 0.63, 1.12));
+  vec3 c = p - vec3(0.0, -0.50, -0.80); c.x = abs(c.x) - 0.22;
+  d = smin(d, sdEll(c, vec3(0.30, 0.24, 0.34)), 0.13);
+  d = smin(d, sdEll(p - vec3(0.0, -0.78, -0.34), vec3(0.15, 0.34, 0.19)), 0.14);
+  d -= 0.030 * sin(p.x*5.2 + uMorph*0.37) * sin(p.y*4.4 + 1.3 - uMorph*0.29) * sin(p.z*4.8 + 2.1 + uMorph*0.31);
+  return d;
+}
+
+#endif
+
+float spikeAt(vec3 p){
+  float w = sin(dot(p, vec3( 1.4, 0.7, 1.9)) * 3.2 - uPulse*2.3)
+          + sin(dot(p, vec3(-1.7, 1.2, 0.6)) * 4.1 - uPulse*3.0)
+          + 0.7 * sin(length(p) * 7.0 - uPulse*4.2);
+  return smoothstep(1.25, 2.35, w);
+}
+
+#ifdef SCENE_NEURON
+float dot2(vec3 v){ return dot(v, v); }
+
+// 3D value noise — two octaves of it perturb the membrane
+float vn(vec3 p){
+  vec3 i = floor(p), f = fract(p);
+  f = f*f*(3.0 - 2.0*f);
+  vec2 e = vec2(0.0, 1.0);
+  float a = hash33(i + e.xxx).x, b = hash33(i + e.yxx).x;
+  float c = hash33(i + e.xyx).x, d = hash33(i + e.yyx).x;
+  float g = hash33(i + e.xxy).x, h = hash33(i + e.yxy).x;
+  float k = hash33(i + e.xyy).x, l = hash33(i + e.yyy).x;
+  return mix(mix(mix(a, b, f.x), mix(c, d, f.x), f.y),
+             mix(mix(g, h, f.x), mix(k, l, f.x), f.y), f.z) - 0.5;
+}
+
+// exact distance to a quadratic Bezier (Quilez), plus the curve parameter so
+// the tube can taper along its length
+float sdBez(vec3 p, vec3 A, vec3 B, vec3 C, out float tOut){
+  vec3 a = B - A;
+  vec3 b = A - 2.0*B + C + 1e-5;
+  vec3 c = a * 2.0;
+  vec3 d = A - p;
+  float kk = 1.0 / dot(b, b);
+  float kx = kk * dot(a, b);
+  float ky = kk * (2.0*dot(a,a) + dot(d,b)) / 3.0;
+  float kz = kk * dot(d, a);
+  float res;
+  float p1 = ky - kx*kx;
+  float q  = kx*(2.0*kx*kx - 3.0*ky) + kz;
+  float h  = q*q + 4.0*p1*p1*p1;
+  if(h >= 0.0){
+    h = sqrt(h);
+    vec2 x = (vec2(h, -h) - q) * 0.5;
+    vec2 uv = sign(x) * pow(abs(x), vec2(1.0/3.0));
+    float t = clamp(uv.x + uv.y - kx, 0.0, 1.0);
+    tOut = t;
+    res = dot2(d + (c + b*t)*t);
+  } else {
+    float z = sqrt(-p1);
+    float v = acos(clamp(q / (p1*z*2.0), -1.0, 1.0)) / 3.0;
+    float m = cos(v), nn = sin(v) * 1.732050808;
+    vec3 t = clamp(vec3(m+m, -nn-m, nn-m)*z - kx, 0.0, 1.0);
+    float r1 = dot2(d + (c + b*t.x)*t.x);
+    float r2 = dot2(d + (c + b*t.y)*t.y);
+    tOut = r1 < r2 ? t.x : t.y;
+    res = min(r1, r2);
+  }
+  return sqrt(res);
+}
+
+// a Bezier segment swept by a radius that tapers from r0 to r1
+float tube(vec3 p, vec3 A, vec3 B, vec3 C, float r0, float r1){
+  float t;
+  float d = sdBez(p, A, B, C, t);
+  return d - mix(r0, r1, t);
+}
+
+// one cell: soma, five unequal dendrites, a Y fork on each, a thick axon
+float neuron(vec3 p, out float sd){
+  sd = length(p);
+  float m = uMorph * 0.5;
+  float r = uThick;
+  float d = sd - (0.165 + r*0.8);
+
+  for(int i=0;i<5;i++){
+    float fi = float(i);
+    vec3 hh = hash33(vec3(fi*1.7 + 0.3, 3.1, 7.3));
+    float ang = fi * 2.39996 + hh.x*0.7;
+    float z = 1.0 - (2.0*fi + 1.0) / 5.0;
+    float rr = sqrt(max(0.0, 1.0 - z*z));
+    vec3 dir = normalize(vec3(rr*cos(ang), z*0.92 + hh.y*0.30 - 0.15, rr*sin(ang)) + 1e-4);
+    float len = 0.62 + 0.30*hh.z;
+
+    // whole branch, children included, sits inside this sphere — skip it early
+    if(length(p - dir*len*0.9) - (len*1.05 + 0.22) > d) continue;
+
+    vec3 sv = normalize(cross(dir, vec3(0.31, 0.79, 0.53)) + 1e-4);
+    vec3 up = normalize(cross(dir, sv));
+    float w1 = sin(m*0.61 + fi*1.7), w2 = sin(m*0.47 + fi*2.9);
+
+    vec3 A = dir * 0.07;
+    vec3 B = dir * len * 0.55 + sv * (0.20 + 0.10*w1) * len;
+    vec3 C = dir * len + sv * (0.06 + 0.18*w2) * len + up * 0.06 * w1;
+    float rb = r * (1.60 + 0.55*hh.x);   // trunk, thick where it leaves the soma
+    float rm = r * (0.78 + 0.30*hh.y);   // waist at the first bifurcation
+    d = smin(d, tube(p, A, B, C, rb, rm), 0.09);
+
+    vec3 fwd = normalize(C - B + 1e-5);
+    for(int j=0;j<2;j++){
+      float sgn = j == 0 ? 1.0 : -1.0;
+      vec3 off = normalize(sv*sgn*0.85 + up*(0.30*sgn + 0.22*w2) + fwd*0.25);
+      vec3 B2 = C + fwd*0.16*len + off*0.16*len;
+      vec3 C2 = C + fwd*0.30*len + off*0.46*len + up*0.06*w1;
+      d = smin(d, tube(p, C, B2, C2, rm*0.92, rm*(0.34 + 0.22*hh.x)), 0.035);
+    }
+  }
+
+  // axon: thicker, straighter, out of the far side
+  d = smin(d, tube(p, vec3(0.0, -0.10, 0.0),
+                      vec3(0.26*sin(m*0.40), -0.70, 0.20),
+                      vec3(-0.32, -1.24, -0.18 + 0.22*sin(m*0.33)),
+                   r*1.5, r*1.05), 0.06);
+
+  // organic membrane: coarse lobes for the silhouette, fine grain for skin
+  float w = 1.0 - clamp(d / 0.085, 0.0, 1.0);
+  if(w > 0.0){
+    float lobe = vn(p * 3.0 + vec3(0.0, m*0.09, 0.0));
+    float skin = vn(p * 24.0);
+    d -= w * ((0.60*r + 0.023) * lobe + (0.14*r + 0.007) * skin);
+  }
+  return d;
+}
+
+#endif
+
+#ifdef SCENE_CHROME
+float sdBox(vec3 p, vec3 b){
+  vec3 q = abs(p) - b;
+  return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
+
+// classic 3D gradient noise (Perlin): a random unit gradient per lattice corner,
+// dotted with the offset and blended with the quintic fade, so it is C2
+float pgd(vec3 i, vec3 f){ return dot(normalize(hash33(i) - 0.5), f); }
+float perlin(vec3 p){
+  vec3 i = floor(p), f = fract(p);
+  vec3 u = f*f*f*(f*(f*6.0 - 15.0) + 10.0);
+  float a = pgd(i + vec3(0.0,0.0,0.0), f - vec3(0.0,0.0,0.0));
+  float b = pgd(i + vec3(1.0,0.0,0.0), f - vec3(1.0,0.0,0.0));
+  float c = pgd(i + vec3(0.0,1.0,0.0), f - vec3(0.0,1.0,0.0));
+  float d = pgd(i + vec3(1.0,1.0,0.0), f - vec3(1.0,1.0,0.0));
+  float e = pgd(i + vec3(0.0,0.0,1.0), f - vec3(0.0,0.0,1.0));
+  float g = pgd(i + vec3(1.0,0.0,1.0), f - vec3(1.0,0.0,1.0));
+  float h = pgd(i + vec3(0.0,1.0,1.0), f - vec3(0.0,1.0,1.0));
+  float k = pgd(i + vec3(1.0,1.0,1.0), f - vec3(1.0,1.0,1.0));
+  return 1.40 * mix(mix(mix(a,b,u.x), mix(c,d,u.x), u.y),
+                    mix(mix(e,g,u.x), mix(h,k,u.x), u.y), u.z);
+}
+
+// LiquidChrome, built exactly as the five steps read:
+//   1  a 20 x 20 x 0.5 slab (normalised to half-extents 1, uLcThick, 1)
+//   2  displaced along its thin axis by two octaves of Perlin -> a landscape
+//   3  an undeformed copy of the same slab, in the same place
+//   4  kept only where the two overlap  (max of the two distances)
+//   5  the result twirled about the vertical axis
+float liquid(vec3 p, out float sd){
+  sd = 1e5;
+  vec3 q = p;
+
+  // 5 - twirl. Applied to the coordinates ahead of both slabs, which twirls
+  // the intersection itself. The angle falls off with radius, so the shear it
+  // adds is bounded by the twirl amount.
+  if(uLcTwirl != 0.0){
+    float r = length(q.xz);
+    float a = uLcTwirl * max(0.0, 1.0 - r / 1.45);
+    float c = cos(a), sn = sin(a);
+    q = vec3(c*q.x - sn*q.z, q.y, sn*q.x + c*q.z);
+  }
+
+  vec3 he = vec3(1.0, uLcThick, 1.0);
+
+  // 2 - the height field, two octaves, drifting when the field is animated
+  float h = 0.0, lip = 1.0;
+  if(uLcOn.y > 0.5){
+    float f = uLcFreq;
+    h = perlin(vec3(q.x*f, uMorph*0.06, q.z*f))
+      + 0.5 * perlin(vec3(q.x*f*2.03 + 5.2, uMorph*0.09 + 1.7, q.z*f*2.03 - 3.1));
+    h *= 0.667 * uLcRelief;
+    // a displaced box is no longer 1-Lipschitz; the slope of the height field
+    // adds to the gradient, so divide by an upper bound on it
+    lip = 1.0 + uLcRelief * uLcFreq * 3.0;
+  }
+
+  float dA = sdBox(q - vec3(0.0, h, 0.0), he) / lip;   // 1 + 2
+  float dB = sdBox(q, he);                             // 3
+
+  float d;
+  if(uLcOn.x > 0.5 && uLcOn.z > 0.5){
+    d = uLcOn.w > 0.5 ? max(dA, dB) : min(dA, dB);     // 4 - intersect, else union
+  } else if(uLcOn.x > 0.5){
+    d = dA;
+  } else if(uLcOn.z > 0.5){
+    d = dB;
+  } else {
+    d = 1e5;
+  }
+
+  // tint by altitude: the crests take the accent colour
+  sd = (0.5 - 0.5 * clamp(h / max(uLcRelief, 1e-3), -1.0, 1.0)) * 0.42;
+  return d;
+}
+
+// three channels of value noise out of one set of eight corner hashes
+#endif
+
+vec3 vn3(vec3 p){
+  vec3 i = floor(p), f = fract(p);
+  f = f*f*(3.0 - 2.0*f);
+  vec2 e = vec2(0.0, 1.0);
+  vec3 a = hash33(i + e.xxx), b = hash33(i + e.yxx);
+  vec3 c = hash33(i + e.xyx), d = hash33(i + e.yyx);
+  vec3 g = hash33(i + e.xxy), h = hash33(i + e.yxy);
+  vec3 k = hash33(i + e.xyy), l = hash33(i + e.yyy);
+  return mix(mix(mix(a, b, f.x), mix(c, d, f.x), f.y),
+             mix(mix(g, h, f.x), mix(k, l, f.x), f.y), f.z) - 0.5;
+}
+
+// Deform the coordinate space itself, before any object is looked up.
+// Composing warps multiplies their Lipschitz constants; `lip` accumulates an
+// upper bound on that product. Dividing the scene distance by it turns the
+// warped field back into a valid lower bound on the true distance, which is
+// exactly what sphere tracing needs in order not to step through a surface.
+vec3 domainWarp(vec3 p, out float lip){
+  lip = 1.0;
+  float amt = uWarpAmt;
+
+  // bend — rotate about Z by an angle that grows along X.
+  // The rotation is an isometry; the angle varying with x adds k*r.
+  if(uWarpOn.z > 0.5){
+    float k = 1.60 * amt;
+    float a = k * p.x;
+    float c = cos(a), sn = sin(a);
+    p = vec3(c*p.x - sn*p.y, sn*p.x + c*p.y, p.z);
+    lip *= sqrt(1.0 + k*k*dot(p.xy, p.xy));
+  }
+
+  // twist — rotate about Y by an angle that grows along Y (a whirl).
+  if(uWarpOn.y > 0.5){
+    float k = 1.70 * amt;
+    float a = k * p.y;
+    float c = cos(a), sn = sin(a);
+    p = vec3(c*p.x - sn*p.z, p.y, sn*p.x + c*p.z);
+    lip *= sqrt(1.0 + k*k*dot(p.xz, p.xz));
+  }
+
+  // noise displacement — the domain warp proper. Smoothstep value noise is
+  // C1, so the displaced space stays continuous; its per-axis gradient peaks
+  // at 1.5 per unit cell, and 2.2 covers the 3-channel worst case.
+  if(uWarpOn.x > 0.5){
+    float f = uWarpFreq;
+    float A = 0.55 * amt;
+    p += A * vn3(p*f + vec3(0.0, uMorph*0.045, 0.0));
+    lip *= 1.0 + A * f * 2.2;
+  }
+  return p;
+}
+
+// the undistorted scene: both objects, evaluated in whatever space it is given
+float scene(vec3 p, out float sd){
+#if defined(SCENE_CHROME)
+  return liquid(p, sd);
+#elif defined(SCENE_NEURON)
+  return neuron(p, sd);
+#else
+  sd = 1e5;
+  float sh = shell(p);
+  if(sh > 0.09) return sh - 0.02;
+
+  float s = uScale;
+  float C = 1.45 / s;
+
+  // every soma drifts along its own short line as the field morphs
+  vec3 wob = vec3(sin(uMorph*0.31), sin(uMorph*0.27 + 1.7), sin(uMorph*0.23 + 3.1));
+
+  vec3 id = floor(p/C - 0.5);
+  for(int i=0;i<2;i++){
+    for(int j=0;j<2;j++){
+      for(int k=0;k<2;k++){
+        vec3 cid = id + vec3(float(i), float(j), float(k));
+        vec3 h = hash33(cid);
+        vec3 cen = (cid + 0.5 + (h - 0.5) * 0.55) * C;
+        cen += C * 0.40 * (wob * (h - 0.5) + wob.zxy * (h.yzx - 0.5));
+        sd = min(sd, length(p - cen) / (0.70 + 0.50*h.z));
+      }
+    }
+  }
+  float u = sd / C;
+  float bead = 0.55 * exp(-3.2 * u * u);
+
+  // the neurite lattice flows and slowly counter-rotates against itself
+  vec3 q = p * s + vec3(sin(uMorph*0.21), cos(uMorph*0.17), sin(uMorph*0.13)) * 2.6;
+  float ca = cos(uMorph*0.055), sa = sin(uMorph*0.055);
+  vec3 q2 = vec3(q.x*ca - q.z*sa, q.y, q.x*sa + q.z*ca) * 0.61 + vec3(2.7, 1.3, 4.1);
+  float w1 = abs(gy(q))  - (0.27 + bead);
+  float w2 = abs(gy(q2)) - (0.32 + bead);
+  float d = smax(w1, w2, 0.22) / (2.1 * s);
+  return smax(d, sh, 0.05);
+#endif
+}
+
+float map(vec3 p, out float sd, out float lip){
+  return scene(domainWarp(p, lip), sd) / lip;
+}
+float map(vec3 p, out float sd){
+  float lip;
+  return map(p, sd, lip);
+}
+
+vec3 calcNormal(vec3 p){
+  float t;
+  vec2 e = vec2(1.0, -1.0) * 0.0016;
+  return normalize(
+    e.xyy * map(p + e.xyy, t) + e.yyx * map(p + e.yyx, t) +
+    e.yxy * map(p + e.yxy, t) + e.xxx * map(p + e.xxx, t));
+}
+
+vec3 bgCol(vec3 rd){
+  return mix(vec3(0.010, 0.015, 0.026), vec3(0.020, 0.032, 0.055), rd.y*0.5 + 0.5);
+}
+
+vec3 render(vec2 fc){
+  vec2 uv = (fc - 0.5*uRes) / min(uRes.x, uRes.y);
+  uv.y -= uShift;
+  float cr = cos(uRoll), sr = sin(uRoll);
+  uv = mat2(cr, -sr, sr, cr) * uv;
+
+  vec3 ww = normalize(uTgt - uEye);
+  vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));
+  vec3 vv = cross(uu, ww);
+  vec3 rd = normalize(uv.x*uu + uv.y*vv + uFov*ww);
+  vec3 ro = uEye;
+
+  vec3 col = bgCol(rd);
+  float glow = 0.0;
+
+  // rotations preserve radius; only the noise term can push the surface out
+  float bR = 1.74 + (uWarpOn.x > 0.5 ? 0.55 * uWarpAmt : 0.0);
+  float b = dot(ro, rd);
+  float cc = dot(ro, ro) - bR*bR;
+  float disc = b*b - cc;
+
+  if(disc > 0.0){
+    float hs = sqrt(disc);
+    float tNear = max(-b - hs, 0.0);
+    float tFar  = -b + hs;
+
+    if(tFar > 0.0){
+      float t = tNear;
+      float sd = 1e5, sdHit = 1e5, dmy;
+      float hit = 0.0, steps = 0.0, d = 1e5, lip = 1.0;
+
+      for(int i=0;i<MARCH_MAX;i++){
+        if(float(i) >= uSteps) break;
+        vec3 p = ro + rd*t;
+        d = map(p, sd, lip);
+        // the warp shrinks reported distances; the glow wants the real one,
+        // otherwise warped regions bloom into a milky haze
+        glow += exp(-38.0 * max(d * lip, 0.0)) * (0.45 + 1.05*spikeAt(p)) * (uScene > 0.5 ? 0.008 : 0.017);
+        if(d < 0.0009*t + 0.0005){ hit = 1.0; sdHit = sd; break; }
+        t += d * 0.70;
+        steps += 1.0;
+        if(t > tFar) break;
+      }
+      // A strong warp divides every step down, so a ray can exhaust its budget
+      // a hair short of a surface it was clearly converging on. Dropping those
+      // pixels to background is what painted a dark veil over the object, so
+      // shade them where they stopped instead.
+      if(hit < 0.5 && t <= tFar && d < 0.02){ hit = 1.0; sdHit = sd; }
+
+      if(hit > 0.5){
+        vec3 p = ro + rd*t;
+        vec3 n = calcNormal(p);
+        float C = uScene > 0.5 ? 0.42 : 1.45 / uScale;
+        float somaMix = 1.0 - smoothstep(C*0.18, C*0.62, sdHit);
+
+        vec3 base = mix(uColA, uColB, somaMix);
+        vec3 key = normalize(-rd + vec3(0.30, 0.62, 0.10));
+        float dif = max(dot(n, key), 0.0);
+        float bak = max(dot(n, -key), 0.0) * 0.28;
+        float ndv = max(dot(n, -rd), 0.0);
+        float fres = 0.035 + 0.965 * pow(1.0 - ndv, 5.0);
+        vec3 hv = normalize(key - rd);
+        float spec = pow(max(dot(n, hv), 0.0), 48.0);
+        float aoLip;
+        float ao = clamp(map(p + n*0.05, dmy, aoLip) * aoLip / 0.05, 0.0, 1.0) * 0.72 + 0.28;
+        float sp = spikeAt(p);
+
+        col = base * (0.05 + 0.62*dif) * ao;
+        col += SPIKE * vec3(0.88, 0.84, 1.0) * bak * 0.55;
+        col += SPIKE * sp * (0.70 + 2.2*somaMix) * uSpike;
+        col += uColB * somaMix * somaMix * 0.42;
+        col += uColA * 0.06;
+        col += RIM * fres * (0.62 + 0.80*ao) * (0.85 + 0.55*somaMix);
+        col += RIM * spec * (0.45 + 3.2*fres);
+
+        float fog = 1.0 - exp(-(uScene > 0.5 ? 0.22 : 0.52) * max(t - tNear, 0.0));
+        col = mix(col, bgCol(rd) * 1.15, fog * 0.78);
+      }
+    }
+  }
+
+  col += (uColA*0.60 + SPIKE*0.40) * glow * (0.55 + 0.70*uSpike);
+
+  col = col / (1.0 + col);
+  col = pow(max(col, 0.0), vec3(0.4545));
+
+  vec2 sv = fc/uRes - 0.5;
+  col *= 1.0 - 0.55 * dot(sv, sv);
+  col += (hash33(vec3(fc, uTime)).x - 0.5) * 0.022;
+
+  return col;
+}
+
+void main(){
+  gl_FragColor = vec4(render(gl_FragCoord.xy), 1.0);
+}
+</script>
+
+<script type="x-shader/x-fragment" id="fsPost">
+precision mediump float;
+uniform sampler2D uTex;
+uniform vec2  uOutRes;   // size being drawn
+uniform vec2  uTexel;    // 1 / size of the texture being read
+uniform float uFxaa;
+
+const vec3 LUMA = vec3(0.299, 0.587, 0.114);
+
+void main(){
+  vec2 uv = gl_FragCoord.xy / uOutRes;
+  // no FXAA: a plain read. When the texture is larger than the output the
+  // bilinear filter resolves it, which for an exact 2x is a box filter.
+  if(uFxaa < 0.5){
+    gl_FragColor = texture2D(uTex, uv);
+    return;
+  }
+  vec2 inv = uTexel;
+  vec3 mC = texture2D(uTex, uv).rgb;
+  vec3 nw = texture2D(uTex, uv + vec2(-1.0, -1.0) * inv).rgb;
+  vec3 ne = texture2D(uTex, uv + vec2( 1.0, -1.0) * inv).rgb;
+  vec3 sw = texture2D(uTex, uv + vec2(-1.0,  1.0) * inv).rgb;
+  vec3 se = texture2D(uTex, uv + vec2( 1.0,  1.0) * inv).rgb;
+  float lM  = dot(mC, LUMA);
+  float lNW = dot(nw, LUMA), lNE = dot(ne, LUMA);
+  float lSW = dot(sw, LUMA), lSE = dot(se, LUMA);
+  float lMin = min(lM, min(min(lNW, lNE), min(lSW, lSE)));
+  float lMax = max(lM, max(max(lNW, lNE), max(lSW, lSE)));
+
+  vec2 dir = vec2(-((lNW + lNE) - (lSW + lSE)), ((lNW + lSW) - (lNE + lSE)));
+  float reduce = max((lNW + lNE + lSW + lSE) * 0.03125, 0.0078125);
+  float rcp = 1.0 / (min(abs(dir.x), abs(dir.y)) + reduce);
+  dir = clamp(dir * rcp, -8.0, 8.0) * inv;
+
+  vec3 a = 0.5 * (texture2D(uTex, uv + dir * (1.0/3.0 - 0.5)).rgb +
+                  texture2D(uTex, uv + dir * (2.0/3.0 - 0.5)).rgb);
+  vec3 b = a * 0.5 + 0.25 * (texture2D(uTex, uv - dir * 0.5).rgb +
+                             texture2D(uTex, uv + dir * 0.5).rgb);
+  float lB = dot(b, LUMA);
+  gl_FragColor = vec4((lB < lMin || lB > lMax) ? a : b, 1.0);
+}
+</script>
+
+<script>
+(function(){
+  "use strict";
+
+  var VS = "attribute vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }";
+  var UM_PER_UNIT = 200;
+
+  var canvas = document.getElementById("stage");
+  var gl = canvas.getContext("webgl2", {antialias:false, alpha:false, powerPreference:"high-performance"})
+        || canvas.getContext("webgl",  {antialias:false, alpha:false, powerPreference:"high-performance"});
+
+  if(!gl){
+    document.getElementById("fault").style.display = "grid";
+    document.getElementById("hud").style.display = "none";
+    return;
+  }
+
+  var baseSrc = document.getElementById("fs").textContent;
+  var hp = gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT);
+  var lowPrec = !hp || hp.precision < 23;
+
+  function compile(type, source){
+    var sh = gl.createShader(type);
+    gl.shaderSource(sh, source);
+    gl.compileShader(sh);
+    if(!gl.getShaderParameter(sh, gl.COMPILE_STATUS)){
+      console.error(gl.getShaderInfoLog(sh));
+      return null;
+    }
+    return sh;
+  }
+
+  var post = document.getElementById("fsPost").textContent;
+  var vs = compile(gl.VERTEX_SHADER, VS);
+  var fsp = compile(gl.FRAGMENT_SHADER, post);
+
+  function fault(){
+    document.getElementById("fault").style.display = "grid";
+    document.getElementById("hud").style.display = "none";
+    document.querySelector(".corner").style.display = "none";
+  }
+
+  // ANGLE translates GLSL to HLSL at LINK time, so a shader that compiles
+  // cleanly can still fail here. Unchecked, that draws nothing at all and
+  // leaves the panels sitting over an empty canvas.
+  function link(frag){
+    var p = gl.createProgram();
+    gl.attachShader(p, vs); gl.attachShader(p, frag);
+    gl.bindAttribLocation(p, 0, "aPos");   // both programs share attribute slot 0
+    gl.linkProgram(p);
+    if(!gl.getProgramParameter(p, gl.LINK_STATUS)){
+      console.error("link failed: " + gl.getProgramInfoLog(p));
+      gl.deleteProgram(p);
+      return null;
+    }
+    return p;
+  }
+  var progPost = vs && fsp ? link(fsp) : null;
+  if(!progPost){ fault(); return; }
+
+  var buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+  var UNIFORMS = ["uRes","uTime","uEye","uTgt","uRoll","uScale","uSpike","uSteps","uFov",
+    "uShift","uMorph","uPulse","uScene","uThick","uWarpAmt","uWarpFreq","uWarpOn",
+    "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick"];
+  var DEFS = ["#define SCENE_BRAIN\n", "#define SCENE_NEURON\n", "#define SCENE_CHROME\n"];
+
+  // One program per object, built the first time that object is shown. Each
+  // carries only its own SDF, which keeps the shader a third of the size and
+  // means opening the page compiles one object, not three.
+  var progs = [], progU = [];
+  function sceneProg(i){
+    if(progs[i] !== undefined) return progs[i];
+    var head = DEFS[i];
+    var p = null;
+    for(var attempt = 0; attempt < 2 && !p; attempt++){
+      // second pass hands the driver a much shorter march. ANGLE lays the
+      // whole loop out at link time, and on some GPUs the full one is more
+      // than it will accept.
+      var src = head + (attempt ? "#define MARCH_MAX 72\n" : "") + baseSrc;
+      if(lowPrec) src = src.replace("precision highp float;", "precision mediump float;");
+      var f = compile(gl.FRAGMENT_SHADER, src);
+      p = f ? link(f) : null;
+      if(!p && attempt === 0) console.warn("retrying object " + i + " with a shorter march");
+    }
+    progs[i] = p;
+    if(p){
+      var u = {};
+      UNIFORMS.forEach(function(nm){ u[nm] = gl.getUniformLocation(p, nm); });
+      progU[i] = u;
+    }
+    return p;
+  }
+  if(!sceneProg(0)){ fault(); return; }
+
+  var P = {
+    uTex:    gl.getUniformLocation(progPost, "uTex"),
+    uOutRes: gl.getUniformLocation(progPost, "uOutRes"),
+    uTexel:  gl.getUniformLocation(progPost, "uTexel"),
+    uFxaa:   gl.getUniformLocation(progPost, "uFxaa")
+  };
+
+  // offscreen target: the scene is marched into it, the post pass resolves it
+  var fbo = gl.createFramebuffer();
+  var tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  function sizeTarget(w, h){
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  }
+
+  // A Chrome with hardware acceleration switched off falls back to a software
+  // rasteriser, which is orders of magnitude slower than any real GPU. Worth
+  // saying out loud, because the page is not what is broken in that case.
+  var renderer = "";
+  try{
+    var dbg = gl.getExtension("WEBGL_debug_renderer_info");
+    if(dbg) renderer = String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || "");
+  }catch(e){}
+  var software = /swiftshader|software|llvmpipe|basic render/i.test(renderer);
+  if(renderer) console.info("WebGL renderer: " + renderer);
+
+  if(window.matchMedia("(pointer:coarse)").matches){
+    document.getElementById("hint").textContent = "Drag to steer · pinch to range in";
+  }
+  var coarse = window.matchMedia("(pointer:coarse)").matches;
+  var small  = window.matchMedia("(max-width:760px)").matches;
+  var mobile = coarse || small;
+  var reduce = window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+  var state = {
+    mode: 0,
+    scene: 0,
+    thick: 0.028,
+    scaleQ: 0.34,                   // 1.0 == one sample per physical device pixel
+    dprCap: 3.0,
+    aa: 1,
+    resPin: 0,
+    warpAmt: 0.70,
+    warpFreq: 3.55,
+    warpOn: [1, 0, 0],
+    lcOn: [1, 1, 1, 1, 1],
+    lcRelief: 0.60, lcFreq: 4.20, lcThick: 0.011, lcTwirl: 1.70,
+    // structure + accent colour per object: brain, neuron, LiquidChrome
+    colors: [["#2FD9C0", "#FFC98A"], ["#2FD9C0", "#FFC98A"], ["#6F93A8", "#FFE3B0"]],
+    steps: mobile ? 68 : 104,
+    fov: mobile ? 1.15 : 1.30,
+    density: 15.0,
+    spike: 0.55,
+    zoom: 1.0,
+    shift: 0.0,
+    fit: 1.0,
+    running: !reduce,
+    morph: !reduce,
+    clock: 12.0,
+    mClock: 0.0,
+    pClock: 6.0,
+    dragAz: 0, dragEl: 0,
+    velAz: 0, velEl: 0
+  };
+
+  var rgbCache = {};
+  function rgb(hex){
+    var v = rgbCache[hex];
+    if(!v){
+      v = [parseInt(hex.substr(1,2),16)/255, parseInt(hex.substr(3,2),16)/255,
+           parseInt(hex.substr(5,2),16)/255];
+      rgbCache[hex] = v;
+    }
+    return v;
+  }
+
+  // A warp divides the marching step by up to this much, so the ray needs
+  // proportionally more of them to cover the same distance.
+  function warpK(){
+    var R = 1.74, K = 1;
+    if(state.warpOn[2]) K *= Math.sqrt(1 + Math.pow(1.60 * state.warpAmt * R, 2));
+    if(state.warpOn[1]) K *= Math.sqrt(1 + Math.pow(1.70 * state.warpAmt * R, 2));
+    if(state.warpOn[0]) K *= 1 + 0.55 * state.warpAmt * state.warpFreq * 2.2;
+    if(state.scene === 2 && state.lcOn[1]) K *= 1 + state.lcRelief * state.lcFreq * 3.0;
+    return Math.min(K, 3.2);
+  }
+  function marchSteps(){ return Math.min(marchCap, Math.round(state.steps * warpK())); }
+
+  // keep the field centred in whatever strip the panels leave visible
+  function reframe(){
+    var cw = canvas.clientWidth || window.innerWidth;
+    var ch = canvas.clientHeight || window.innerHeight;
+    var minDim = Math.min(cw, ch) || 1;
+    state.fit = ch > cw * 1.25 ? 0.92 : 1.0;
+    if(document.getElementById("hud").classList.contains("hidden")){ state.shift = 0; return; }
+    var top = document.querySelector(".ident").getBoundingClientRect().bottom;
+    var bot = ch - document.querySelector(".foot").getBoundingClientRect().top;
+    state.shift = Math.max(-0.45, Math.min(0.45, (bot - top) * 0.5 / minDim));
+  }
+
+  // The opening frames are capped hard. Nothing has been measured yet, and on a
+  // machine without GPU acceleration a full-size first frame can take a minute,
+  // which looks exactly like a page that renders only its panels.
+  var warm = 5;
+  var marchCap = 160;
+  var W = 0, H = 0, RW = 0, RH = 0;
+  function resize(){
+    var cw = canvas.clientWidth || window.innerWidth;
+    var ch = canvas.clientHeight || window.innerHeight;
+    var dpr = Math.min(window.devicePixelRatio || 1, state.dprCap);
+    var q = state.scaleQ;
+    var w = Math.max(2, Math.round(cw * dpr * q));
+    var h = Math.max(2, Math.round(ch * dpr * q));
+    // ceiling is the physical screen; the frame-time controller walks up to it.
+    // Auto stays inside what a per-pixel marcher can sustain; Native is the
+    // user asking for the screen's own resolution, so it keeps the headroom.
+    var maxPx = warm > 0 ? 1.1e5
+              : software ? 4.0e5
+              : state.resPin ? (mobile ? 4.2e6 : 9.0e6)
+              : (mobile ? 2.4e6 : 3.0e6);
+    // SSAA renders the offscreen target at 2x and lets the post pass filter it
+    // down, so the budget applies to that, not to the canvas
+    var ss = state.aa === 2 ? 2 : 1;
+    if(w * h * ss * ss > maxPx){
+      var k = Math.sqrt(maxPx / (w * h * ss * ss));
+      w = Math.max(2, Math.round(w * k)); h = Math.max(2, Math.round(h * k));
+    }
+    if(w !== W || h !== H || w * ss !== RW){
+      W = w; H = h; RW = w * ss; RH = h * ss;
+      canvas.width = W; canvas.height = H;
+      sizeTarget(RW, RH);
+      reframe();
+    }
+  }
+  function relayout(){ resize(); reframe(); }
+  window.addEventListener("resize", relayout);
+  window.addEventListener("orientationchange", relayout);
+
+  function pathPoint(u){
+    return [1.62*Math.sin(u), 0.52*Math.sin(u*0.73 + 1.1), 1.72*Math.cos(u*0.61)];
+  }
+  function rotateDir(d, az, el){
+    var ca = Math.cos(az), sa = Math.sin(az);
+    var x = d[0]*ca + d[2]*sa, z = -d[0]*sa + d[2]*ca;
+    var len = Math.sqrt(x*x + z*z) || 1e-5;
+    var ce = Math.cos(el), se = Math.sin(el);
+    var y = d[1]*ce + len*se;
+    var k = (len*ce - d[1]*se) / len;
+    return [x*k, y, z*k];
+  }
+
+  var eye = [0,0,3], tgt = [0,0,0], roll = 0;
+
+  function camera(t){
+    var az, el, r;
+    if(state.mode === 1){
+      var u = t * 0.085;
+      eye = pathPoint(u);
+      var ah = pathPoint(u + 0.07);
+      var d = rotateDir([ah[0]-eye[0], ah[1]-eye[1], ah[2]-eye[2]], state.dragAz, state.dragEl);
+      tgt = [eye[0]+d[0], eye[1]+d[1], eye[2]+d[2]];
+      roll = 0.10 * Math.sin(t*0.21);
+      return;
+    }
+    if(state.mode === 2){
+      az = 0.9 + t*0.035 + state.dragAz;
+      el = -0.10 + 0.09*Math.sin(t*0.09) + state.dragEl;
+      r  = (2.02 + 0.14*Math.sin(t*0.05)) * state.zoom * state.fit;
+      tgt = [0.22*Math.sin(t*0.06), 0.10*Math.sin(t*0.043) - 0.05, 0.18*Math.cos(t*0.05)];
+      roll = 0.03*Math.sin(t*0.07);
+    } else {
+      az = t*0.10 + state.dragAz;
+      el = 0.20 + 0.16*Math.sin(t*0.13) + state.dragEl;
+      r  = (3.05 + 0.30*Math.sin(t*0.071)) * state.zoom * state.fit;
+      tgt = [0, 0.03*Math.sin(t*0.2), 0];
+      roll = 0.04*Math.sin(t*0.11);
+    }
+    el = Math.max(-1.35, Math.min(1.35, el));
+    eye = [
+      tgt[0] + r*Math.cos(el)*Math.sin(az),
+      tgt[1] + r*Math.sin(el),
+      tgt[2] + r*Math.cos(el)*Math.cos(az)
+    ];
+  }
+
+  var el = {
+    path: document.getElementById("tPath"), range: document.getElementById("tRange"),
+    az: document.getElementById("tAz"), el: document.getElementById("tEl"),
+    soma: document.getElementById("tSoma"), fib: document.getElementById("tFib"),
+    hz: document.getElementById("tHz"), steps: document.getElementById("tSteps"),
+    fps: document.getElementById("tFps"), res: document.getElementById("tRes"),
+    nat: document.getElementById("tNat"),
+    scale: document.getElementById("tScale"),
+    morph: document.getElementById("tMorph")
+  };
+  var MODES = ["Orbit", "Fly-through", "Drift"];
+
+  var last = performance.now(), ema = 16.7, acc = 0, frames = 0, tele = 0;
+
+  function telemetry(){
+    var r = Math.sqrt(eye[0]*eye[0] + eye[1]*eye[1] + eye[2]*eye[2]);
+    var azd = Math.atan2(eye[0], eye[2]) * 180 / Math.PI;
+    if(azd < 0) azd += 360;
+    var eld = Math.asin(Math.max(-1, Math.min(1, eye[1] / (r || 1)))) * 180 / Math.PI;
+    var C = 1.45 / state.density;
+    el.path.textContent = MODES[state.mode];
+    el.morph.textContent = state.morph ? "Morph " + (state.mClock % 100).toFixed(1) : "Static";
+    el.range.textContent = r.toFixed(2);
+    el.az.textContent = azd.toFixed(1);
+    el.el.textContent = eld.toFixed(1);
+    if(state.scene === 2){
+      el.soma.textContent = "—";
+      el.fib.textContent  = "—";
+    } else if(state.scene === 1){
+      el.soma.textContent = (2.0 * (0.11 + state.thick) * UM_PER_UNIT).toFixed(1);
+      el.fib.textContent  = (2.0 * state.thick * UM_PER_UNIT).toFixed(1);
+    } else {
+      el.soma.textContent = (2.0 * 0.82 / (2.1 * state.density) * UM_PER_UNIT).toFixed(1);
+      el.fib.textContent  = (2.0 * 0.27 / (2.1 * state.density) * UM_PER_UNIT).toFixed(1);
+    }
+    el.hz.textContent = (state.spike * 11).toFixed(1);
+    el.steps.textContent = String(marchSteps());
+    var fps = 1000 / Math.max(ema, 1);
+    el.fps.textContent = fps < 10 ? fps.toFixed(1) : fps.toFixed(0);
+    el.res.textContent = RW + "×" + RH;
+    var native = (canvas.clientWidth || window.innerWidth) * (window.devicePixelRatio || 1);
+    el.nat.textContent = (W / Math.max(native, 1)).toFixed(2) + "× native";
+    el.scale.textContent = state.scene === 2 ? "20 × 20 × " + (state.lcThick * 20).toFixed(2) + " slab"
+                         : state.scene === 1 ? "16 Bézier curves"
+                         : Math.round(C * UM_PER_UNIT) + " µm";
+  }
+
+  function frame(now){
+    var raw = now - last;                       // true cost of the last frame
+    var dt = Math.min(raw / 1000, 0.05);        // clamped, only for the clocks
+    last = now;
+    if(state.running) state.clock += dt;
+    if(state.morph) state.mClock += dt;
+    if(state.running || state.morph) state.pClock += dt;
+
+    state.dragAz += state.velAz; state.dragEl += state.velEl;
+    state.velAz *= 0.90; state.velEl *= 0.90;
+    state.dragEl = Math.max(-1.0, Math.min(1.0, state.dragEl));
+
+    resize();
+    camera(state.clock);
+
+    var prog = sceneProg(state.scene);
+    if(!prog){ requestAnimationFrame(frame); return; }
+    var U = progU[state.scene];
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.viewport(0, 0, RW, RH);
+    gl.useProgram(prog);
+    gl.uniform2f(U.uRes, RW, RH);
+    gl.uniform1f(U.uTime, state.clock);
+    gl.uniform3f(U.uEye, eye[0], eye[1], eye[2]);
+    gl.uniform3f(U.uTgt, tgt[0], tgt[1], tgt[2]);
+    gl.uniform1f(U.uRoll, roll);
+    gl.uniform1f(U.uScale, state.density);
+    gl.uniform1f(U.uSpike, state.spike);
+    gl.uniform1f(U.uSteps, marchSteps());
+    gl.uniform1f(U.uFov, state.fov);
+    gl.uniform1f(U.uShift, state.shift);
+    gl.uniform1f(U.uMorph, state.mClock);
+    gl.uniform1f(U.uPulse, state.pClock);
+    gl.uniform1f(U.uScene, state.scene);
+    gl.uniform1f(U.uThick, state.thick);
+    gl.uniform1f(U.uWarpAmt, state.warpAmt);
+    gl.uniform1f(U.uWarpFreq, state.warpFreq);
+    gl.uniform3f(U.uWarpOn, state.warpOn[0], state.warpOn[1], state.warpOn[2]);
+    var ca = rgb(state.colors[state.scene][0]), cb = rgb(state.colors[state.scene][1]);
+    gl.uniform3f(U.uColA, ca[0], ca[1], ca[2]);
+    gl.uniform3f(U.uColB, cb[0], cb[1], cb[2]);
+    gl.uniform4f(U.uLcOn, state.lcOn[0], state.lcOn[1], state.lcOn[2], state.lcOn[3]);
+    gl.uniform1f(U.uLcTwirl, state.lcOn[4] ? state.lcTwirl : 0.0);
+    gl.uniform1f(U.uLcRelief, state.lcRelief);
+    gl.uniform1f(U.uLcFreq, state.lcFreq);
+    gl.uniform1f(U.uLcThick, state.lcThick);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, W, H);
+    gl.useProgram(progPost);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.uniform1i(P.uTex, 0);
+    gl.uniform2f(P.uOutRes, W, H);
+    gl.uniform2f(P.uTexel, 1.0 / RW, 1.0 / RH);
+    gl.uniform1f(P.uFxaa, state.aa === 1 ? 1.0 : 0.0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    // snap up on a spike so one bad frame is enough to trigger a correction
+    ema = raw > ema * 2.0 ? raw : ema * 0.90 + raw * 0.10;
+    frames++; acc += dt;
+    // correct within a few frames when the frame time is over budget
+    if(frames >= (ema > 34 ? 3 : ema < 13 ? 25 : 40)){
+      // a pinned resolution only gives way when the frame time gets untenable
+      if(state.resPin && ema < 250){ /* held */ }
+      else if(ema > 22 && state.scaleQ > 0.30){
+        // cost is quadratic in the scale, so aim straight at the budget rather
+        // than creeping down 0.08 at a time
+        var k = Math.sqrt(17.0 / ema);
+        state.scaleQ = Math.max(0.30, Math.min(state.scaleQ - 0.04, state.scaleQ * k));
+      } else if(ema < 13 && state.scaleQ < 1.0){
+        state.scaleQ = Math.min(1.0, state.scaleQ * Math.min(1.25, Math.sqrt(15.0 / Math.max(ema, 1))));
+      }
+      if(ema > 40 && state.steps > 44) state.steps -= 8;
+      else if(ema < 12 && state.steps < (mobile ? 68 : 104)) state.steps += 8;
+      frames = 0;
+    }
+    if(warm > 0) warm--;
+    tele += dt;
+    if(tele > 0.2){ telemetry(); tele = 0; }
+
+    requestAnimationFrame(frame);
+  }
+
+  // ---- input ----------------------------------------------------------
+  var pointers = {}, lastPinch = 0, pid = null, px = 0, py = 0;
+
+  canvas.addEventListener("pointerdown", function(e){
+    canvas.setPointerCapture(e.pointerId);
+    pointers[e.pointerId] = {x:e.clientX, y:e.clientY};
+    if(pid === null){ pid = e.pointerId; px = e.clientX; py = e.clientY; }
+  });
+  canvas.addEventListener("pointermove", function(e){
+    if(!pointers[e.pointerId]) return;
+    pointers[e.pointerId] = {x:e.clientX, y:e.clientY};
+    var ids = Object.keys(pointers);
+    if(ids.length >= 2){
+      var a = pointers[ids[0]], b = pointers[ids[1]];
+      var dist = Math.hypot(a.x-b.x, a.y-b.y);
+      if(lastPinch) setZoom(state.zoom * (lastPinch / dist));
+      lastPinch = dist;
+      return;
+    }
+    if(e.pointerId !== pid) return;
+    var dx = e.clientX - px, dy = e.clientY - py;
+    px = e.clientX; py = e.clientY;
+    state.velAz = -dx * 0.0032;
+    state.velEl =  dy * 0.0024;
+    state.dragAz += state.velAz * 3;
+    state.dragEl = Math.max(-1.0, Math.min(1.0, state.dragEl + state.velEl * 3));
+  });
+  function release(e){
+    delete pointers[e.pointerId];
+    if(Object.keys(pointers).length < 2) lastPinch = 0;
+    if(e.pointerId === pid) pid = null;
+  }
+  canvas.addEventListener("pointerup", release);
+  canvas.addEventListener("pointercancel", release);
+  canvas.addEventListener("wheel", function(e){
+    e.preventDefault();
+    setZoom(state.zoom * (1 + Math.sign(e.deltaY) * 0.07));
+  }, {passive:false});
+
+  function setZoom(z){ state.zoom = Math.max(0.42, Math.min(1.8, z)); }
+
+  // ---- console --------------------------------------------------------
+  var segBtns = document.querySelectorAll("[data-mode]");
+  Array.prototype.forEach.call(segBtns, function(btn){
+    btn.addEventListener("click", function(){
+      state.mode = parseInt(btn.dataset.mode, 10);
+      Array.prototype.forEach.call(segBtns, function(b){
+        b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+      });
+      state.dragAz = 0; state.dragEl = 0; state.velAz = 0; state.velEl = 0;
+      telemetry();
+    });
+  });
+
+  var sceneBtns = document.querySelectorAll("[data-scene]");
+  Array.prototype.forEach.call(sceneBtns, function(btn){
+    btn.addEventListener("click", function(){
+      var want = parseInt(btn.dataset.scene, 10);
+      if(!sceneProg(want)){
+        btn.disabled = true;
+        btn.title = "This object's shader will not build on this GPU";
+        btn.blur();
+        return;
+      }
+      state.scene = want;
+      Array.prototype.forEach.call(sceneBtns, function(b){
+        b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+      });
+      applyScene(); btn.blur();
+    });
+  });
+
+  // only the controls that belong to the active object stay on screen
+  var scoped = document.querySelectorAll("[data-only]");
+  function applyScene(){
+    var v = String(state.scene);
+    Array.prototype.forEach.call(scoped, function(el){
+      el.hidden = el.getAttribute("data-only").indexOf(v) < 0;
+    });
+    colA.value = state.colors[state.scene][0];
+    colB.value = state.colors[state.scene][1];
+    reframe(); telemetry();
+  }
+
+  function paint(input){
+    var pct = (input.value - input.min) / (input.max - input.min) * 100;
+    input.style.setProperty("--pct", pct + "%");
+  }
+  var dens = document.getElementById("density"), densOut = document.getElementById("densityOut");
+  var spk  = document.getElementById("spike"),   spkOut  = document.getElementById("spikeOut");
+  dens.addEventListener("input", function(){
+    state.density = parseFloat(dens.value);
+    densOut.textContent = Math.round(1.45 / state.density * UM_PER_UNIT) + " µm pitch";
+    paint(dens); telemetry();
+  });
+  spk.addEventListener("input", function(){
+    state.spike = parseFloat(spk.value) / 100;
+    spkOut.textContent = (state.spike * 11).toFixed(1) + " Hz";
+    paint(spk); telemetry();
+  });
+  var thk = document.getElementById("thick"), thkOut = document.getElementById("thickOut");
+  thk.addEventListener("input", function(){
+    state.thick = parseFloat(thk.value) / 1000;
+    thkOut.textContent = (state.thick * 2 * UM_PER_UNIT).toFixed(1) + " µm";
+    paint(thk); telemetry();
+  });
+  paint(dens); paint(spk); paint(thk);
+
+  if(software){
+    state.steps = 56;
+    marchCap = 96;
+    document.getElementById("hint").textContent =
+      "Software rendering — enable hardware acceleration in your browser for full speed";
+  }
+
+  var playBtn = document.getElementById("playBtn");
+  function setRunning(v){
+    state.running = v;
+    playBtn.setAttribute("aria-pressed", v ? "true" : "false");
+    playBtn.title = (v ? "Hold the camera still" : "Resume camera flight") + " (space)";
+  }
+  playBtn.addEventListener("click", function(){ setRunning(!state.running); playBtn.blur(); });
+  setRunning(state.running);
+
+  var morphBtn = document.getElementById("morphBtn");
+  function setMorph(v){
+    state.morph = v;
+    morphBtn.setAttribute("aria-pressed", v ? "true" : "false");
+    morphBtn.title = (v ? "Freeze the field" : "Animate the field") + " (M)";
+    telemetry();
+  }
+  morphBtn.addEventListener("click", function(){ setMorph(!state.morph); morphBtn.blur(); });
+  setMorph(state.morph);
+
+  var warpBtns = document.querySelectorAll("[data-warp]");
+  Array.prototype.forEach.call(warpBtns, function(btn){
+    btn.addEventListener("click", function(){
+      var i = parseInt(btn.dataset.warp, 10);
+      state.warpOn[i] = state.warpOn[i] ? 0 : 1;
+      btn.setAttribute("aria-pressed", state.warpOn[i] ? "true" : "false");
+      btn.blur();
+    });
+  });
+  var wAmt = document.getElementById("warpAmt"), wAmtOut = document.getElementById("warpAmtOut");
+  var wFrq = document.getElementById("warpFreq"), wFrqOut = document.getElementById("warpFreqOut");
+  wAmt.addEventListener("input", function(){
+    state.warpAmt = parseFloat(wAmt.value) / 100;
+    wAmtOut.textContent = state.warpAmt.toFixed(2);
+    paint(wAmt);
+  });
+  wFrq.addEventListener("input", function(){
+    state.warpFreq = parseFloat(wFrq.value) / 100;
+    wFrqOut.textContent = state.warpFreq.toFixed(2) + " /unit";
+    paint(wFrq);
+  });
+
+  paint(wAmt); paint(wFrq);
+
+  var lcBtns = document.querySelectorAll("[data-lc]");
+  Array.prototype.forEach.call(lcBtns, function(btn){
+    btn.addEventListener("click", function(){
+      var i = parseInt(btn.dataset.lc, 10);
+      state.lcOn[i] = state.lcOn[i] ? 0 : 1;
+      btn.setAttribute("aria-pressed", state.lcOn[i] ? "true" : "false");
+      telemetry(); btn.blur();
+    });
+  });
+  function lcSlider(id, key, scale, fmt){
+    var inp = document.getElementById(id), out = document.getElementById(id + "Out");
+    inp.addEventListener("input", function(){
+      state[key] = parseFloat(inp.value) * scale;
+      out.textContent = fmt(state[key]);
+      paint(inp); telemetry();
+    });
+    paint(inp);
+  }
+  lcSlider("lcRelief", "lcRelief", 0.01,  function(v){ return v.toFixed(2); });
+  lcSlider("lcFreq",   "lcFreq",   0.01,  function(v){ return v.toFixed(2); });
+  lcSlider("lcThick",  "lcThick",  0.0005, function(v){ return (v * 20).toFixed(2); });
+  lcSlider("lcTwirl",  "lcTwirl",  0.01,  function(v){ return v.toFixed(2) + " rad"; });
+
+  var colA = document.getElementById("colA"), colB = document.getElementById("colB");
+  colA.addEventListener("input", function(){ state.colors[state.scene][0] = colA.value; });
+  colB.addEventListener("input", function(){ state.colors[state.scene][1] = colB.value; });
+
+  var resBtns = document.querySelectorAll("[data-res]");
+  Array.prototype.forEach.call(resBtns, function(btn){
+    btn.addEventListener("click", function(){
+      state.resPin = parseInt(btn.dataset.res, 10);
+      if(state.resPin) state.scaleQ = state.resPin === 1 ? 0.5 : 1.0;
+      Array.prototype.forEach.call(resBtns, function(b){
+        b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+      });
+      resize(); telemetry(); btn.blur();
+    });
+  });
+
+  var aaBtns = document.querySelectorAll("[data-aa]");
+  function setAA(v){
+    state.aa = v;
+    Array.prototype.forEach.call(aaBtns, function(b){
+      b.setAttribute("aria-pressed", parseInt(b.dataset.aa, 10) === v ? "true" : "false");
+    });
+    resize(); telemetry();
+  }
+  Array.prototype.forEach.call(aaBtns, function(btn){
+    btn.addEventListener("click", function(){ setAA(parseInt(btn.dataset.aa, 10)); btn.blur(); });
+  });
+
+  // SVGElement has no `hidden` IDL property — set the content attribute
+  function showIcon(node, on){
+    if(on) node.removeAttribute("hidden"); else node.setAttribute("hidden", "");
+  }
+
+  var hud = document.getElementById("hud");
+  var uiToggle = document.getElementById("uiToggle");
+  var icoOpen = document.getElementById("icoOpen"), icoShut = document.getElementById("icoShut");
+  var uiLbl = document.getElementById("uiToggleLbl");
+  function setHud(v){
+    hud.classList.toggle("hidden", !v);
+    showIcon(icoOpen, v); showIcon(icoShut, !v);
+    uiLbl.textContent = v ? "Hide panels" : "Show panels";
+    uiToggle.title = (v ? "Hide panels" : "Show panels") + " (H)";
+    uiToggle.setAttribute("aria-pressed", v ? "false" : "true");
+    reframe();
+  }
+  uiToggle.addEventListener("click", function(){
+    setBare(false);
+    setHud(hud.classList.contains("hidden"));
+    uiToggle.blur();
+  });
+
+  // U strips the page back to the render alone — panels and corner buttons
+  var corner = document.querySelector(".corner");
+  var bare = false;
+  function setBare(v){
+    if(bare === v) return;
+    bare = v;
+    corner.hidden = v;
+    setHud(!v);
+  }
+
+  setHud(true);
+
+  // ---- full screen -----------------------------------------------------
+  var fsToggle = document.getElementById("fsToggle");
+  var icoFull = document.getElementById("icoFull"), icoExit = document.getElementById("icoExit");
+  var root = document.documentElement;
+  var enter = root.requestFullscreen || root.webkitRequestFullscreen;
+  var leave = document.exitFullscreen || document.webkitExitFullscreen;
+  var fsAllowed = !!(enter && leave) &&
+    (document.fullscreenEnabled !== false) && (document.webkitFullscreenEnabled !== false);
+
+  function inFullscreen(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+
+  function dropFullscreenButton(){
+    fsToggle.setAttribute("hidden", "");
+    document.querySelector(".ident").classList.add("solo");
+    reframe();
+  }
+
+  function syncFullscreen(){
+    var on = inFullscreen();
+    showIcon(icoFull, !on); showIcon(icoExit, on);
+    fsToggle.setAttribute("aria-pressed", on ? "true" : "false");
+    fsToggle.title = (on ? "Exit full screen" : "Full screen") + " (F)";
+    fsToggle.setAttribute("aria-label", on ? "Exit full screen" : "Full screen");
+    resize();
+  }
+
+  function toggleFullscreen(){
+    if(!fsAllowed) return;
+    try{
+      var r = inFullscreen() ? leave.call(document) : enter.call(root);
+      if(r && r.catch) r.catch(dropFullscreenButton);
+    }catch(err){ dropFullscreenButton(); }
+  }
+
+  if(fsAllowed){
+    fsToggle.addEventListener("click", function(){ toggleFullscreen(); fsToggle.blur(); });
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    document.addEventListener("webkitfullscreenchange", syncFullscreen);
+    syncFullscreen();
+  } else {
+    dropFullscreenButton();
+  }
+
+  window.addEventListener("keydown", function(e){
+    if(e.target.tagName === "INPUT") return;
+    if(e.code === "Space"){ e.preventDefault(); setRunning(!state.running); }
+    if(e.key === "m" || e.key === "M"){ setMorph(!state.morph); }
+    if(e.key === "a" || e.key === "A"){ setAA((state.aa + 1) % 3); }
+    if(e.key === "f" || e.key === "F"){ toggleFullscreen(); }
+    if(e.key === "h" || e.key === "H"){ setBare(false); setHud(hud.classList.contains("hidden")); }
+    if(e.key === "u" || e.key === "U"){ setBare(!bare); }
+  });
+
+  canvas.addEventListener("webglcontextlost", function(e){ e.preventDefault(); });
+
+  applyScene();
+  resize();
+  reframe();
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(reframe);
+  telemetry();
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
