@@ -62,7 +62,19 @@
   #tNat{margin-left:auto;color:var(--fiber)}
   .note{font-family:var(--mono);font-size:9px;letter-spacing:.06em;color:var(--dim);opacity:.75;margin:6px 0 0}
 
-  .console{display:flex;flex-direction:column;gap:11px;min-width:min(292px,88vw);max-height:calc(100vh - 128px);overflow-y:auto;overscroll-behavior:contain;pointer-events:auto}
+  .console{display:flex;flex-direction:column;gap:11px;min-width:min(292px,88vw);max-height:calc(100vh - 128px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;pointer-events:auto}
+  /* The console is the one panel that scrolls, so it gets a bar that belongs to
+     it rather than the platform's; height:0 also drops the horizontal one.
+     Blink ignores these pseudo-elements as soon as scrollbar-width or
+     scrollbar-color is set, so the standard properties are kept for the
+     engines that have nothing else. */
+  .console::-webkit-scrollbar{width:6px;height:0}
+  .console::-webkit-scrollbar-track{background:rgba(47,217,192,.06)}
+  .console::-webkit-scrollbar-thumb{background:rgba(47,217,192,.38)}
+  .console:hover::-webkit-scrollbar-thumb{background:rgba(47,217,192,.60)}
+  @supports not selector(::-webkit-scrollbar){
+    .console{scrollbar-width:thin;scrollbar-color:rgba(47,217,192,.40) rgba(47,217,192,.07)}
+  }
   .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
   .seg{display:flex;border:1px solid var(--line)}
   .seg button{flex:1;appearance:none;background:transparent;border:0;border-right:1px solid var(--line);color:var(--dim);font-family:var(--cond);font-weight:600;font-size:12px;letter-spacing:.06em;padding:9px 4px;cursor:pointer;transition:color .15s,background .15s}
@@ -134,12 +146,6 @@
     .seg button{padding:11px 4px}
     .transport button{padding:11px 6px}
   }
-  @media (min-width:761px){
-    /* both bottom panels sit 100px higher; the console has to give up that
-       much height too, or it overflows and the offset has nothing to push */
-    .foot{margin-bottom:100px}
-    .console{max-height:calc(100vh - 340px)}
-  }
   @media (max-height:520px){ .ident h1{font-size:22px} .telemetry .wide{display:none} }
   @media (prefers-reduced-motion:reduce){ .hud.hidden{transition:none} }
 </style>
@@ -210,28 +216,28 @@
         </div>
       </div>
       <div class="slider" data-only="2" hidden>
-        <label class="lbl" for="lcRelief">Relief</label><output id="lcReliefOut">0.60</output>
-        <input id="lcRelief" type="range" min="0" max="90" step="1" value="60">
+        <label class="lbl" for="lcRelief">Relief</label><output id="lcReliefOut">0.26</output>
+        <input id="lcRelief" type="range" min="0" max="90" step="1" value="26">
       </div>
       <div class="slider" data-only="2" hidden>
-        <label class="lbl" for="lcFreq">Terrain scale</label><output id="lcFreqOut">4.20</output>
-        <input id="lcFreq" type="range" min="60" max="1100" step="10" value="420">
+        <label class="lbl" for="lcFreq">Terrain scale</label><output id="lcFreqOut">4.00</output>
+        <input id="lcFreq" type="range" min="60" max="1100" step="10" value="400">
       </div>
       <div class="slider" data-only="2" hidden>
-        <label class="lbl" for="lcThick">Slab thickness</label><output id="lcThickOut">0.22</output>
-        <input id="lcThick" type="range" min="6" max="240" step="2" value="22">
+        <label class="lbl" for="lcThick">Slab thickness</label><output id="lcThickOut">0.44</output>
+        <input id="lcThick" type="range" min="6" max="240" step="2" value="44">
       </div>
       <div class="slider" data-only="2" hidden>
-        <label class="lbl" for="lcTwirl">Twirl</label><output id="lcTwirlOut">1.70 rad</output>
-        <input id="lcTwirl" type="range" min="0" max="300" step="5" value="170">
+        <label class="lbl" for="lcTwirl">Twirl</label><output id="lcTwirlOut">1.90 rad</output>
+        <input id="lcTwirl" type="range" min="0" max="300" step="5" value="190">
       </div>
       <div class="slider">
-        <label class="lbl" for="rSteps">Ray steps</label><output id="rStepsOut">auto</output>
-        <input id="rSteps" type="range" min="48" max="320" step="8" value="160">
+        <label class="lbl" for="rSteps">Ray steps</label><output id="rStepsOut">320</output>
+        <input id="rSteps" type="range" min="48" max="320" step="8" value="320">
       </div>
       <div class="slider">
-        <label class="lbl" for="rEps" title="How close a ray must get before it counts as a hit. Higher is tighter — it removes the banding on grazing surfaces, and costs march steps.">Surface precision</label><output id="rEpsOut">3.0</output>
-        <input id="rEps" type="range" min="10" max="120" step="2" value="30">
+        <label class="lbl" for="rEps" title="How close a ray must get before it counts as a hit. Higher is tighter — it removes the banding on grazing surfaces, and costs march steps.">Surface precision</label><output id="rEpsOut">12.0</output>
+        <input id="rEps" type="range" min="10" max="120" step="2" value="120">
       </div>
       <div class="slider" id="densRow" data-only="0">
         <label class="lbl" for="density">Cell density</label><output id="densityOut">19 µm pitch</output>
@@ -246,18 +252,18 @@
         </div>
       </div>
       <div class="slider">
-        <label class="lbl" for="warpAmt">Warp strength</label><output id="warpAmtOut">0.70</output>
-        <input id="warpAmt" type="range" min="0" max="100" step="1" value="70">
+        <label class="lbl" for="warpAmt">Warp strength</label><output id="warpAmtOut">0.74</output>
+        <input id="warpAmt" type="range" min="0" max="100" step="1" value="74">
       </div>
       <div class="slider">
-        <label class="lbl" for="warpFreq">Warp scale</label><output id="warpFreqOut">3.55 /unit</output>
-        <input id="warpFreq" type="range" min="30" max="400" step="5" value="355">
+        <label class="lbl" for="warpFreq">Warp scale</label><output id="warpFreqOut">3.75 /unit</output>
+        <input id="warpFreq" type="range" min="30" max="400" step="5" value="375">
       </div>
       <div>
         <p class="lbl" id="resLbl">Resolution</p>
         <div class="seg" role="group" aria-labelledby="resLbl">
-          <button type="button" data-res="0" aria-pressed="true">Auto</button>
-          <button type="button" data-res="1" aria-pressed="false">Half</button>
+          <button type="button" data-res="0" aria-pressed="false">Auto</button>
+          <button type="button" data-res="1" aria-pressed="true">Half</button>
           <button type="button" data-res="2" aria-pressed="false">Native</button>
         </div>
       </div>
@@ -283,10 +289,11 @@
         <input type="color" id="colB" value="#FFC98A" aria-label="Accent colour">
       </div>
       <div class="transport">
-        <button type="button" id="playBtn" aria-pressed="true" title="Camera flight (space)">Flight</button>
+        <button type="button" id="playBtn" aria-pressed="true" title="Camera flight and field (space)">Flight</button>
         <button type="button" id="morphBtn" aria-pressed="true" title="Animate the field (M)">Morph</button>
+        <button type="button" id="spikeBtn" aria-pressed="true" title="Travelling impulse lights (I)">Impulses</button>
       </div>
-      <p class="hint" id="hint">Drag to steer · scroll or pinch to range in · space, M, A, F, H, U</p>
+      <p class="hint" id="hint">Drag to steer · scroll or pinch to range in · space, M, I, A, F, H, U</p>
     </section>
   </div>
 </div>
@@ -385,6 +392,7 @@ float shell(vec3 p){
 #endif
 
 float spikeAt(vec3 p){
+  if(uSpike <= 0.0) return 0.0;   // impulses off: no travelling light anywhere
   float w = sin(dot(p, vec3( 1.4, 0.7, 1.9)) * 3.2 - uPulse*2.3)
           + sin(dot(p, vec3(-1.7, 1.2, 0.6)) * 4.1 - uPulse*3.0)
           + 0.7 * sin(length(p) * 7.0 - uPulse*4.2);
@@ -1012,22 +1020,25 @@ void main(){
     mode: 0,
     scene: 0,
     thick: 0.028,
-    scaleQ: 0.34,                   // 1.0 == one sample per physical device pixel
+    scaleQ: 0.50,                   // 1.0 == one sample per physical device pixel
     dprCap: 3.0,
     aa: 1,
-    resPin: 0,
-    warpAmt: 0.70,
-    warpFreq: 3.55,
+    resPin: 1,                      // Half, to pay for the march budget below
+    warpAmt: 0.74,
+    warpFreq: 3.75,
     warpOn: [1, 0, 0],
     lcOn: [1, 1, 1, 1, 1],
-    eps: 3.00, stepsPin: false,
-    lcRelief: 0.60, lcFreq: 4.20, lcThick: 0.011, lcTwirl: 1.70,
+    // a phone cannot afford the pinned 320-step budget the desktop opens with,
+    // so it keeps the frame-time controller instead
+    eps: 12.00, stepsPin: !mobile,
+    lcRelief: 0.26, lcFreq: 4.00, lcThick: 0.022, lcTwirl: 1.90,
     // structure + accent colour per object: brain, neuron, LiquidChrome
-    colors: [["#2FD9C0", "#FFC98A"], ["#2FD9C0", "#FFC98A"], ["#6F93A8", "#FFE3B0"]],
-    steps: mobile ? 68 : 104,
+    colors: [["#2FD9C0", "#FFC98A"], ["#2FD9C0", "#FFC98A"], ["#009DFF", "#FF4271"]],
+    steps: mobile ? 68 : 320,
     fov: mobile ? 1.15 : 1.30,
     density: 15.0,
     spike: 0.55,
+    spikeOn: true,
     zoom: 1.0,
     shift: 0.0,
     fit: 1.0,
@@ -1078,6 +1089,16 @@ void main(){
     state.fit = ch > cw * 1.25 ? 0.92 : 1.0;
     if(document.getElementById("hud").classList.contains("hidden")){ state.shift = 0; return; }
     var top = document.querySelector(".ident").getBoundingClientRect().bottom;
+    // The hud is a flex column; a console taller than the gap the header leaves
+    // simply overflows the viewport, so cap it against what is actually free.
+    // Below 761px the panels stack and the stylesheet's own cap applies.
+    var con = document.querySelector(".console");
+    if(cw >= 761){
+      var padB = parseFloat(getComputedStyle(document.getElementById("hud")).paddingBottom) || 0;
+      con.style.maxHeight = Math.max(150, ch - top - padB - 40) + "px";
+    } else {
+      con.style.maxHeight = "";
+    }
     var bot = ch - document.querySelector(".foot").getBoundingClientRect().top;
     state.shift = Math.max(-0.45, Math.min(0.45, (bot - top) * 0.5 / minDim));
   }
@@ -1239,7 +1260,7 @@ void main(){
       el.soma.textContent = (2.0 * 0.82 / (2.1 * state.density) * UM_PER_UNIT).toFixed(1);
       el.fib.textContent  = (2.0 * 0.27 / (2.1 * state.density) * UM_PER_UNIT).toFixed(1);
     }
-    el.hz.textContent = (state.spike * 11).toFixed(1);
+    el.hz.textContent = state.spikeOn ? (state.spike * 11).toFixed(1) : "0.0";
     el.steps.textContent = String(marchSteps());
     // telemetry runs before the console is wired, so check the control exists
     if(rSteps && !state.stepsPin){
@@ -1289,7 +1310,7 @@ void main(){
     gl.uniform3f(U.uTgt, tgt[0], tgt[1], tgt[2]);
     gl.uniform1f(U.uRoll, roll);
     gl.uniform1f(U.uScale, state.density);
-    gl.uniform1f(U.uSpike, state.spike);
+    gl.uniform1f(U.uSpike, state.spikeOn ? state.spike : 0.0);
     gl.uniform1f(U.uSteps, marchSteps());
     gl.uniform1f(U.uFov, state.fov);
     gl.uniform1f(U.uShift, state.shift);
@@ -1499,6 +1520,7 @@ void main(){
 
   if(software){
     state.steps = 56;
+    state.stepsPin = false;         // let the controller own it, and the readout say so
     marchCap = 96;
     document.getElementById("hint").textContent =
       "Software rendering — enable hardware acceleration in your browser for full speed";
@@ -1508,7 +1530,7 @@ void main(){
   function setRunning(v){
     state.running = v;
     playBtn.setAttribute("aria-pressed", v ? "true" : "false");
-    playBtn.title = (v ? "Hold the camera still" : "Resume camera flight") + " (space)";
+    playBtn.title = (v ? "Hold the camera still" : "Resume camera flight") + " (space, with the field)";
   }
   playBtn.addEventListener("click", function(){ setRunning(!state.running); playBtn.blur(); });
   setRunning(state.running);
@@ -1522,6 +1544,16 @@ void main(){
   }
   morphBtn.addEventListener("click", function(){ setMorph(!state.morph); morphBtn.blur(); });
   setMorph(state.morph);
+
+  var spikeBtn = document.getElementById("spikeBtn");
+  function setSpikes(v){
+    state.spikeOn = v;
+    spikeBtn.setAttribute("aria-pressed", v ? "true" : "false");
+    spikeBtn.title = (v ? "Put the impulses out" : "Light the impulses") + " (I)";
+    telemetry();
+  }
+  spikeBtn.addEventListener("click", function(){ setSpikes(!state.spikeOn); spikeBtn.blur(); });
+  setSpikes(state.spikeOn);
 
   var warpBtns = document.querySelectorAll("[data-warp]");
   Array.prototype.forEach.call(warpBtns, function(btn){
@@ -1708,8 +1740,10 @@ void main(){
     if(state.fly && FLYKEYS[fk] && !e.ctrlKey && !e.metaKey && !e.altKey){
       held[fk] = 1; e.preventDefault(); return;
     }
-    if(e.code === "Space"){ e.preventDefault(); setRunning(!state.running); }
+    // space is the one "freeze everything" key: camera and field together
+    if(e.code === "Space"){ e.preventDefault(); var go = !state.running; setRunning(go); setMorph(go); }
     if(e.key === "m" || e.key === "M"){ setMorph(!state.morph); }
+    if(e.key === "i" || e.key === "I"){ setSpikes(!state.spikeOn); }
     if(e.key === "a" || e.key === "A"){ setAA((state.aa + 1) % 3); }
     if(e.key === "f" || e.key === "F"){ toggleFullscreen(); }
     if(e.key === "h" || e.key === "H"){ setBare(false); setHud(hud.classList.contains("hidden")); }
