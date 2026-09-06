@@ -293,7 +293,7 @@
         <button type="button" id="morphBtn" aria-pressed="true" title="Animate the field (M)">Morph</button>
         <button type="button" id="spikeBtn" aria-pressed="true" title="Travelling impulse lights (I)">Impulses</button>
       </div>
-      <p class="hint" id="hint">Drag to steer · scroll or pinch to range in · space, M, I, A, F, H, U</p>
+      <p class="hint" id="hint">Drag to steer · scroll or pinch to range in · R new view · 1-3 resolution · space, M, I, A, F, H, U</p>
     </section>
   </div>
 </div>
@@ -1174,6 +1174,14 @@ void main(){
     state.flyPitch = Math.max(-1.553, Math.min(1.553, state.flyPitch - dy * 0.0040));
   }
   function setFlySpeed(v){ state.flySpeed = Math.max(0.03, Math.min(12, v)); }
+  // put the camera at pos with the given point dead ahead
+  function aimAt(pos, target){
+    var d = [target[0]-pos[0], target[1]-pos[1], target[2]-pos[2]];
+    var l = Math.sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]) || 1;
+    state.flyPos = [pos[0], pos[1], pos[2]];
+    state.flyPitch = Math.asin(Math.max(-1, Math.min(1, d[1]/l)));
+    state.flyYaw = Math.atan2(d[0]/l, d[2]/l);
+  }
   function flyStep(dt){
     var mx = (held.d ? 1 : 0) - (held.a ? 1 : 0);   // strafe
     var mz = (held.w ? 1 : 0) - (held.s ? 1 : 0);   // forward
@@ -1422,16 +1430,10 @@ void main(){
   var navBtns = document.querySelectorAll("[data-nav]");
   var pathRow = document.getElementById("pathRow");
   var hintEl = document.getElementById("hint"), autoHint = null;
-  var FLY_HINT = "WASD move · Q/E down/up · shift sprint · right-drag look · wheel speed";
+  var FLY_HINT = "WASD move · Q/E down/up · shift sprint · right-drag look · wheel speed · R new view";
   function setFly(on){
-    if(on && !state.fly){
-      // hand the camera over exactly where the auto path left it
-      var d = [tgt[0]-eye[0], tgt[1]-eye[1], tgt[2]-eye[2]];
-      var l = Math.sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]) || 1;
-      state.flyPos = [eye[0], eye[1], eye[2]];
-      state.flyPitch = Math.asin(Math.max(-1, Math.min(1, d[1]/l)));
-      state.flyYaw = Math.atan2(d[0]/l, d[2]/l);
-    }
+    // hand the camera over exactly where the auto path left it
+    if(on && !state.fly) aimAt(eye, tgt);
     state.fly = on ? 1 : 0;
     held = {};
     state.velAz = 0; state.velEl = 0;
@@ -1450,6 +1452,47 @@ void main(){
       setFly(parseInt(btn.dataset.nav, 10) === 1); btn.blur();
     });
   });
+
+  // how far each object actually reaches; every jump stays inside it, close
+  // enough that the object overruns the frame instead of sitting in the middle
+  var SCENE_R = [1.55, 1.15, 1.10];
+  function randomView(){
+    var R = SCENE_R[state.scene];
+    if(state.fly){
+      // pick a point near the object's middle, then step back along the line of
+      // sight to it, so the camera is always facing the object and never space
+      var tp = [(Math.random()*2-1)*R*0.28, (Math.random()*2-1)*R*0.16, (Math.random()*2-1)*R*0.28];
+      var yaw = Math.random() * 6.2832, el = (Math.random()*2-1) * 0.6;
+      var d = R * (0.50 + Math.random()*0.55);
+      var ce = Math.cos(el);
+      var pos = [tp[0] - d*ce*Math.sin(yaw), tp[1] - d*Math.sin(el), tp[2] - d*ce*Math.cos(yaw)];
+      // the chrome slab is thin, so a low camera lands inside its relief
+      if(state.scene === 2 && Math.abs(pos[1]) < 0.45) pos[1] = pos[1] < 0 ? -0.45 : 0.45;
+      aimAt(pos, tp);
+    } else if(state.mode === 1){
+      // the path decides where the camera is, so only the aim is left: the
+      // steering offsets are the yaw and pitch that swing the path's own
+      // tangent onto a point near the middle of the object
+      state.clock = Math.random() * 400;
+      var u = state.clock * 0.085;
+      var e0 = pathPoint(u), a0 = pathPoint(u + 0.07);
+      var T = [a0[0]-e0[0], a0[1]-e0[1], a0[2]-e0[2]];
+      var tp1 = [(Math.random()*2-1)*R*0.25, (Math.random()*2-1)*R*0.15, (Math.random()*2-1)*R*0.25];
+      var Wv = [tp1[0]-e0[0], tp1[1]-e0[1], tp1[2]-e0[2]];
+      state.dragAz = Math.atan2(Wv[0], Wv[2]) - Math.atan2(T[0], T[2]);
+      state.dragEl = Math.max(-0.9, Math.min(0.9,
+        Math.atan2(Wv[1], Math.sqrt(Wv[0]*Wv[0] + Wv[2]*Wv[2])) -
+        Math.atan2(T[1], Math.sqrt(T[0]*T[0] + T[2]*T[2]))));
+    } else {
+      // orbit and drift are aimed at the centre by construction, so only the
+      // angle and the range are left to pick
+      state.dragAz = Math.random() * 6.2832;
+      state.dragEl = (Math.random()-0.5) * 1.6;
+      state.zoom = 0.42 + Math.random() * 0.30;
+    }
+    state.velAz = 0; state.velEl = 0;
+    telemetry();
+  }
 
   // ---- console --------------------------------------------------------
   var segBtns = document.querySelectorAll("[data-mode]");
@@ -1622,15 +1665,16 @@ void main(){
   paint(rSteps); paint(rEps);
 
   var resBtns = document.querySelectorAll("[data-res]");
-  Array.prototype.forEach.call(resBtns, function(btn){
-    btn.addEventListener("click", function(){
-      state.resPin = parseInt(btn.dataset.res, 10);
-      if(state.resPin) state.scaleQ = state.resPin === 1 ? 0.5 : 1.0;
-      Array.prototype.forEach.call(resBtns, function(b){
-        b.setAttribute("aria-pressed", b === btn ? "true" : "false");
-      });
-      resize(); telemetry(); btn.blur();
+  function setRes(v){
+    state.resPin = v;
+    if(v) state.scaleQ = v === 1 ? 0.5 : 1.0;   // Auto leaves it to the controller
+    Array.prototype.forEach.call(resBtns, function(b){
+      b.setAttribute("aria-pressed", parseInt(b.dataset.res, 10) === v ? "true" : "false");
     });
+    resize(); telemetry();
+  }
+  Array.prototype.forEach.call(resBtns, function(btn){
+    btn.addEventListener("click", function(){ setRes(parseInt(btn.dataset.res, 10)); btn.blur(); });
   });
 
   var aaBtns = document.querySelectorAll("[data-aa]");
@@ -1725,6 +1769,7 @@ void main(){
 
   // WASDQE belong to fly mode while it is on; A would otherwise cycle the AA
   var FLYKEYS = {w:1, a:1, s:1, d:1, q:1, e:1};
+  var RES_KEY = {Digit1:0, Digit2:1, Digit3:2, Numpad1:0, Numpad2:1, Numpad3:2};
   function keyName(e){ return e.key.length === 1 ? e.key.toLowerCase() : e.key; }
   window.addEventListener("keyup", function(e){
     held.shift = e.shiftKey ? 1 : 0;
@@ -1744,6 +1789,8 @@ void main(){
     if(e.code === "Space"){ e.preventDefault(); var go = !state.running; setRunning(go); setMorph(go); }
     if(e.key === "m" || e.key === "M"){ setMorph(!state.morph); }
     if(e.key === "i" || e.key === "I"){ setSpikes(!state.spikeOn); }
+    if(e.key === "r" || e.key === "R"){ randomView(); }
+    if(RES_KEY[e.code] !== undefined){ setRes(RES_KEY[e.code]); }
     if(e.key === "a" || e.key === "A"){ setAA((state.aa + 1) % 3); }
     if(e.key === "f" || e.key === "F"){ toggleFullscreen(); }
     if(e.key === "h" || e.key === "H"){ setBare(false); setHud(hud.classList.contains("hidden")); }
