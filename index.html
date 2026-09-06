@@ -185,6 +185,13 @@
         </div>
       </div>
       <div>
+        <p class="lbl" id="navLbl">Navigation</p>
+        <div class="seg" role="group" aria-labelledby="navLbl">
+          <button type="button" data-nav="0" aria-pressed="true" title="The camera flies its own path">Auto cam</button>
+          <button type="button" data-nav="1" aria-pressed="false" title="WASD to move, Q/E down and up, shift to sprint, right-drag to look, wheel for speed">Fly</button>
+        </div>
+      </div>
+      <div id="pathRow">
         <p class="lbl" id="pathLbl">Flight path</p>
         <div class="seg" role="group" aria-labelledby="pathLbl">
           <button type="button" data-mode="0" aria-pressed="true">Orbit</button>
@@ -1030,7 +1037,10 @@ void main(){
     mClock: 0.0,
     pClock: 6.0,
     dragAz: 0, dragEl: 0,
-    velAz: 0, velEl: 0
+    velAz: 0, velEl: 0,
+    // free navigation: world position, look angles, metres per second
+    fly: 0,
+    flyPos: [0, 0, 3], flyYaw: 0, flyPitch: 0, flySpeed: 0.60
   };
 
   var rgbCache = {};
@@ -1125,8 +1135,45 @@ void main(){
 
   var eye = [0,0,3], tgt = [0,0,0], roll = 0;
 
+  // ---- free flight (Blender-style) -----------------------------------
+  // Yaw 0 looks down +Z; pitch stops just shy of the poles so the horizontal
+  // basis never collapses. Keys are held state, integrated once per frame.
+  var held = {};
+  function flyFwd(){
+    var cp = Math.cos(state.flyPitch);
+    return [cp*Math.sin(state.flyYaw), Math.sin(state.flyPitch), cp*Math.cos(state.flyYaw)];
+  }
+  // screen-right, matching the shader's uu = normalize(cross(ww, worldUp)),
+  // flattened to the horizon so strafing never climbs
+  function flyRight(){
+    return [-Math.cos(state.flyYaw), 0, Math.sin(state.flyYaw)];
+  }
+  function flyLook(dx, dy){
+    state.flyYaw  -= dx * 0.0040;
+    state.flyPitch = Math.max(-1.553, Math.min(1.553, state.flyPitch - dy * 0.0040));
+  }
+  function setFlySpeed(v){ state.flySpeed = Math.max(0.03, Math.min(12, v)); }
+  function flyStep(dt){
+    var mx = (held.d ? 1 : 0) - (held.a ? 1 : 0);   // strafe
+    var mz = (held.w ? 1 : 0) - (held.s ? 1 : 0);   // forward
+    var my = (held.e ? 1 : 0) - (held.q ? 1 : 0);   // world up / down
+    if(!mx && !mz && !my) return;
+    var f = flyFwd(), r = flyRight();
+    var v = state.flySpeed * (held.shift ? 3.5 : 1.0) * dt;
+    state.flyPos[0] += (f[0]*mz + r[0]*mx) * v;
+    state.flyPos[1] += (f[1]*mz + my) * v;
+    state.flyPos[2] += (f[2]*mz + r[2]*mx) * v;
+  }
+
   function camera(t){
     var az, el, r;
+    if(state.fly){
+      eye = [state.flyPos[0], state.flyPos[1], state.flyPos[2]];
+      var f = flyFwd();
+      tgt = [eye[0] + f[0], eye[1] + f[1], eye[2] + f[2]];
+      roll = 0.0;
+      return;
+    }
     if(state.mode === 1){
       var u = t * 0.085;
       eye = pathPoint(u);
@@ -1177,7 +1224,7 @@ void main(){
     if(azd < 0) azd += 360;
     var eld = Math.asin(Math.max(-1, Math.min(1, eye[1] / (r || 1)))) * 180 / Math.PI;
     var C = 1.45 / state.density;
-    el.path.textContent = MODES[state.mode];
+    el.path.textContent = state.fly ? "Fly " + state.flySpeed.toFixed(2) + "/s" : MODES[state.mode];
     el.morph.textContent = state.morph ? "Morph " + (state.mClock % 100).toFixed(1) : "Static";
     el.range.textContent = r.toFixed(2);
     el.az.textContent = azd.toFixed(1);
@@ -1221,6 +1268,10 @@ void main(){
     state.dragAz += state.velAz; state.dragEl += state.velEl;
     state.velAz *= 0.90; state.velEl *= 0.90;
     state.dragEl = Math.max(-1.0, Math.min(1.0, state.dragEl));
+
+    // the clocks clamp dt hard to stay stable; flight tolerates a longer
+    // frame than that before it starts under-travelling
+    if(state.fly) flyStep(Math.min(raw / 1000, 0.10));
 
     resize();
     camera(state.clock);
@@ -1314,13 +1365,16 @@ void main(){
     if(ids.length >= 2){
       var a = pointers[ids[0]], b = pointers[ids[1]];
       var dist = Math.hypot(a.x-b.x, a.y-b.y);
-      if(lastPinch) setZoom(state.zoom * (lastPinch / dist));
+      // spreading two fingers means "closer" when orbiting, "faster" when flying
+      if(lastPinch) state.fly ? setFlySpeed(state.flySpeed * (dist / lastPinch))
+                              : setZoom(state.zoom * (lastPinch / dist));
       lastPinch = dist;
       return;
     }
     if(e.pointerId !== pid) return;
     var dx = e.clientX - px, dy = e.clientY - py;
     px = e.clientX; py = e.clientY;
+    if(state.fly){ flyLook(dx, dy); return; }
     state.velAz = -dx * 0.0032;
     state.velEl =  dy * 0.0024;
     state.dragAz += state.velAz * 3;
@@ -1335,10 +1389,46 @@ void main(){
   canvas.addEventListener("pointercancel", release);
   canvas.addEventListener("wheel", function(e){
     e.preventDefault();
+    if(state.fly){ setFlySpeed(state.flySpeed * Math.exp(-Math.sign(e.deltaY) * 0.14)); telemetry(); return; }
     setZoom(state.zoom * (1 + Math.sign(e.deltaY) * 0.07));
   }, {passive:false});
+  // right-drag is the look control, so the context menu has to stand down
+  canvas.addEventListener("contextmenu", function(e){ if(state.fly) e.preventDefault(); });
 
   function setZoom(z){ state.zoom = Math.max(0.42, Math.min(1.8, z)); }
+
+  // ---- navigation toggle ----------------------------------------------
+  var navBtns = document.querySelectorAll("[data-nav]");
+  var pathRow = document.getElementById("pathRow");
+  var hintEl = document.getElementById("hint"), autoHint = null;
+  var FLY_HINT = "WASD move · Q/E down/up · shift sprint · right-drag look · wheel speed";
+  function setFly(on){
+    if(on && !state.fly){
+      // hand the camera over exactly where the auto path left it
+      var d = [tgt[0]-eye[0], tgt[1]-eye[1], tgt[2]-eye[2]];
+      var l = Math.sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]) || 1;
+      state.flyPos = [eye[0], eye[1], eye[2]];
+      state.flyPitch = Math.asin(Math.max(-1, Math.min(1, d[1]/l)));
+      state.flyYaw = Math.atan2(d[0]/l, d[2]/l);
+    }
+    state.fly = on ? 1 : 0;
+    held = {};
+    state.velAz = 0; state.velEl = 0;
+    Array.prototype.forEach.call(navBtns, function(b){
+      b.setAttribute("aria-pressed", parseInt(b.dataset.nav, 10) === state.fly ? "true" : "false");
+    });
+    if(pathRow) pathRow.hidden = !!state.fly;
+    if(hintEl){
+      if(autoHint === null) autoHint = hintEl.textContent;
+      hintEl.textContent = state.fly ? FLY_HINT : autoHint;
+    }
+    reframe(); telemetry();
+  }
+  Array.prototype.forEach.call(navBtns, function(btn){
+    btn.addEventListener("click", function(){
+      setFly(parseInt(btn.dataset.nav, 10) === 1); btn.blur();
+    });
+  });
 
   // ---- console --------------------------------------------------------
   var segBtns = document.querySelectorAll("[data-mode]");
@@ -1601,8 +1691,23 @@ void main(){
     dropFullscreenButton();
   }
 
+  // WASDQE belong to fly mode while it is on; A would otherwise cycle the AA
+  var FLYKEYS = {w:1, a:1, s:1, d:1, q:1, e:1};
+  function keyName(e){ return e.key.length === 1 ? e.key.toLowerCase() : e.key; }
+  window.addEventListener("keyup", function(e){
+    held.shift = e.shiftKey ? 1 : 0;
+    var k = keyName(e);
+    if(FLYKEYS[k]) held[k] = 0;
+  });
+  // a key held while the tab loses focus never sends its keyup
+  window.addEventListener("blur", function(){ held = {}; });
   window.addEventListener("keydown", function(e){
     if(e.target.tagName === "INPUT") return;
+    held.shift = e.shiftKey ? 1 : 0;
+    var fk = keyName(e);
+    if(state.fly && FLYKEYS[fk] && !e.ctrlKey && !e.metaKey && !e.altKey){
+      held[fk] = 1; e.preventDefault(); return;
+    }
     if(e.code === "Space"){ e.preventDefault(); setRunning(!state.running); }
     if(e.key === "m" || e.key === "M"){ setMorph(!state.morph); }
     if(e.key === "a" || e.key === "A"){ setAA((state.aa + 1) % 3); }
