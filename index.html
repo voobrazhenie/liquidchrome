@@ -220,11 +220,11 @@
       </div>
       <div class="slider">
         <label class="lbl" for="rSteps">Ray steps</label><output id="rStepsOut">auto</output>
-        <input id="rSteps" type="range" min="48" max="160" step="4" value="104">
+        <input id="rSteps" type="range" min="48" max="320" step="8" value="160">
       </div>
       <div class="slider">
-        <label class="lbl" for="rStepK">Step size</label><output id="rStepKOut">0.70</output>
-        <input id="rStepK" type="range" min="45" max="95" step="1" value="70">
+        <label class="lbl" for="rEps" title="How close a ray must get before it counts as a hit. Higher is tighter — it removes the banding on grazing surfaces, and costs march steps.">Surface precision</label><output id="rEpsOut">3.0</output>
+        <input id="rEps" type="range" min="10" max="120" step="2" value="30">
       </div>
       <div class="slider" id="densRow" data-only="0">
         <label class="lbl" for="density">Cell density</label><output id="densityOut">19 µm pitch</output>
@@ -309,7 +309,7 @@
 precision highp float;
 
 #ifndef MARCH_MAX
-#define MARCH_MAX 160
+#define MARCH_MAX 320
 #endif
 
 uniform vec2  uRes;
@@ -336,7 +336,7 @@ uniform float uLcTwirl;   // step 5, radians at the centre; 0 when the step is o
 uniform float uLcRelief;
 uniform float uLcFreq;
 uniform float uLcThick;   // half-thickness of the slab
-uniform float uStepK;     // fraction of the safe distance each march step takes
+uniform float uEps;       // how close to the surface a ray must get to count as a hit
 
 const vec3 SPIKE = vec3(0.608, 0.482, 1.000);
 const vec3 RIM   = vec3(0.620, 0.898, 1.000);
@@ -744,9 +744,13 @@ vec3 render(vec2 fc){
         d = map(p, sd, lip);
         // the warp shrinks reported distances; the glow wants the real one,
         // otherwise warped regions bloom into a milky haze
-        glow += exp(-38.0 * max(d * lip * sceneLip(), 0.0)) * (0.45 + 1.05*spikeAt(p)) * (uScene > 0.5 ? 0.008 : 0.017);
-        if(d < 0.0009*t + 0.0005){ hit = 1.0; sdHit = sd; break; }
-        t += d * uStepK;
+        float lipT = lip * sceneLip();          // reported distance -> true distance
+        glow += exp(-38.0 * max(d * lipT, 0.0)) * (0.45 + 1.05*spikeAt(p)) * (uScene > 0.5 ? 0.008 : 0.017);
+        if(d * lipT < uEps * (0.0009*t + 0.0005)){
+          t += d * lipT;                        // land on the surface, not on the sample
+          hit = 1.0; sdHit = sd; break;
+        }
+        t += d * 0.98;
         steps += 1.0;
         if(t > tFar) break;
       }
@@ -924,7 +928,7 @@ void main(){
 
   var UNIFORMS = ["uRes","uTime","uEye","uTgt","uRoll","uScale","uSpike","uSteps","uFov",
     "uShift","uMorph","uPulse","uScene","uThick","uWarpAmt","uWarpFreq","uWarpOn",
-    "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uStepK"];
+    "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps"];
   var DEFS = ["#define SCENE_BRAIN\n", "#define SCENE_NEURON\n", "#define SCENE_CHROME\n"];
 
   // One program per object, built the first time that object is shown. Each
@@ -939,7 +943,7 @@ void main(){
       // second pass hands the driver a much shorter march. ANGLE lays the
       // whole loop out at link time, and on some GPUs the full one is more
       // than it will accept.
-      var src = head + (attempt ? "#define MARCH_MAX 72\n" : "") + baseSrc;
+      var src = head + (attempt ? "#define MARCH_MAX 96\n" : "") + baseSrc;
       if(lowPrec) src = src.replace("precision highp float;", "precision mediump float;");
       var f = compile(gl.FRAGMENT_SHADER, src);
       p = f ? link(f) : null;
@@ -1009,7 +1013,7 @@ void main(){
     warpFreq: 3.55,
     warpOn: [1, 0, 0],
     lcOn: [1, 1, 1, 1, 1],
-    stepK: 0.70, stepsPin: false,
+    eps: 3.00, stepsPin: false,
     lcRelief: 0.60, lcFreq: 4.20, lcThick: 0.011, lcTwirl: 1.70,
     // structure + accent colour per object: brain, neuron, LiquidChrome
     colors: [["#2FD9C0", "#FFC98A"], ["#2FD9C0", "#FFC98A"], ["#6F93A8", "#FFE3B0"]],
@@ -1072,7 +1076,7 @@ void main(){
   // machine without GPU acceleration a full-size first frame can take a minute,
   // which looks exactly like a page that renders only its panels.
   var warm = 5;
-  var marchCap = 160;
+  var marchCap = 320;
   var W = 0, H = 0, RW = 0, RH = 0;
   function resize(){
     var cw = canvas.clientWidth || window.innerWidth;
@@ -1253,7 +1257,7 @@ void main(){
     gl.uniform1f(U.uLcRelief, state.lcRelief);
     gl.uniform1f(U.uLcFreq, state.lcFreq);
     gl.uniform1f(U.uLcThick, state.lcThick);
-    gl.uniform1f(U.uStepK, state.stepK);
+    gl.uniform1f(U.uEps, 1.0 / state.eps);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -1284,7 +1288,7 @@ void main(){
       }
       if(!state.stepsPin){
         if(ema > 40 && state.steps > 44) state.steps -= 8;
-        else if(ema < 12 && state.steps < (mobile ? 68 : 104)) state.steps += 8;
+        else if(ema < 12 && state.steps < (mobile ? 96 : 192)) state.steps += 8;
       }
       frames = 0;
     }
@@ -1487,13 +1491,13 @@ void main(){
     rStepsOut.textContent = String(state.steps);
     paint(rSteps); telemetry();
   });
-  var rStepK = document.getElementById("rStepK"), rStepKOut = document.getElementById("rStepKOut");
-  rStepK.addEventListener("input", function(){
-    state.stepK = parseFloat(rStepK.value) / 100;
-    rStepKOut.textContent = state.stepK.toFixed(2);
-    paint(rStepK); telemetry();
+  var rEps = document.getElementById("rEps"), rEpsOut = document.getElementById("rEpsOut");
+  rEps.addEventListener("input", function(){
+    state.eps = parseFloat(rEps.value) / 10;
+    rEpsOut.textContent = state.eps.toFixed(1);
+    paint(rEps); telemetry();
   });
-  paint(rSteps); paint(rStepK);
+  paint(rSteps); paint(rEps);
 
   var resBtns = document.querySelectorAll("[data-res]");
   Array.prototype.forEach.call(resBtns, function(btn){
