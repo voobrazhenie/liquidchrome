@@ -243,6 +243,18 @@
         <label class="lbl" for="rOmega" title="How far past the safe distance each march step reaches. Above 1 it converges in fewer steps; too far and it spends them backing out of overshoots instead.">Step relaxation</label><output id="rOmegaOut">1.30×</output>
         <input id="rOmega" type="range" min="100" max="190" step="2" value="130">
       </div>
+      <div>
+        <p class="lbl" id="bndLbl">Bounds</p>
+        <div class="seg" role="group" aria-labelledby="bndLbl">
+          <button type="button" data-bnd="0" aria-pressed="false" title="One sphere around everything">Sphere</button>
+          <button type="button" data-bnd="1" aria-pressed="false" title="A box fitted to the object — far tighter on a thin slab">Box</button>
+          <button type="button" data-bnd="2" aria-pressed="true" title="Box for the chrome slab, sphere for the rest">Auto</button>
+        </div>
+      </div>
+      <div class="slider">
+        <label class="lbl" for="rPad" title="Slack added to the bounding volume. Too little clips the object at its edges; too much marches empty space.">Bound padding</label><output id="rPadOut">0.05</output>
+        <input id="rPad" type="range" min="0" max="60" step="1" value="5">
+      </div>
       <div class="slider" id="densRow" data-only="0">
         <label class="lbl" for="density">Cell density</label><output id="densityOut">19 µm pitch</output>
         <input id="density" type="range" min="9" max="22" step="0.5" value="15">
@@ -356,6 +368,8 @@ uniform float uLcFreq;
 uniform float uLcThick;   // half-thickness of the slab
 uniform float uEps;       // how close to the surface a ray must get to count as a hit
 uniform float uOmega;     // over-relaxation: how far past the safe radius a step reaches
+uniform float uBound;     // bounding volume: 0 sphere, 1 box, 2 pick per object
+uniform float uBoundPad;  // slack added to it
 
 const vec3 SPIKE = vec3(0.608, 0.482, 1.000);
 const vec3 RIM   = vec3(0.620, 0.898, 1.000);
@@ -727,6 +741,34 @@ vec3 bgCol(vec3 rd){
   return mix(vec3(0.010, 0.015, 0.026), vec3(0.020, 0.032, 0.055), rd.y*0.5 + 0.5);
 }
 
+// ---- bounding volume -------------------------------------------------
+// The march only runs where the object can be. A sphere fits the brain and the
+// neuron; the chrome slab is 2 x 2 across and a fraction of that thick, so a
+// box skips the empty air above and below that a sphere still marches through.
+vec3 boundHalf(){
+#if defined(SCENE_CHROME)
+  // the twirl sweeps the slab's corners, so across x and z the reach is the
+  // corner radius whatever the angle — and a twist warp is bounded by it too.
+  // y is where the tightness actually is.
+  float relief = uLcOn.y > 0.5 ? uLcRelief : 0.0;
+  // intersecting with the undeformed copy clips the relief straight back off
+  bool isect = uLcOn.x > 0.5 && uLcOn.z > 0.5 && uLcOn.w > 0.5;
+  float ry = uLcThick + (isect ? 0.0 : relief);
+  // bend tips space about Z, which lifts the slab out of an axis-aligned box
+  if(uWarpOn.z > 0.5) ry = 1.74;
+  return vec3(1.4143, ry, 1.4143);
+#else
+  return vec3(1.74);
+#endif
+}
+bool autoBox(){
+#if defined(SCENE_CHROME)
+  return true;
+#else
+  return false;
+#endif
+}
+
 vec3 render(vec2 fc){
   vec2 uv = (fc - 0.5*uRes) / min(uRes.x, uRes.y);
   uv.y -= uShift;
@@ -743,17 +785,32 @@ vec3 render(vec2 fc){
   float glow = 0.0;
 
   // rotations preserve radius; only the noise term can push the surface out
-  float bR = 1.74 + (uWarpOn.x > 0.5 ? 0.55 * uWarpAmt : 0.0);
-  float b = dot(ro, rd);
-  float cc = dot(ro, ro) - bR*bR;
-  float disc = b*b - cc;
+  float pad = (uWarpOn.x > 0.5 ? 0.55 * uWarpAmt : 0.0) + uBoundPad;
+  bool useBox = uBound > 1.5 ? autoBox() : (uBound > 0.5);
 
-  if(disc > 0.0){
-    float hs = sqrt(disc);
-    float tNear = max(-b - hs, 0.0);
-    float tFar  = -b + hs;
+  float tNear = 0.0, tFar = -1.0;
+  if(useBox){
+    vec3 he = boundHalf() + pad;
+    vec3 rs = rd + step(abs(rd), vec3(1e-6)) * 1e-6;   // never divide by zero
+    vec3 inv = 1.0 / rs;
+    vec3 t0 = (-he - ro) * inv, t1 = (he - ro) * inv;
+    vec3 lo = min(t0, t1), hi = max(t0, t1);
+    tNear = max(max(max(lo.x, lo.y), lo.z), 0.0);
+    tFar  = min(min(hi.x, hi.y), hi.z);
+  } else {
+    float bR = 1.74 + pad;
+    float b = dot(ro, rd);
+    float cc = dot(ro, ro) - bR*bR;
+    float disc = b*b - cc;
+    if(disc > 0.0){
+      float hs = sqrt(disc);
+      tNear = max(-b - hs, 0.0);
+      tFar  = -b + hs;
+    }
+  }
 
-    if(tFar > 0.0){
+  if(tFar > tNear){
+    {
       float t = tNear;
       float sd = 1e5, sdHit = 1e5, dmy;
       float hit = 0.0, steps = 0.0, d = 1e5, lip = 1.0;
@@ -963,7 +1020,7 @@ void main(){
 
   var UNIFORMS = ["uRes","uTime","uEye","uTgt","uRoll","uScale","uSpike","uSteps","uFov",
     "uShift","uMorph","uPulse","uScene","uThick","uWarpAmt","uWarpFreq","uWarpOn",
-    "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps","uOmega"];
+    "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps","uOmega","uBound","uBoundPad"];
   var DEFS = ["#define SCENE_BRAIN\n", "#define SCENE_NEURON\n", "#define SCENE_CHROME\n"];
 
   // One program per object, built the first time that object is shown. Each
@@ -1051,6 +1108,7 @@ void main(){
     // a phone cannot afford the pinned 320-step budget the desktop opens with,
     // so it keeps the frame-time controller instead
     eps: 12.00, stepsPin: !mobile, omega: 1.30,
+    bound: 2, boundPad: 0.05,
     lcRelief: 0.26, lcFreq: 4.00, lcThick: 0.022, lcTwirl: 1.90,
     // structure + accent colour per object: brain, neuron, LiquidChrome
     colors: [["#2FD9C0", "#FFC98A"], ["#2FD9C0", "#FFC98A"], ["#009DFF", "#FF4271"]],
@@ -1359,6 +1417,8 @@ void main(){
     gl.uniform1f(U.uLcThick, state.lcThick);
     gl.uniform1f(U.uEps, 1.0 / state.eps);
     gl.uniform1f(U.uOmega, state.omega);
+    gl.uniform1f(U.uBound, state.bound);
+    gl.uniform1f(U.uBoundPad, state.boundPad);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -1689,7 +1749,23 @@ void main(){
     rOmegaOut.textContent = state.omega.toFixed(2) + "\u00d7";
     paint(rOmega); telemetry();
   });
-  paint(rSteps); paint(rEps); paint(rOmega);
+  var bndBtns = document.querySelectorAll("[data-bnd]");
+  Array.prototype.forEach.call(bndBtns, function(btn){
+    btn.addEventListener("click", function(){
+      state.bound = parseInt(btn.dataset.bnd, 10);
+      Array.prototype.forEach.call(bndBtns, function(b){
+        b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+      });
+      telemetry(); btn.blur();
+    });
+  });
+  var rPad = document.getElementById("rPad"), rPadOut = document.getElementById("rPadOut");
+  rPad.addEventListener("input", function(){
+    state.boundPad = parseFloat(rPad.value) / 100;
+    rPadOut.textContent = state.boundPad.toFixed(2);
+    paint(rPad); telemetry();
+  });
+  paint(rSteps); paint(rEps); paint(rOmega); paint(rPad);
 
   var resBtns = document.querySelectorAll("[data-res]");
   function setRes(v){
