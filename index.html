@@ -313,6 +313,7 @@
         <button type="button" id="saveBtn" title="Open the page with everything set the way it is now">Save as default</button>
         <button type="button" id="resetBtn" title="Forget the saved settings and go back to the built-in ones">Reset</button>
       </div>
+      <p class="hint" id="cloudNote">Checking for saved settings\u2026</p>
       <p class="hint" id="hint">Drag to steer · scroll or pinch to range in · R new view · 1-3 resolution · space, M, I, A, F, H, U</p>
     </section>
   </div>
@@ -1909,11 +1910,12 @@ void main(){
   // ---- saved settings --------------------------------------------------
   // readStore and writeStore are the whole storage seam: everything above and
   // below them is backend-agnostic, so a remote store replaces just these two.
-  var SAVE_KEY = "cortical.defaults.v1";
+  var SAVE_KEY = "cortical.defaults.v2";
   var SAVE_KEYS = ["scene","mode","fly","aa","resPin","bound","boundPad","omega","eps",
     "steps","stepsPin","warpAmt","warpFreq","warpOn","lcOn","lcRelief","lcFreq","lcThick",
     "lcTwirl","colors","density","spike","spikeOn","thick","zoom","flySpeed","running","morph"];
 
+  // this browser
   function readStore(){
     try{ var raw = localStorage.getItem(SAVE_KEY); return raw ? JSON.parse(raw) : null; }
     catch(e){ return null; }
@@ -1922,6 +1924,45 @@ void main(){
     try{ localStorage.setItem(SAVE_KEY, JSON.stringify(o)); return true; }catch(e){ return false; }
   }
   function clearStore(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+
+  // and the cloud. One shared document, so the same defaults follow the page
+  // to any computer — a per-browser identity would defeat exactly that. The
+  // whole path fails soft: no network, no permission, no cloud, and the page
+  // carries on with the browser's own copy.
+  var FB_URL = "https://firestore.googleapis.com/v1/projects/claudecode-3bb06" +
+               "/databases/(default)/documents/settings/default" +
+               "?key=AIzaSyA63gqdsNDdECCFA5DPFiI7R6LFBpGz5kI";
+  var cloudNote = document.getElementById("cloudNote");
+  var CLOUD_ON  = "Settings sync to the cloud \u00b7 available on any computer";
+  var CLOUD_OFF = "Settings are saved on this device only";
+  function note(t){ if(cloudNote) cloudNote.textContent = t; }
+
+  // the settings ride as one JSON string, so there is no field-by-field
+  // encoding to keep in step with the settings themselves
+  function cloudRead(){
+    return fetch(FB_URL, {cache:"no-store"})
+      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(d){
+        var f = d && d.fields;
+        if(!f || !f.json || !f.json.stringValue) return null;
+        return { data: JSON.parse(f.json.stringValue),
+                 at: parseInt((f.savedAt && f.savedAt.integerValue) || "0", 10) };
+      });
+  }
+  function cloudWrite(o, at){
+    return fetch(FB_URL, {
+      method: "PATCH",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ fields: {
+        json:    { stringValue: JSON.stringify(o) },
+        savedAt: { integerValue: String(at) }
+      }})
+    }).then(function(r){ if(!r.ok) throw 0; return true; });
+  }
+  function cloudClear(){
+    return fetch(FB_URL, {method:"DELETE"})
+      .then(function(r){ if(!r.ok) throw 0; return true; });
+  }
 
   function snapshot(){
     var o = {};
@@ -2000,16 +2041,37 @@ void main(){
     flashT = setTimeout(function(){ btn.textContent = back; }, 1400);
   }
   saveBtn.addEventListener("click", function(){
-    flash(saveBtn, writeStore(snapshot()) ? "Saved" : "Can't save", "Save as default");
+    var snap = snapshot(), at = Date.now();
+    var here = writeStore({ data: snap, at: at });
     saveBtn.blur();
+    flash(saveBtn, "Saving\u2026", "Save as default");
+    cloudWrite(snap, at).then(function(){
+      note(CLOUD_ON); flash(saveBtn, "Saved everywhere", "Save as default");
+    }).catch(function(){
+      note(CLOUD_OFF);
+      flash(saveBtn, here ? "Saved on this device" : "Can't save", "Save as default");
+    });
   });
   resetBtn.addEventListener("click", function(){
     clearStore(); applySaved(BUILTIN);
-    flash(resetBtn, "Reset", "Reset"); resetBtn.blur();
+    resetBtn.blur(); flash(resetBtn, "Reset", "Reset");
+    cloudClear().catch(function(){});
   });
-  applySaved(readStore());
+
+  // the local copy lands first so there is no flash of the wrong settings,
+  // then the cloud overrides it only if it is actually newer
+  var localSaved = readStore();
+  if(localSaved && localSaved.data) applySaved(localSaved.data);
   // the software clamp outranks a saved march budget, whoever saved it
   if(software){ state.steps = 56; state.stepsPin = false; }
+  note(localSaved ? CLOUD_OFF : "Checking for saved settings\u2026");
+  cloudRead().then(function(c){
+    note(CLOUD_ON);
+    if(!c || (localSaved && localSaved.at >= c.at)) return;
+    applySaved(c.data);
+    if(software){ state.steps = 56; state.stepsPin = false; }
+    writeStore(c);                 // keep this browser's mirror current
+  }).catch(function(){ note(CLOUD_OFF); });
 
   applyScene();
   resize();
