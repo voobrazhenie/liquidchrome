@@ -45,12 +45,12 @@
 
   .foot{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap}
 
-  .telemetry{min-width:214px}
+  .telemetry{min-width:236px}
   .telemetry dl{display:grid;grid-template-columns:repeat(3,auto);justify-content:space-between;gap:1px 20px;margin:0;font-family:var(--mono)}
   .telemetry dt{grid-row:1;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;font-size:9px}
   .telemetry dd{grid-row:2;margin:0;font-size:15px;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--fiber)}
   .telemetry dd i{font-style:normal;color:var(--dim);font-size:9.5px;margin-left:2px}
-  #fpsGraph{display:block;width:100%;height:34px;margin-top:9px;border-top:1px solid var(--line)}
+  #fpsGraph{display:block;width:100%;height:66px;margin-top:9px;border-top:1px solid var(--line)}
 
   .console{display:flex;flex-direction:column;gap:11px;min-width:min(292px,88vw);max-height:calc(100vh - 128px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;pointer-events:auto}
   /* The console is the one panel that scrolls, so it gets a bar that belongs to
@@ -122,7 +122,7 @@
     .telemetry{min-width:0}
     .telemetry dt{font-size:8.5px}
     .telemetry dd{font-size:13px}
-    #fpsGraph{height:28px}
+    #fpsGraph{height:52px}
     .console{min-width:0;gap:9px;max-height:calc(100vh - 214px)}
     .grp,.grpb{gap:9px}
     .seg button{padding:11px 4px}
@@ -286,6 +286,7 @@
               <button type="button" data-res="0" aria-pressed="false">Auto</button>
               <button type="button" data-res="1" aria-pressed="true">Half</button>
               <button type="button" data-res="2" aria-pressed="false">Native</button>
+              <button type="button" data-res="3" aria-pressed="false" title="Render exactly 1920 × 1080, whatever size the window is (4)">FHD</button>
             </div>
           </div>
           <div>
@@ -304,7 +305,7 @@
         <button type="button" id="resetBtn" title="Forget the saved settings and go back to the built-in ones">Reset</button>
       </div>
       <p class="hint" id="cloudNote">Checking for saved settings…</p>
-      <p class="hint" id="hint">Drag to steer · scroll to range in · R new view · 1-3 resolution · 5-0 saved views, shift+5-0 to store · shift+` fly</p>
+      <p class="hint" id="hint">Drag to steer · scroll to range in · R new view · 1-4 resolution · 5-0 saved views, shift+5-0 to store · shift+` fly</p>
     </section>
   </div>
 </div>
@@ -1177,26 +1178,23 @@ void main(){
     return Math.min(marchCap, Math.round(state.steps * (state.stepsPin ? 1 : warpK())));
   }
 
-  // keep the field centred in whatever strip the panels leave visible
+  // The console is the only thing here that answers to the window. The framing
+  // deliberately does not: the view used to slide to stay clear of the panels,
+  // which meant folding a group or hiding the UI moved the image. Nothing you
+  // do to the menu should move the shot, so the camera is left alone and only
+  // the scroll cap is measured.
   function reframe(){
     var cw = canvas.clientWidth || window.innerWidth;
     var ch = canvas.clientHeight || window.innerHeight;
-    var minDim = Math.min(cw, ch) || 1;
     state.fit = ch > cw * 1.25 ? 0.92 : 1.0;
-    if(document.getElementById("hud").classList.contains("hidden")){ state.shift = 0; return; }
-    var top = parseFloat(getComputedStyle(document.getElementById("hud")).paddingTop) || 0;
-    // The hud is a flex column; a console taller than the gap the header leaves
-    // simply overflows the viewport, so cap it against what is actually free.
-    // Below 761px the panels stack and the stylesheet's own cap applies.
     var con = document.querySelector(".console");
     if(cw >= 761){
-      var padB = parseFloat(getComputedStyle(document.getElementById("hud")).paddingBottom) || 0;
-      con.style.maxHeight = Math.max(150, ch - top - padB - 40) + "px";
+      var cs = getComputedStyle(document.getElementById("hud"));
+      var padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+      con.style.maxHeight = Math.max(150, ch - padY) + "px";
     } else {
       con.style.maxHeight = "";
     }
-    var bot = ch - document.querySelector(".foot").getBoundingClientRect().top;
-    state.shift = Math.max(-0.45, Math.min(0.45, (bot - top) * 0.5 / minDim));
   }
 
   // The opening frames are capped hard. Nothing has been measured yet, and on a
@@ -1205,26 +1203,37 @@ void main(){
   var warm = 5;
   var marchCap = 320;
   var W = 0, H = 0, RW = 0, RH = 0;
+  var FHD_W = 1920, FHD_H = 1080;
   function resize(){
     var cw = canvas.clientWidth || window.innerWidth;
     var ch = canvas.clientHeight || window.innerHeight;
-    var dpr = Math.min(window.devicePixelRatio || 1, state.dprCap);
-    var q = state.scaleQ;
-    var w = Math.max(2, Math.round(cw * dpr * q));
-    var h = Math.max(2, Math.round(ch * dpr * q));
-    // ceiling is the physical screen; the frame-time controller walks up to it.
-    // Auto stays inside what a per-pixel marcher can sustain; Native is the
-    // user asking for the screen's own resolution, so it keeps the headroom.
-    var maxPx = warm > 0 ? 1.1e5
-              : software ? 4.0e5
-              : state.resPin ? (mobile ? 4.2e6 : 9.0e6)
-              : (mobile ? 2.4e6 : 3.0e6);
     // SSAA renders the offscreen target at 2x and lets the post pass filter it
     // down, so the budget applies to that, not to the canvas
     var ss = state.aa === 2 ? 2 : 1;
-    if(w * h * ss * ss > maxPx){
-      var k = Math.sqrt(maxPx / (w * h * ss * ss));
-      w = Math.max(2, Math.round(w * k)); h = Math.max(2, Math.round(h * k));
+    var w, h;
+    if(state.resPin === 3 && warm <= 0){
+      // Full HD is an exact size rather than a share of the window: the march
+      // runs at 1920 x 1080 whatever the page is, and the post pass fits that
+      // to the canvas. Asked for by hand, so it outranks even the software
+      // clamp — only the opening warm-up frames come before it.
+      w = FHD_W; h = FHD_H;
+    } else {
+      var dpr = Math.min(window.devicePixelRatio || 1, state.dprCap);
+      var q = state.scaleQ;
+      w = Math.max(2, Math.round(cw * dpr * q));
+      h = Math.max(2, Math.round(ch * dpr * q));
+      // ceiling is the physical screen; the frame-time controller walks up to
+      // it. Auto stays inside what a per-pixel marcher can sustain; Native is
+      // the user asking for the screen's own resolution, so it keeps the
+      // headroom.
+      var maxPx = warm > 0 ? 1.1e5
+                : software ? 4.0e5
+                : state.resPin ? (mobile ? 4.2e6 : 9.0e6)
+                : (mobile ? 2.4e6 : 3.0e6);
+      if(w * h * ss * ss > maxPx){
+        var k = Math.sqrt(maxPx / (w * h * ss * ss));
+        w = Math.max(2, Math.round(w * k)); h = Math.max(2, Math.round(h * k));
+      }
     }
     if(w !== W || h !== H || w * ss !== RW){
       W = w; H = h; RW = w * ss; RH = h * ss;
@@ -1361,39 +1370,106 @@ void main(){
 
   var gCan = document.getElementById("fpsGraph");
   var gCtx = gCan && gCan.getContext ? gCan.getContext("2d") : null;
+  var GRAPH_MS = 5000;
+  var G_TOPS = [60, 120, 240, 480];
+  var gTopI = 0;                       // the ceiling is sticky, see below
+  var gCols = [];                      // reused so the draw allocates nothing
+
   function drawGraph(now){
-    if(!gCtx) return;
+    if(!gCtx || (hud && hud.classList.contains("hidden"))) return;
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
-    var cw = Math.max(40, Math.round((gCan.clientWidth || 200) * dpr));
-    var chh = Math.max(20, Math.round((gCan.clientHeight || 34) * dpr));
+    var cw = Math.max(60, Math.round((gCan.clientWidth || 220) * dpr));
+    var chh = Math.max(28, Math.round((gCan.clientHeight || 64) * dpr));
     if(gCan.width !== cw || gCan.height !== chh){ gCan.width = cw; gCan.height = chh; }
     gCtx.clearRect(0, 0, cw, chh);
-    var idx = [];
-    fpsWindow(now, idx);
-    var m = idx.length;
-    if(m < 2) return;
-    idx.reverse();                                  // oldest first
-    var peak = 0;
-    for(var i = 0; i < m; i++) peak = Math.max(peak, 1000 / Math.max(hMs[idx[i]], 0.5));
-    var top = peak > 120 ? 240 : peak > 60 ? 120 : 60;
+
     var lw = Math.max(1, Math.round(dpr));
-    // 60 fps line, so the shape has something to be read against
-    if(top > 60){
-      var y60 = Math.round(chh - chh * (60 / top)) + 0.5;
-      gCtx.strokeStyle = "rgba(198,211,220,.16)"; gCtx.lineWidth = 1;
-      gCtx.beginPath(); gCtx.moveTo(0, y60); gCtx.lineTo(cw, y60); gCtx.stroke();
+    var fs = Math.max(7, Math.round(8.5 * dpr));
+    var gut = Math.round(20 * dpr);            // left gutter, for the scale
+    var padY = Math.round(4 * dpr);
+    var x0 = gut, x1 = cw - lw, y0 = padY, y1 = chh - padY;
+    var ph = y1 - y0;
+    if(x1 <= x0 || ph <= 4) return;
+
+    // The x axis is time, not sample count: a column is a fixed slice of the
+    // last five seconds, so the trace scrolls at a steady rate instead of
+    // stretching and squeezing as the frame rate changes.
+    var N = Math.max(24, Math.min(200, Math.round((x1 - x0) / (2 * dpr))));
+    for(var c = 0; c < N; c++) gCols[c] = -1;
+    gCols.length = N;
+    var filled = 0;
+    for(var i = 1; i <= hLen; i++){
+      var k = (hHead - i + HN) % HN;
+      var age = now - hT[k];
+      if(age > GRAPH_MS) break;
+      var f = 1000 / Math.max(hMs[k], 0.5);
+      var col = Math.floor((1 - age / GRAPH_MS) * (N - 1));
+      if(col < 0) col = 0; else if(col > N - 1) col = N - 1;
+      // worst frame wins the column, so a stall cannot hide between samples
+      if(gCols[col] < 0 || f < gCols[col]){ if(gCols[col] < 0) filled++; gCols[col] = f; }
     }
+    // Scale to the 90th percentile of the columns, not the highest one. A
+    // single freak-fast frame otherwise pushes the ceiling up a whole band and
+    // squashes everything real into the bottom of the graph; letting that one
+    // spike clip against the top costs nothing, since it is the dips that
+    // matter.
+    var sorted = [];
+    for(var c2 = 0; c2 < N; c2++) if(gCols[c2] >= 0) sorted.push(gCols[c2]);
+    sorted.sort(function(a, b){ return a - b; });
+    var peak = sorted.length ? sorted[Math.floor(0.90 * (sorted.length - 1))] : 0;
+
+    // The ceiling steps up at once and comes back down only well clear of the
+    // boundary, so it does not flip back and forth and rescale the picture.
+    while(gTopI < G_TOPS.length - 1 && peak > G_TOPS[gTopI]) gTopI++;
+    while(gTopI > 0 && peak < G_TOPS[gTopI - 1] * 0.85) gTopI--;
+    var top = G_TOPS[gTopI];
+    function mapY(v){ return y1 - ph * Math.min(Math.max(v, 0), top) / top; }
+
+    // scale: the ceiling, its half, and zero
+    gCtx.font = fs + "px ui-monospace, SFMono-Regular, Menlo, monospace";
+    gCtx.textBaseline = "middle";
+    gCtx.textAlign = "right";
+    var marks = [top, top / 2, 0];
+    for(var m = 0; m < 3; m++){
+      var y = Math.round(mapY(marks[m])) + 0.5;
+      gCtx.strokeStyle = m === 2 ? "rgba(198,211,220,.22)" : "rgba(198,211,220,.13)";
+      gCtx.lineWidth = 1;
+      gCtx.beginPath(); gCtx.moveTo(x0, y); gCtx.lineTo(x1, y); gCtx.stroke();
+      gCtx.fillStyle = "rgba(106,122,136,.95)";
+      gCtx.fillText(String(marks[m]), gut - Math.round(4 * dpr), y);
+    }
+
+    if(filled < 2) return;
+
+    // the trace, gaps carried forward so one dropped column is not a hole
     gCtx.beginPath();
-    for(var j = 0; j < m; j++){
-      var x = j * (cw - lw) / (m - 1) + lw * 0.5;
-      var f = Math.min(1000 / Math.max(hMs[idx[j]], 0.5), top);
-      var y = chh - (chh - lw) * (f / top) - lw * 0.5;
-      if(j === 0) gCtx.moveTo(x, y); else gCtx.lineTo(x, y);
+    var started = false, prev = 0;
+    for(var j = 0; j < N; j++){
+      var v = gCols[j];
+      if(v < 0){ if(!started) continue; v = prev; }
+      prev = v;
+      var px = x0 + j * (x1 - x0) / (N - 1);
+      var py = mapY(v);
+      if(!started){ gCtx.moveTo(px, py); started = true; } else { gCtx.lineTo(px, py); }
     }
-    gCtx.strokeStyle = "rgba(47,217,192,.85)"; gCtx.lineWidth = lw;
+    gCtx.strokeStyle = "rgba(47,217,192,.90)";
+    gCtx.lineWidth = lw;
+    gCtx.lineJoin = "round";
     gCtx.stroke();
-    gCtx.lineTo(cw, chh); gCtx.lineTo(lw * 0.5, chh); gCtx.closePath();
+    gCtx.lineTo(x1, y1); gCtx.lineTo(x0, y1); gCtx.closePath();
     gCtx.fillStyle = "rgba(47,217,192,.13)"; gCtx.fill();
+
+    // the five-second mean, in yellow, with its own reading
+    var avg = fpsWindow(now, null);
+    if(avg > 0){
+      var ay = Math.round(mapY(avg)) + 0.5;
+      gCtx.strokeStyle = "rgba(255,206,74,.95)"; gCtx.lineWidth = Math.max(1, lw);
+      gCtx.beginPath(); gCtx.moveTo(x0, ay); gCtx.lineTo(x1, ay); gCtx.stroke();
+      gCtx.fillStyle = "rgba(255,206,74,.95)";
+      gCtx.textAlign = "right";
+      gCtx.fillText(fmtFps(avg), x1 - Math.round(2 * dpr),
+                    ay < y0 + fs ? ay + fs : ay - Math.round(fs * 0.75));
+    }
   }
 
   function fmtFps(v){ return v < 10 ? v.toFixed(1) : v.toFixed(0); }
@@ -1409,7 +1485,6 @@ void main(){
     el.fps.textContent = fmtFps(1000 / Math.max(ema, 1));
     el.avg.textContent = fmtFps(fpsWindow(now, null));
     el.res.textContent = RW + "×" + RH;
-    drawGraph(now);
   }
 
   function frame(now){
@@ -1504,6 +1579,7 @@ void main(){
       frames = 0;
     }
     if(warm > 0) warm--;
+    drawGraph(now);                 // every frame, so the trace scrolls
     tele += dt;
     if(tele > 0.2){ telemetry(); tele = 0; }
 
@@ -1836,13 +1912,34 @@ void main(){
   paint(rSteps); paint(rEps); paint(rOmega); paint(rPad);
 
   var resBtns = document.querySelectorAll("[data-res]");
+  // A page can only resize a window it opened itself, so in an ordinary tab
+  // this quietly does nothing. That is fine — the render is 1920 x 1080 either
+  // way; matching the window only makes it land one render pixel per screen
+  // pixel. Say which of the two happened rather than leave it a mystery.
+  function matchWindowToFHD(){
+    var was = window.innerWidth;
+    try{
+      var dw = Math.max(0, (window.outerWidth || 0) - (window.innerWidth || 0));
+      var dh = Math.max(0, (window.outerHeight || 0) - (window.innerHeight || 0));
+      window.resizeTo(FHD_W + dw, FHD_H + dh);
+    }catch(e){}
+    setTimeout(function(){
+      if(state.resPin !== 3) return;
+      var fit = Math.abs(window.innerWidth - FHD_W) <= 2 && Math.abs(window.innerHeight - FHD_H) <= 2;
+      toast(fit ? "1920 × 1080, window matched"
+                : "Rendering 1920 × 1080 · the browser will not resize a tab, so it is fitted to the window");
+      if(window.innerWidth !== was) relayout();
+    }, 220);
+  }
   function setRes(v){
     state.resPin = v;
-    if(v) state.scaleQ = v === 1 ? 0.5 : 1.0;   // Auto leaves it to the controller
+    if(v === 1) state.scaleQ = 0.5;
+    else if(v === 2) state.scaleQ = 1.0;        // Auto and FHD do not use it
     Array.prototype.forEach.call(resBtns, function(b){
       b.setAttribute("aria-pressed", parseInt(b.dataset.res, 10) === v ? "true" : "false");
     });
     resize(); telemetry();
+    if(v === 3 && !restoring) matchWindowToFHD();
   }
   Array.prototype.forEach.call(resBtns, function(btn){
     btn.addEventListener("click", function(){ setRes(parseInt(btn.dataset.res, 10)); btn.blur(); });
@@ -1946,7 +2043,8 @@ void main(){
 
   // WASDQE belong to fly mode while it is on; A would otherwise cycle the AA
   var FLYKEYS = {w:1, a:1, s:1, d:1, q:1, e:1};
-  var RES_KEY = {Digit1:0, Digit2:1, Digit3:2, Numpad1:0, Numpad2:1, Numpad3:2};
+  var RES_KEY = {Digit1:0, Digit2:1, Digit3:2, Digit4:3,
+                 Numpad1:0, Numpad2:1, Numpad3:2, Numpad4:3};
   function keyName(e){ return e.key.length === 1 ? e.key.toLowerCase() : e.key; }
   window.addEventListener("keyup", function(e){
     held.shift = e.shiftKey ? 1 : 0;
@@ -2074,7 +2172,9 @@ void main(){
     arr[i] = on ? 1 : 0;
     if(b) b.setAttribute("aria-pressed", on ? "true" : "false");
   }
+  var restoring = false;
   function syncUI(){
+    restoring = true;                // these are not button presses by a person
     pressSeg("scene", state.scene);
     pressSeg("mode", state.mode);
     pressSeg("res", state.resPin);
@@ -2103,6 +2203,7 @@ void main(){
     syncGroups();
     applyScene();                    // reloads this object's colours into the swatches
     resize(); telemetry();
+    restoring = false;
   }
   function applySaved(o){
     if(!o) return false;
@@ -2112,6 +2213,10 @@ void main(){
       state[k] = (typeof o[k] === "object" && o[k] !== null)
                ? JSON.parse(JSON.stringify(o[k])) : o[k];
     }
+    // Pressing 4 is a deliberate act and always gets Full HD. Reopening the
+    // page is not: a saved 1080p default on a machine with no GPU would greet
+    // it with a frame that takes a minute, so that one setting is stood down.
+    if(software && state.resPin === 3) state.resPin = 1;
     syncUI();
     return true;
   }
