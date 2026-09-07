@@ -1941,7 +1941,13 @@ void main(){
   // encoding to keep in step with the settings themselves
   function cloudRead(){
     return fetch(FB_URL, {cache:"no-store"})
-      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(r){
+        // 404 is the cloud answering that nothing has been saved yet, which is
+        // not the same as the cloud being out of reach
+        if(r.status === 404) return null;
+        if(!r.ok) throw 0;
+        return r.json();
+      })
       .then(function(d){
         var f = d && d.fields;
         if(!f || !f.json || !f.json.stringValue) return null;
