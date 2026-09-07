@@ -112,6 +112,14 @@
 
   :focus-visible{outline:1px solid var(--fiber);outline-offset:2px}
 
+  .report{position:fixed;inset:0;z-index:5;display:grid;place-items:center;padding:20px;background:rgba(4,6,11,.62);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+  .report[hidden]{display:none}
+  .report .panel{width:min(560px,94vw);pointer-events:auto}
+  .repbig{margin:2px 0 4px;font-family:var(--cond);font-weight:700;font-size:34px;line-height:1;letter-spacing:-.02em;color:var(--fiber);font-variant-numeric:tabular-nums}
+  .repbig i{font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-left:9px}
+  .report pre{font-family:var(--mono);font-size:11px;line-height:1.7;color:var(--chrome);margin:10px 0 12px;white-space:pre-wrap;word-break:break-word;max-height:46vh;overflow-y:auto}
+  .report .transport button[hidden]{display:none}
+
   .fault{position:fixed;inset:0;display:none;place-items:center;padding:24px;text-align:center;background:var(--ink)}
   .fault p{font-family:var(--mono);font-size:12px;color:var(--dim);line-height:1.7;max-width:38ch}
 
@@ -301,6 +309,9 @@
       </div>
 
       <div class="transport">
+        <button type="button" id="benchBtn" title="A fixed camera run over the object with the clock stepped by frame, not by time — the same work on every machine, so the numbers compare">Benchmark</button>
+      </div>
+      <div class="transport">
         <button type="button" id="saveBtn" title="Open the page with everything set the way it is now — including the fly camera and the saved views">Save as default</button>
         <button type="button" id="resetBtn" title="Forget the saved settings and go back to the built-in ones">Reset</button>
       </div>
@@ -308,6 +319,18 @@
       <p class="hint" id="hint">Drag to steer · scroll to range in · R new view · 1-4 resolution · 5-0 saved views, shift+5-0 to store · shift+` fly</p>
     </section>
   </div>
+</div>
+
+<div class="report" id="report" hidden>
+  <section class="panel" role="dialog" aria-modal="true" aria-labelledby="repTitle">
+    <p class="lbl" id="repTitle">Benchmark</p>
+    <p class="repbig"><span id="repFps">—</span><i id="repUnit">avg fps</i></p>
+    <pre id="repBody"></pre>
+    <div class="transport">
+      <button type="button" id="repCopy" hidden>Copy</button>
+      <button type="button" id="repClose">Stop</button>
+    </div>
+  </section>
 </div>
 
 <div class="fault" id="fault"><p>This view needs WebGL. The field is marched on the GPU one ray per pixel, so there is no fallback image to show — try a browser with hardware acceleration enabled.</p></div>
@@ -1492,20 +1515,26 @@ void main(){
     var dt = Math.min(raw / 1000, 0.05);        // clamped, only for the clocks
     last = now;
     fpsPush(now, raw);
-    if(state.running) state.clock += dt;
-    if(state.morph) state.mClock += dt;
-    if(state.running || state.morph) state.pClock += dt;
 
-    state.dragAz += state.velAz; state.dragEl += state.velEl;
-    state.velAz *= 0.90; state.velEl *= 0.90;
-    state.dragEl = Math.max(-1.0, Math.min(1.0, state.dragEl));
+    // a run drives the camera and the clocks itself, and may hand control back
+    // mid-frame when it finishes
+    if(bench.on) benchStep(now, raw);
+    if(!bench.on){
+      if(state.running) state.clock += dt;
+      if(state.morph) state.mClock += dt;
+      if(state.running || state.morph) state.pClock += dt;
 
-    // the clocks clamp dt hard to stay stable; flight tolerates a longer
-    // frame than that before it starts under-travelling
-    if(state.fly) flyStep(Math.min(raw / 1000, 0.10));
+      state.dragAz += state.velAz; state.dragEl += state.velEl;
+      state.velAz *= 0.90; state.velEl *= 0.90;
+      state.dragEl = Math.max(-1.0, Math.min(1.0, state.dragEl));
+
+      // the clocks clamp dt hard to stay stable; flight tolerates a longer
+      // frame than that before it starts under-travelling
+      if(state.fly) flyStep(Math.min(raw / 1000, 0.10));
+    }
 
     resize();
-    camera(state.clock);
+    if(!bench.on) camera(state.clock);
 
     var prog = sceneProg(state.scene);
     if(!prog){ requestAnimationFrame(frame); return; }
@@ -1521,7 +1550,7 @@ void main(){
     gl.uniform1f(U.uRoll, roll);
     gl.uniform1f(U.uScale, state.density);
     gl.uniform1f(U.uSpike, state.spikeOn ? state.spike : 0.0);
-    gl.uniform1f(U.uSteps, marchSteps());
+    gl.uniform1f(U.uSteps, bench.on ? bench.steps : marchSteps());
     gl.uniform1f(U.uFov, state.fov);
     gl.uniform1f(U.uShift, state.shift);
     gl.uniform1f(U.uMorph, state.mClock);
@@ -1560,8 +1589,10 @@ void main(){
     // snap up on a spike so one bad frame is enough to trigger a correction
     ema = raw > ema * 2.0 ? raw : ema * 0.90 + raw * 0.10;
     frames++; acc += dt;
-    // correct within a few frames when the frame time is over budget
-    if(frames >= (ema > 34 ? 3 : ema < 13 ? 25 : 40)){
+    // correct within a few frames when the frame time is over budget. Never
+    // during a run: a controller that changes the resolution or the march
+    // budget half way through would be measuring two different things.
+    if(!bench.on && frames >= (ema > 34 ? 3 : ema < 13 ? 25 : 40)){
       // a pinned resolution only gives way when the frame time gets untenable
       if(state.resPin && ema < 250){ /* held */ }
       else if(ema > 22 && state.scaleQ > 0.30){
@@ -1579,9 +1610,11 @@ void main(){
       frames = 0;
     }
     if(warm > 0) warm--;
-    drawGraph(now);                 // every frame, so the trace scrolls
-    tele += dt;
-    if(tele > 0.2){ telemetry(); tele = 0; }
+    if(!bench.on){
+      drawGraph(now);               // every frame, so the trace scrolls
+      tele += dt;
+      if(tele > 0.2){ telemetry(); tele = 0; }
+    }
 
     requestAnimationFrame(frame);
   }
@@ -2071,6 +2104,11 @@ void main(){
     if(e.key === "h" || e.key === "H" || e.key === "u" || e.key === "U"){
       setHud(hud.classList.contains("hidden"));
     }
+    if(e.code === "Escape" && !repEl.hidden){
+      e.preventDefault();
+      if(bench.on) benchStop(); else repEl.hidden = true;
+      return;
+    }
     // shift+` hands the camera over without reaching for the console
     if(e.code === "Backquote" && e.shiftKey){ e.preventDefault(); setFly(!state.fly); }
     if(FAV_KEY[e.code] !== undefined && !e.ctrlKey && !e.metaKey && !e.altKey){
@@ -2080,6 +2118,242 @@ void main(){
   });
 
   canvas.addEventListener("webglcontextlost", function(e){ e.preventDefault(); });
+
+  // ---- benchmark -------------------------------------------------------
+  // A run has to mean the same thing on every machine, so nothing about it is
+  // allowed to depend on how fast the machine is:
+  //   * the camera follows a fixed path, never the user's view or saved slots
+  //   * the animation clocks step by a fixed 1/60 s PER FRAME, not by elapsed
+  //     time, so frame N shows the same geometry everywhere
+  //   * the march budget is frozen at what the settings ask for, and the
+  //     adaptive resolution and step controllers are switched off for the run
+  // The only thing measured is how long each of those identical frames took.
+  // The full spec lives in REQUIREMENTS.md so a native build can reproduce it.
+  var BENCH = {
+    version: 1,
+    dt: 1 / 60,               // clock step per frame
+    warmMs: 1500,             // discarded: shader caches, GPU clocks ramping
+    frames: 150,              // per shot
+    capMs: 45000,             // a machine too slow to finish reports partial
+    c0: 12.0, m0: 40.0, p0: 6.0,      // fixed seeds for the three clocks
+    // every position is in units of the object's own radius, and every shot
+    // passes above it looking down at the middle
+    shots: [
+      { name: "Pass",     a: [-1.65, 0.55,  0.10], b: [ 1.65, 0.55, -0.10], t: [0, 0, 0] },
+      { name: "Diagonal", a: [-1.30, 0.95, -1.30], b: [ 1.30, 0.35,  1.30], t: [0, 0.05, 0] },
+      { name: "Orbit",    orbit: { r: 1.05, y: 0.45, a0: 0.60, a1: 2.70 },  t: [0, 0, 0] },
+      { name: "Graze",    a: [ 0.15, 0.30, -1.75], b: [-0.10, 0.22,  1.15], t: [0, 0.05, 0] }
+    ]
+  };
+  var bench = { on: false, phase: 0, idx: 0, prevShot: 0, t0: 0, ms: [], shotMs: [], steps: 0 };
+
+  function benchPose(sh, u, R){
+    var e;
+    if(sh.orbit){
+      var a = sh.orbit.a0 + (sh.orbit.a1 - sh.orbit.a0) * u;
+      e = [Math.sin(a) * sh.orbit.r, sh.orbit.y, Math.cos(a) * sh.orbit.r];
+    } else {
+      e = [sh.a[0] + (sh.b[0] - sh.a[0]) * u,
+           sh.a[1] + (sh.b[1] - sh.a[1]) * u,
+           sh.a[2] + (sh.b[2] - sh.a[2]) * u];
+    }
+    eye = [e[0] * R, e[1] * R, e[2] * R];
+    tgt = [sh.t[0] * R, sh.t[1] * R, sh.t[2] * R];
+    roll = 0.0;
+  }
+  function benchClocks(i){
+    var g = i * BENCH.dt;
+    state.clock = BENCH.c0 + g;
+    state.mClock = BENCH.m0 + g;
+    state.pClock = BENCH.p0 + g;
+  }
+
+  function benchStep(now, raw){
+    var B = BENCH, R = SCENE_R[state.scene];
+    if(bench.phase === 0){
+      benchPose(B.shots[0], 0, R);
+      benchClocks(0);
+      if(now - bench.t0 >= B.warmMs){ bench.phase = 1; bench.t0 = now; bench.idx = 0; }
+      return;
+    }
+    // raw is the cost of the frame drawn last, so it belongs to that shot
+    if(bench.idx > 0){ bench.ms.push(raw); bench.shotMs[bench.prevShot].push(raw); }
+    var total = B.shots.length * B.frames;
+    if(bench.idx >= total || now - bench.t0 > B.capMs){
+      benchFinish(now, bench.idx >= total);
+      return;
+    }
+    var shot = Math.floor(bench.idx / B.frames);
+    benchPose(B.shots[shot], (bench.idx % B.frames) / (B.frames - 1), R);
+    benchClocks(bench.idx);
+    bench.prevShot = shot;
+    bench.idx++;
+    if((bench.idx & 15) === 0) benchProgress();
+  }
+
+  var repEl = document.getElementById("report");
+  var repTitle = document.getElementById("repTitle");
+  var repFps = document.getElementById("repFps");
+  var repUnit = document.getElementById("repUnit");
+  var repBody = document.getElementById("repBody");
+  var repCopy = document.getElementById("repCopy");
+  var repClose = document.getElementById("repClose");
+  var repText = "";
+
+  function benchProgress(){
+    var total = BENCH.shots.length * BENCH.frames;
+    var p = Math.min(100, Math.round(100 * bench.idx / total));
+    repFps.textContent = p;
+    repBody.textContent = "Shot " + (bench.prevShot + 1) + " of " + BENCH.shots.length +
+      "  \u00b7  " + BENCH.shots[bench.prevShot].name + "\n" +
+      bench.idx + " of " + total + " frames\n\nHold still \u2014 anything that steals the GPU\nwhile this runs lands in the numbers.";
+  }
+
+  function benchStart(){
+    if(bench.on) return;
+    bench.on = true;
+    bench.phase = 0;
+    bench.idx = 0;
+    bench.prevShot = 0;
+    bench.ms = [];
+    bench.shotMs = BENCH.shots.map(function(){ return []; });
+    // whatever the settings ask for right now, held for the whole run
+    bench.steps = marchSteps();
+    bench.save = { clock: state.clock, m: state.mClock, p: state.pClock };
+    bench.t0 = performance.now();
+    repTitle.textContent = "Benchmark \u00b7 running";
+    repUnit.textContent = "% done";
+    repCopy.hidden = true;
+    repClose.textContent = "Stop";
+    repEl.hidden = false;
+    benchProgress();
+  }
+
+  function benchStop(){
+    if(!bench.on) return;
+    benchFinish(performance.now(), false);
+  }
+
+  function pctOf(sorted, p){
+    if(!sorted.length) return 0;
+    var i = Math.round(p * (sorted.length - 1));
+    return sorted[Math.max(0, Math.min(sorted.length - 1, i))];
+  }
+  function fpsOf(ms){ return ms > 0 ? 1000 / ms : 0; }
+
+  var RES_NAME = ["Auto", "Half", "Native", "FHD"];
+  var AA_NAME = ["Off", "FXAA", "SSAA \u00d74"];
+  var BND_NAME = ["Sphere", "Box", "Auto"];
+  var OBJ_NAME = ["Brain", "Neuron", "Chrome"];
+  var WARP_NAME = ["Noise", "Twist", "Bend"];
+
+  function benchFinish(now, complete){
+    bench.on = false;
+    state.clock = bench.save.clock;
+    state.mClock = bench.save.m;
+    state.pClock = bench.save.p;
+
+    var ms = bench.ms;
+    if(ms.length < 20){
+      repTitle.textContent = "Benchmark \u00b7 stopped";
+      repUnit.textContent = "";
+      repFps.textContent = "\u2014";
+      repBody.textContent = "Stopped before there was anything worth reporting.";
+      repCopy.hidden = true;
+      repClose.textContent = "Close";
+      return;
+    }
+    var sum = 0;
+    for(var i = 0; i < ms.length; i++) sum += ms[i];
+    var sorted = ms.slice().sort(function(a, b){ return a - b; });
+    var avg = fpsOf(sum / ms.length);
+    var med = fpsOf(pctOf(sorted, 0.50));
+    var low = fpsOf(pctOf(sorted, 0.99));      // the slowest 1% of frames
+    var best = fpsOf(pctOf(sorted, 0.01));
+
+    var shots = [];
+    for(var k = 0; k < bench.shotMs.length; k++){
+      var a = bench.shotMs[k], t = 0;
+      for(var j = 0; j < a.length; j++) t += a[j];
+      shots.push(BENCH.shots[k].name + " " + (a.length ? fpsOf(t / a.length).toFixed(1) : "\u2014"));
+    }
+
+    // A display that caps the frame rate measures the display, not the render.
+    // Steady frames sitting on a common refresh rate is what that looks like.
+    var caps = [30, 50, 60, 75, 90, 100, 120, 144, 165, 240];
+    var vsync = false;
+    for(var c = 0; c < caps.length; c++){
+      if(Math.abs(med - caps[c]) / caps[c] < 0.03 && low > avg * 0.85){ vsync = true; break; }
+    }
+
+    var warps = [];
+    for(var w = 0; w < 3; w++) if(state.warpOn[w]) warps.push(WARP_NAME[w]);
+
+    var L = [];
+    L.push("Cortical Flythrough \u00b7 benchmark v" + BENCH.version);
+    L.push("");
+    L.push("Object     " + OBJ_NAME[state.scene]);
+    L.push("Render     " + RES_NAME[state.resPin] + " \u00b7 " + RW + "\u00d7" + RH +
+           " \u00b7 AA " + AA_NAME[state.aa]);
+    L.push("March      " + bench.steps + " steps \u00b7 precision " + state.eps.toFixed(1) +
+           " \u00b7 relax " + state.omega.toFixed(2));
+    L.push("Bounds     " + BND_NAME[state.bound] + " + " + state.boundPad.toFixed(2));
+    L.push("Warp       " + (warps.length ? warps.join("+") : "none") +
+           " \u00b7 " + (state.warpMode ? "object" : "space") +
+           " \u00b7 " + state.warpAmt.toFixed(2) + " @ " + state.warpFreq.toFixed(2));
+    if(state.scene === 2){
+      L.push("Chrome     relief " + state.lcRelief.toFixed(2) + " \u00b7 scale " + state.lcFreq.toFixed(2) +
+             " \u00b7 thick " + state.lcThick.toFixed(3) + " \u00b7 twirl " + state.lcTwirl.toFixed(2));
+    } else if(state.scene === 0){
+      L.push("Brain      density " + state.density.toFixed(1));
+    } else {
+      L.push("Neuron     line width " + state.thick.toFixed(3));
+    }
+    L.push("");
+    L.push("avg        " + avg.toFixed(1) + " fps   (" + (sum / ms.length).toFixed(2) + " ms)");
+    L.push("median     " + med.toFixed(1) + " fps");
+    L.push("1% low     " + low.toFixed(1) + " fps");
+    L.push("best 1%    " + best.toFixed(1) + " fps");
+    L.push("frames     " + ms.length + " in " + (sum / 1000).toFixed(2) + " s" +
+           (complete ? "" : "  \u2014 PARTIAL"));
+    if(!complete) L.push("           cut off at the " + (BENCH.capMs / 1000) +
+                         " s limit, so it covers only the start of the path." +
+                         " Not comparable with a complete run.");
+    L.push("shots      " + shots.join(" \u00b7 "));
+    if(vsync) L.push("note       steady at " + med.toFixed(0) + " fps \u2014 the display is the limit here," +
+                     " not the render. Raise the resolution to get a discriminating number.");
+    L.push("");
+    L.push("Renderer   " + (renderer || "unknown"));
+    L.push("Window     " + (canvas.clientWidth || 0) + "\u00d7" + (canvas.clientHeight || 0) +
+           " @ dpr " + (window.devicePixelRatio || 1));
+    L.push("Agent      " + navigator.userAgent);
+    repText = L.join("\n");
+
+    repTitle.textContent = "Benchmark \u00b7 " + (complete ? "done" : "partial");
+    repUnit.textContent = "avg fps";
+    repFps.textContent = avg.toFixed(1);
+    repBody.textContent = repText;
+    repCopy.hidden = false;
+    repCopy.textContent = "Copy";
+    repClose.textContent = "Close";
+  }
+
+  document.getElementById("benchBtn").addEventListener("click", function(){
+    this.blur(); benchStart();
+  });
+  repClose.addEventListener("click", function(){
+    if(bench.on) benchStop(); else repEl.hidden = true;
+    repClose.blur();
+  });
+  repCopy.addEventListener("click", function(){
+    var btn = this;
+    btn.blur();
+    function ok(){ btn.textContent = "Copied"; setTimeout(function(){ btn.textContent = "Copy"; }, 1200); }
+    function no(){ btn.textContent = "Select it by hand"; setTimeout(function(){ btn.textContent = "Copy"; }, 1600); }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(repText).then(ok, no);
+    } else { no(); }
+  });
 
   // ---- saved settings --------------------------------------------------
   // readStore and writeStore are the whole storage seam: everything above and
