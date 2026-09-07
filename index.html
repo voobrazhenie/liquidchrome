@@ -309,6 +309,10 @@
         <button type="button" id="morphBtn" aria-pressed="true" title="Animate the field (M)">Morph</button>
         <button type="button" id="spikeBtn" aria-pressed="true" title="Travelling impulse lights (I)">Impulses</button>
       </div>
+      <div class="transport">
+        <button type="button" id="saveBtn" title="Open the page with everything set the way it is now">Save as default</button>
+        <button type="button" id="resetBtn" title="Forget the saved settings and go back to the built-in ones">Reset</button>
+      </div>
       <p class="hint" id="hint">Drag to steer · scroll or pinch to range in · R new view · 1-3 resolution · space, M, I, A, F, H, U</p>
     </section>
   </div>
@@ -1901,6 +1905,111 @@ void main(){
   });
 
   canvas.addEventListener("webglcontextlost", function(e){ e.preventDefault(); });
+
+  // ---- saved settings --------------------------------------------------
+  // readStore and writeStore are the whole storage seam: everything above and
+  // below them is backend-agnostic, so a remote store replaces just these two.
+  var SAVE_KEY = "cortical.defaults.v1";
+  var SAVE_KEYS = ["scene","mode","fly","aa","resPin","bound","boundPad","omega","eps",
+    "steps","stepsPin","warpAmt","warpFreq","warpOn","lcOn","lcRelief","lcFreq","lcThick",
+    "lcTwirl","colors","density","spike","spikeOn","thick","zoom","flySpeed","running","morph"];
+
+  function readStore(){
+    try{ var raw = localStorage.getItem(SAVE_KEY); return raw ? JSON.parse(raw) : null; }
+    catch(e){ return null; }
+  }
+  function writeStore(o){
+    try{ localStorage.setItem(SAVE_KEY, JSON.stringify(o)); return true; }catch(e){ return false; }
+  }
+  function clearStore(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+
+  function snapshot(){
+    var o = {};
+    for(var i = 0; i < SAVE_KEYS.length; i++){
+      var k = SAVE_KEYS[i];
+      o[k] = (typeof state[k] === "object" && state[k] !== null)
+           ? JSON.parse(JSON.stringify(state[k])) : state[k];
+    }
+    return o;
+  }
+
+  // Drive every value through the control the user would have used, so that
+  // pressed states, per-object scoping and side effects stay in one place.
+  function slide(inp, v){
+    if(!inp) return;
+    inp.value = v;
+    inp.dispatchEvent(new Event("input"));
+  }
+  function pressSeg(attr, v){
+    var b = document.querySelector("[data-" + attr + "='" + v + "']");
+    if(b) b.click();
+  }
+  // the group toggles flip rather than set, and state already holds the value
+  function markToggle(attr, i, arr, on){
+    var b = document.querySelector("[data-" + attr + "='" + i + "']");
+    arr[i] = on ? 1 : 0;
+    if(b) b.setAttribute("aria-pressed", on ? "true" : "false");
+  }
+  function syncUI(){
+    pressSeg("scene", state.scene);
+    pressSeg("mode", state.mode);
+    pressSeg("res", state.resPin);
+    pressSeg("aa", state.aa);
+    pressSeg("bnd", state.bound);
+    setFly(!!state.fly);
+    for(var i = 0; i < 3; i++) markToggle("warp", i, state.warpOn, state.warpOn[i]);
+    for(var j = 0; j < 5; j++) markToggle("lc", j, state.lcOn, state.lcOn[j]);
+    setRunning(!!state.running); setMorph(!!state.morph); setSpikes(!!state.spikeOn);
+    slide(dens, state.density);
+    slide(spk, state.spike * 100);
+    slide(thk, state.thick * 1000);
+    slide(wAmt, state.warpAmt * 100);
+    slide(wFrq, state.warpFreq * 100);
+    slide(document.getElementById("lcRelief"), state.lcRelief * 100);
+    slide(document.getElementById("lcFreq"),   state.lcFreq * 100);
+    slide(document.getElementById("lcThick"),  state.lcThick / 0.0005);
+    slide(document.getElementById("lcTwirl"),  state.lcTwirl * 100);
+    slide(rEps,   state.eps * 10);
+    slide(rOmega, state.omega * 100);
+    slide(rPad,   state.boundPad * 100);
+    var pin = state.stepsPin;
+    slide(rSteps, state.steps);      // its handler pins the budget as a side effect
+    state.stepsPin = pin;
+    applyScene();                    // reloads this object's colours into the swatches
+    resize(); telemetry();
+  }
+  function applySaved(o){
+    if(!o) return false;
+    for(var i = 0; i < SAVE_KEYS.length; i++){
+      var k = SAVE_KEYS[i];
+      if(o[k] === undefined) continue;
+      state[k] = (typeof o[k] === "object" && o[k] !== null)
+               ? JSON.parse(JSON.stringify(o[k])) : o[k];
+    }
+    syncUI();
+    return true;
+  }
+
+  var BUILTIN = snapshot();          // captured before anything saved is applied
+  var saveBtn = document.getElementById("saveBtn");
+  var resetBtn = document.getElementById("resetBtn");
+  var flashT = 0;
+  function flash(btn, msg, back){
+    clearTimeout(flashT);
+    btn.textContent = msg;
+    flashT = setTimeout(function(){ btn.textContent = back; }, 1400);
+  }
+  saveBtn.addEventListener("click", function(){
+    flash(saveBtn, writeStore(snapshot()) ? "Saved" : "Can't save", "Save as default");
+    saveBtn.blur();
+  });
+  resetBtn.addEventListener("click", function(){
+    clearStore(); applySaved(BUILTIN);
+    flash(resetBtn, "Reset", "Reset"); resetBtn.blur();
+  });
+  applySaved(readStore());
+  // the software clamp outranks a saved march budget, whoever saved it
+  if(software){ state.steps = 56; state.stepsPin = false; }
 
   applyScene();
   resize();
