@@ -239,6 +239,10 @@
         <label class="lbl" for="rEps" title="How close a ray must get before it counts as a hit. Higher is tighter — it removes the banding on grazing surfaces, and costs march steps.">Surface precision</label><output id="rEpsOut">12.0</output>
         <input id="rEps" type="range" min="10" max="120" step="2" value="120">
       </div>
+      <div class="slider">
+        <label class="lbl" for="rOmega" title="How far past the safe distance each march step reaches. Above 1 it converges in fewer steps; too far and it spends them backing out of overshoots instead.">Step relaxation</label><output id="rOmegaOut">1.30×</output>
+        <input id="rOmega" type="range" min="100" max="190" step="2" value="130">
+      </div>
       <div class="slider" id="densRow" data-only="0">
         <label class="lbl" for="density">Cell density</label><output id="densityOut">19 µm pitch</output>
         <input id="density" type="range" min="9" max="22" step="0.5" value="15">
@@ -351,6 +355,7 @@ uniform float uLcRelief;
 uniform float uLcFreq;
 uniform float uLcThick;   // half-thickness of the slab
 uniform float uEps;       // how close to the surface a ray must get to count as a hit
+uniform float uOmega;     // over-relaxation: how far past the safe radius a step reaches
 
 const vec3 SPIKE = vec3(0.608, 0.482, 1.000);
 const vec3 RIM   = vec3(0.620, 0.898, 1.000);
@@ -752,6 +757,12 @@ vec3 render(vec2 fc){
       float t = tNear;
       float sd = 1e5, sdHit = 1e5, dmy;
       float hit = 0.0, steps = 0.0, d = 1e5, lip = 1.0;
+      // Over-relaxed sphere tracing: a plain march steps by the safe radius,
+      // which is conservative on a surface it is running alongside. Stepping
+      // omega times further converges in fewer iterations, and is still exact
+      // because a step whose sphere fails to touch the previous one is walked
+      // back to where the plain step would have landed.
+      float omega = uOmega, prevD = 0.0, stepLen = 0.0;
 
       for(int i=0;i<MARCH_MAX;i++){
         if(float(i) >= uSteps) break;
@@ -761,11 +772,20 @@ vec3 render(vec2 fc){
         // otherwise warped regions bloom into a milky haze
         float lipT = lip * sceneLip();          // reported distance -> true distance
         glow += exp(-38.0 * max(d * lipT, 0.0)) * (0.45 + 1.05*spikeAt(p)) * (uScene > 0.5 ? 0.008 : 0.017);
-        if(d * lipT < uEps * (0.0009*t + 0.0005)){
+        // the spheres no longer overlap, so the last step jumped a gap it had
+        // no right to: undo the relaxed part of it and march plainly from here
+        bool sorFail = omega > 1.0 && (d + prevD) < stepLen;
+        if(sorFail){
+          stepLen -= omega * stepLen;           // negative, so t moves back
+          omega = 1.0;
+        } else if(d * lipT < uEps * (0.0009*t + 0.0005)){
           t += d * lipT;                        // land on the surface, not on the sample
           hit = 1.0; sdHit = sd; break;
+        } else {
+          stepLen = d * omega * 0.98;
         }
-        t += d * 0.98;
+        prevD = d;
+        t += stepLen;
         steps += 1.0;
         if(t > tFar) break;
       }
@@ -943,7 +963,7 @@ void main(){
 
   var UNIFORMS = ["uRes","uTime","uEye","uTgt","uRoll","uScale","uSpike","uSteps","uFov",
     "uShift","uMorph","uPulse","uScene","uThick","uWarpAmt","uWarpFreq","uWarpOn",
-    "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps"];
+    "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps","uOmega"];
   var DEFS = ["#define SCENE_BRAIN\n", "#define SCENE_NEURON\n", "#define SCENE_CHROME\n"];
 
   // One program per object, built the first time that object is shown. Each
@@ -1030,7 +1050,7 @@ void main(){
     lcOn: [1, 1, 1, 1, 1],
     // a phone cannot afford the pinned 320-step budget the desktop opens with,
     // so it keeps the frame-time controller instead
-    eps: 12.00, stepsPin: !mobile,
+    eps: 12.00, stepsPin: !mobile, omega: 1.30,
     lcRelief: 0.26, lcFreq: 4.00, lcThick: 0.022, lcTwirl: 1.90,
     // structure + accent colour per object: brain, neuron, LiquidChrome
     colors: [["#2FD9C0", "#FFC98A"], ["#2FD9C0", "#FFC98A"], ["#009DFF", "#FF4271"]],
@@ -1338,6 +1358,7 @@ void main(){
     gl.uniform1f(U.uLcFreq, state.lcFreq);
     gl.uniform1f(U.uLcThick, state.lcThick);
     gl.uniform1f(U.uEps, 1.0 / state.eps);
+    gl.uniform1f(U.uOmega, state.omega);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -1662,7 +1683,13 @@ void main(){
     rEpsOut.textContent = state.eps.toFixed(1);
     paint(rEps); telemetry();
   });
-  paint(rSteps); paint(rEps);
+  var rOmega = document.getElementById("rOmega"), rOmegaOut = document.getElementById("rOmegaOut");
+  rOmega.addEventListener("input", function(){
+    state.omega = parseFloat(rOmega.value) / 100;
+    rOmegaOut.textContent = state.omega.toFixed(2) + "\u00d7";
+    paint(rOmega); telemetry();
+  });
+  paint(rSteps); paint(rEps); paint(rOmega);
 
   var resBtns = document.querySelectorAll("[data-res]");
   function setRes(v){
