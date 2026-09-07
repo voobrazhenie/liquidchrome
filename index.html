@@ -33,7 +33,7 @@
   }
   #stage{position:fixed;inset:0;width:100%;height:100%;display:block;background:var(--ink);touch-action:none}
 
-  .hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(14px,3vw,28px)}
+  .hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:flex-end;padding:clamp(14px,3vw,28px)}
   .hud.hidden{opacity:0;visibility:hidden;transition:opacity .25s ease}
   .hud > *{pointer-events:none}
   .hud button,.hud input,.hud a{pointer-events:auto}
@@ -43,24 +43,14 @@
   .panel::before{top:-1px;left:-1px;border-right:0;border-bottom:0}
   .panel::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
 
-  .eyebrow{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--fiber);opacity:.85;margin:0 0 6px}
-  h1{font-family:var(--cond);font-weight:700;font-size:clamp(25px,4.6vw,38px);line-height:.98;letter-spacing:-.015em;margin:0;text-wrap:balance;color:#EAF3F6}
-  .lede{margin:8px 0 0;max-width:30ch;font-size:13px;line-height:1.5;color:var(--dim)}
-  .ident{max-width:min(372px,86vw)}
-
   .foot{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap}
 
-  .telemetry{min-width:196px}
-  .telemetry dl{display:grid;grid-template-columns:auto auto;gap:3px 16px;margin:0;font-family:var(--mono);font-size:11px}
-  .telemetry dt{color:var(--dim);letter-spacing:.08em;text-transform:uppercase;font-size:9.5px;align-self:center}
-  .telemetry dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;color:var(--chrome)}
-  .telemetry dd b{font-weight:500;color:var(--fiber)}
+  .telemetry{min-width:214px}
+  .telemetry dl{display:grid;grid-template-columns:repeat(3,auto);justify-content:space-between;gap:1px 20px;margin:0;font-family:var(--mono)}
+  .telemetry dt{grid-row:1;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;font-size:9px}
+  .telemetry dd{grid-row:2;margin:0;font-size:15px;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--fiber)}
   .telemetry dd i{font-style:normal;color:var(--dim);font-size:9.5px;margin-left:2px}
-  .rule{height:1px;background:var(--line);margin:8px 0}
-  .scalebar{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:.06em}
-  .scalebar span:first-child{display:block;width:44px;height:5px;border:1px solid var(--line);border-top:0;border-bottom-color:var(--fiber)}
-  #tNat{margin-left:auto;color:var(--fiber)}
-  .note{font-family:var(--mono);font-size:9px;letter-spacing:.06em;color:var(--dim);opacity:.75;margin:6px 0 0}
+  #fpsGraph{display:block;width:100%;height:34px;margin-top:9px;border-top:1px solid var(--line)}
 
   .console{display:flex;flex-direction:column;gap:11px;min-width:min(292px,88vw);max-height:calc(100vh - 128px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;pointer-events:auto}
   /* The console is the one panel that scrolls, so it gets a bar that belongs to
@@ -76,6 +66,16 @@
     .console{scrollbar-width:thin;scrollbar-color:rgba(47,217,192,.40) rgba(47,217,192,.07)}
   }
   .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+
+  /* Folding groups. The header is the control; the body is a plain flex column
+     so the rows keep the console's own rhythm whichever group they sit in. */
+  .grp{display:flex;flex-direction:column;gap:11px}
+  .grph{display:flex;align-items:center;gap:8px;width:100%;appearance:none;background:transparent;border:0;border-bottom:1px solid var(--line);padding:3px 0 6px;cursor:pointer;text-align:left;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--fiber)}
+  .grph::before{content:"";flex:none;width:0;height:0;border-left:4px solid currentColor;border-top:3.5px solid transparent;border-bottom:3.5px solid transparent;transition:transform .16s ease}
+  .grph[aria-expanded="true"]::before{transform:rotate(90deg)}
+  .grph:hover{color:var(--chrome)}
+  .grpb{display:flex;flex-direction:column;gap:11px}
+  .grpb[hidden]{display:none}
   .seg{display:flex;border:1px solid var(--line)}
   .seg button{flex:1;appearance:none;background:transparent;border:0;border-right:1px solid var(--line);color:var(--dim);font-family:var(--cond);font-weight:600;font-size:12px;letter-spacing:.06em;padding:9px 4px;cursor:pointer;transition:color .15s,background .15s}
   .seg button:last-child{border-right:0}
@@ -112,41 +112,22 @@
 
   :focus-visible{outline:1px solid var(--fiber);outline-offset:2px}
 
-  .corner{position:fixed;right:clamp(12px,3vw,28px);top:clamp(12px,3vw,28px);display:flex;gap:8px;transition:opacity .2s ease}
-  .corner button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;pointer-events:auto;appearance:none;background:var(--panel);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid var(--line);color:var(--fiber);font-family:var(--mono);font-size:10px;letter-spacing:.12em;padding:0 13px;cursor:pointer;transition:background .15s}
-  .corner button:hover{background:rgba(47,217,192,.12)}
-  .corner svg{width:17px;height:17px;display:block;flex:none}
-  .corner svg[hidden]{display:none}
-  .corner[hidden]{display:none}
-  #fsToggle{width:44px;padding:0}
-  #fsToggle[hidden]{display:none}
-  .hud.hidden ~ .corner{opacity:.42}
-  .hud.hidden ~ .corner:hover,.hud.hidden ~ .corner:focus-within{opacity:1}
-
   .fault{position:fixed;inset:0;display:none;place-items:center;padding:24px;text-align:center;background:var(--ink)}
   .fault p{font-family:var(--mono);font-size:12px;color:var(--dim);line-height:1.7;max-width:38ch}
 
   @media (max-width:760px){
     .hud{padding:12px;padding-bottom:max(12px,env(safe-area-inset-bottom))}
-    .lede,.note{display:none}
     .foot{flex-direction:column;align-items:stretch;gap:10px}
     .panel{padding:10px 12px}
-    .ident{max-width:none;margin-right:104px}
-    .ident.solo{margin-right:56px}
-    #uiToggle{padding:0;width:44px}
-    #uiToggleLbl{display:none}
-    .eyebrow{font-size:8.5px;margin-bottom:4px}
     .telemetry{min-width:0}
-    .telemetry dl{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:1fr;grid-template-rows:auto auto;gap:2px 8px}
     .telemetry dt{font-size:8.5px}
-    .telemetry dd{text-align:left;font-size:12px}
-    .telemetry .wide{display:none}
-    .rule{margin:7px 0}
-    .console{min-width:0;gap:9px;max-height:calc(100vh - 258px)}
+    .telemetry dd{font-size:13px}
+    #fpsGraph{height:28px}
+    .console{min-width:0;gap:9px;max-height:calc(100vh - 214px)}
+    .grp,.grpb{gap:9px}
     .seg button{padding:11px 4px}
     .transport button{padding:11px 6px}
   }
-  @media (max-height:520px){ .ident h1{font-size:22px} .telemetry .wide{display:none} }
   @media (prefers-reduced-motion:reduce){ .hud.hidden{transition:none} }
 </style>
 
@@ -155,194 +136,177 @@
 <canvas id="stage" aria-label="Ray-marched field of neuron cell bodies and neurites in a brain-shaped volume, with the camera in flight"></canvas>
 
 <div class="hud" id="hud">
-  <header class="ident panel">
-    <p class="eyebrow">Ray-marched SDF · synthetic field</p>
-    <h1>Cortical Flythrough</h1>
-    <p class="lede">Somata and neurites solved per pixel as a single distance function — no mesh, no scan. The camera flies a continuous path; every fiber is the equation resolving in front of it.</p>
-  </header>
-
   <div class="foot">
-    <section class="telemetry panel" aria-label="Flight telemetry">
+    <section class="telemetry panel" aria-label="Render statistics">
       <dl>
-        <dt class="wide">Path</dt><dd class="wide"><b id="tPath">Orbit</b></dd>
-        <dt>Range</dt><dd><span id="tRange">3.05</span><i>r</i></dd>
-        <dt>Azimuth</dt><dd><span id="tAz">0.0</span><i>°</i></dd>
-        <dt class="wide">Elevation</dt><dd class="wide"><span id="tEl">11.5</span><i>°</i></dd>
-        <dt class="wide">Soma Ø</dt><dd class="wide"><span id="tSoma">10.4</span><i>µm</i></dd>
-        <dt class="wide">Neurite Ø</dt><dd class="wide"><span id="tFib">3.4</span><i>µm</i></dd>
-        <dt class="wide">Spikes</dt><dd class="wide"><span id="tHz">6.0</span><i>Hz</i></dd>
-        <dt class="wide">Field</dt><dd class="wide"><b id="tMorph">Morph</b></dd>
-        <dt class="wide">Steps/px</dt><dd class="wide"><span id="tSteps">88</span></dd>
-        <dt>Rate</dt><dd><span id="tFps">60</span><i>fps</i></dd>
+        <dt>Now</dt><dd><span id="tFps">60</span><i>fps</i></dd>
+        <dt>Avg 5s</dt><dd><span id="tAvg">60</span><i>fps</i></dd>
         <dt>Render</dt><dd><span id="tRes">0×0</span></dd>
       </dl>
-      <div class="rule"></div>
-      <div class="scalebar"><span></span><span id="tScale">19 µm</span><span id="tNat">1.00× native</span></div>
-      <p class="note">Synthetic field — not anatomical data</p>
+      <canvas id="fpsGraph" aria-hidden="true"></canvas>
     </section>
 
     <section class="console panel" aria-label="Flight console">
-      <div>
-        <p class="lbl" id="sceneLbl">Object</p>
-        <div class="seg" role="group" aria-labelledby="sceneLbl">
-          <button type="button" data-scene="0" aria-pressed="true">Brain</button>
-          <button type="button" data-scene="1" aria-pressed="false">Neuron</button>
-          <button type="button" data-scene="2" aria-pressed="false" title="LiquidChrome">Chrome</button>
+      <div class="grp">
+        <button type="button" class="grph" data-grp="0" aria-expanded="true" aria-controls="grpb0">Construction</button>
+        <div class="grpb" id="grpb0" data-grpb="0">
+          <div>
+            <p class="lbl" id="sceneLbl">Object</p>
+            <div class="seg" role="group" aria-labelledby="sceneLbl">
+              <button type="button" data-scene="0" aria-pressed="true">Brain</button>
+              <button type="button" data-scene="1" aria-pressed="false">Neuron</button>
+              <button type="button" data-scene="2" aria-pressed="false" title="LiquidChrome">Chrome</button>
+            </div>
+          </div>
+          <div>
+            <p class="lbl" id="navLbl">Navigation</p>
+            <div class="seg" role="group" aria-labelledby="navLbl">
+              <button type="button" data-nav="0" aria-pressed="true" title="The camera flies its own path">Auto cam</button>
+              <button type="button" data-nav="1" aria-pressed="false" title="WASD to move, Q/E down and up, shift to sprint, right-drag to look, wheel for speed (shift+`)">Fly</button>
+            </div>
+          </div>
+          <div id="pathRow">
+            <p class="lbl" id="pathLbl">Flight path</p>
+            <div class="seg" role="group" aria-labelledby="pathLbl">
+              <button type="button" data-mode="0" aria-pressed="true">Orbit</button>
+              <button type="button" data-mode="1" aria-pressed="false">Fly-through</button>
+              <button type="button" data-mode="2" aria-pressed="false">Drift</button>
+            </div>
+          </div>
         </div>
       </div>
-      <div>
-        <p class="lbl" id="navLbl">Navigation</p>
-        <div class="seg" role="group" aria-labelledby="navLbl">
-          <button type="button" data-nav="0" aria-pressed="true" title="The camera flies its own path">Auto cam</button>
-          <button type="button" data-nav="1" aria-pressed="false" title="WASD to move, Q/E down and up, shift to sprint, right-drag to look, wheel for speed">Fly</button>
+
+      <div class="grp">
+        <button type="button" class="grph" data-grp="1" aria-expanded="true" aria-controls="grpb1">Object modifications</button>
+        <div class="grpb" id="grpb1" data-grpb="1">
+          <div data-only="2" hidden>
+            <p class="lbl" id="lcLbl">Build steps</p>
+            <div class="transport wrap" role="group" aria-labelledby="lcLbl">
+              <button type="button" data-lc="0" aria-pressed="true" title="A 20 × 20 × 0.5 slab">1 Slab</button>
+              <button type="button" data-lc="1" aria-pressed="true" title="Perlin relief along the thin axis">2 Relief</button>
+              <button type="button" data-lc="2" aria-pressed="true" title="An undeformed copy in the same place">3 Copy</button>
+              <button type="button" data-lc="3" aria-pressed="true" title="Keep only where the two overlap">4 Intersect</button>
+              <button type="button" data-lc="4" aria-pressed="true" title="Twirl the result">5 Twirl</button>
+            </div>
+          </div>
+          <div class="slider" data-only="2" hidden>
+            <label class="lbl" for="lcRelief">Relief</label><output id="lcReliefOut">0.26</output>
+            <input id="lcRelief" type="range" min="0" max="90" step="1" value="26">
+          </div>
+          <div class="slider" data-only="2" hidden>
+            <label class="lbl" for="lcFreq">Terrain scale</label><output id="lcFreqOut">4.00</output>
+            <input id="lcFreq" type="range" min="60" max="1100" step="10" value="400">
+          </div>
+          <div class="slider" data-only="2" hidden>
+            <label class="lbl" for="lcThick">Slab thickness</label><output id="lcThickOut">0.44</output>
+            <input id="lcThick" type="range" min="6" max="240" step="2" value="44">
+          </div>
+          <div class="slider" data-only="2" hidden>
+            <label class="lbl" for="lcTwirl">Twirl</label><output id="lcTwirlOut">1.90 rad</output>
+            <input id="lcTwirl" type="range" min="0" max="300" step="5" value="190">
+          </div>
+          <div class="slider">
+            <label class="lbl" for="rSteps">Ray steps</label><output id="rStepsOut">320</output>
+            <input id="rSteps" type="range" min="48" max="320" step="8" value="320">
+          </div>
+          <div class="slider">
+            <label class="lbl" for="rEps" title="How close a ray must get before it counts as a hit. Higher is tighter — it removes the banding on grazing surfaces, and costs march steps.">Surface precision</label><output id="rEpsOut">12.0</output>
+            <input id="rEps" type="range" min="10" max="120" step="2" value="120">
+          </div>
+          <div class="slider">
+            <label class="lbl" for="rOmega" title="How far past the safe distance each march step reaches. Above 1 it converges in fewer steps; too far and it spends them backing out of overshoots instead.">Step relaxation</label><output id="rOmegaOut">1.30×</output>
+            <input id="rOmega" type="range" min="100" max="190" step="2" value="130">
+          </div>
+          <div>
+            <p class="lbl" id="bndLbl">Bounds</p>
+            <div class="seg" role="group" aria-labelledby="bndLbl">
+              <button type="button" data-bnd="0" aria-pressed="false" title="One sphere around everything">Sphere</button>
+              <button type="button" data-bnd="1" aria-pressed="false" title="A box fitted to the object — far tighter on a thin slab">Box</button>
+              <button type="button" data-bnd="2" aria-pressed="true" title="Box for the chrome slab, sphere for the rest">Auto</button>
+            </div>
+          </div>
+          <div class="slider">
+            <label class="lbl" for="rPad" title="Slack added to the bounding volume. Too little clips the object at its edges; too much marches empty space.">Bound padding</label><output id="rPadOut">0.05</output>
+            <input id="rPad" type="range" min="0" max="60" step="1" value="5">
+          </div>
+          <div class="slider" id="densRow" data-only="0">
+            <label class="lbl" for="density">Cell density</label><output id="densityOut">19 µm pitch</output>
+            <input id="density" type="range" min="9" max="22" step="0.5" value="15">
+          </div>
+          <div>
+            <p class="lbl" id="warpLbl">Domain warp</p>
+            <div class="transport" role="group" aria-labelledby="warpLbl">
+              <button type="button" data-warp="0" aria-pressed="true" title="Noise displacement">Noise</button>
+              <button type="button" data-warp="1" aria-pressed="false" title="Whirl the space about Y">Twist</button>
+              <button type="button" data-warp="2" aria-pressed="false" title="Bend the space about Z">Bend</button>
+            </div>
+          </div>
+          <div>
+            <p class="lbl" id="wmLbl">Noise warp</p>
+            <div class="seg" role="group" aria-labelledby="wmLbl">
+              <button type="button" data-wm="0" aria-pressed="true" title="Bends the space the object sits in, so the whole object shears with the noise. Every march step pays for it.">Space</button>
+              <button type="button" data-wm="1" aria-pressed="false" title="Leaves the space straight and pushes the object&#39;s own surface in and out along its normal. The silhouette still moves, and the cost is only paid near the surface.">Object</button>
+            </div>
+          </div>
+          <div class="slider">
+            <label class="lbl" for="warpAmt">Warp strength</label><output id="warpAmtOut">0.74</output>
+            <input id="warpAmt" type="range" min="0" max="100" step="1" value="74">
+          </div>
+          <div class="slider">
+            <label class="lbl" for="warpFreq">Warp scale</label><output id="warpFreqOut">3.75 /unit</output>
+            <input id="warpFreq" type="range" min="30" max="400" step="5" value="375">
+          </div>
+          <div class="slider" id="thickRow" data-only="1" hidden>
+            <label class="lbl" for="thick">Line width</label><output id="thickOut">11.2 µm</output>
+            <input id="thick" type="range" min="6" max="70" step="1" value="28">
+          </div>
+          <div class="slider" data-only="01">
+            <label class="lbl" for="spike">Spike rate</label><output id="spikeOut">6.0 Hz</output>
+            <input id="spike" type="range" min="0" max="100" step="1" value="55">
+          </div>
+          <div class="swatches">
+            <label class="lbl" for="colA">Structure</label><label class="lbl" for="colB">Accent</label>
+            <input type="color" id="colA" value="#2FD9C0" aria-label="Structure colour">
+            <input type="color" id="colB" value="#FFC98A" aria-label="Accent colour">
+          </div>
+          <div class="transport">
+            <button type="button" id="playBtn" aria-pressed="true" title="Camera flight and field (space)">Flight</button>
+            <button type="button" id="morphBtn" aria-pressed="true" title="Animate the field (M)">Morph</button>
+            <button type="button" id="spikeBtn" aria-pressed="true" title="Travelling impulse lights (I)">Impulses</button>
+          </div>
         </div>
       </div>
-      <div id="pathRow">
-        <p class="lbl" id="pathLbl">Flight path</p>
-        <div class="seg" role="group" aria-labelledby="pathLbl">
-          <button type="button" data-mode="0" aria-pressed="true">Orbit</button>
-          <button type="button" data-mode="1" aria-pressed="false">Fly-through</button>
-          <button type="button" data-mode="2" aria-pressed="false">Drift</button>
+
+      <div class="grp">
+        <button type="button" class="grph" data-grp="2" aria-expanded="true" aria-controls="grpb2">Rendering</button>
+        <div class="grpb" id="grpb2" data-grpb="2">
+          <div>
+            <p class="lbl" id="resLbl">Resolution</p>
+            <div class="seg" role="group" aria-labelledby="resLbl">
+              <button type="button" data-res="0" aria-pressed="false">Auto</button>
+              <button type="button" data-res="1" aria-pressed="true">Half</button>
+              <button type="button" data-res="2" aria-pressed="false">Native</button>
+            </div>
+          </div>
+          <div>
+            <p class="lbl" id="aaLbl">Antialiasing</p>
+            <div class="seg" role="group" aria-labelledby="aaLbl">
+              <button type="button" data-aa="0" aria-pressed="false">Off</button>
+              <button type="button" data-aa="1" aria-pressed="true">FXAA</button>
+              <button type="button" data-aa="2" aria-pressed="false">SSAA ×4</button>
+            </div>
+          </div>
         </div>
       </div>
-      <div data-only="2" hidden>
-        <p class="lbl" id="lcLbl">Construction</p>
-        <div class="transport wrap" role="group" aria-labelledby="lcLbl">
-          <button type="button" data-lc="0" aria-pressed="true" title="A 20 × 20 × 0.5 slab">1 Slab</button>
-          <button type="button" data-lc="1" aria-pressed="true" title="Perlin relief along the thin axis">2 Relief</button>
-          <button type="button" data-lc="2" aria-pressed="true" title="An undeformed copy in the same place">3 Copy</button>
-          <button type="button" data-lc="3" aria-pressed="true" title="Keep only where the two overlap">4 Intersect</button>
-          <button type="button" data-lc="4" aria-pressed="true" title="Twirl the result">5 Twirl</button>
-        </div>
-      </div>
-      <div class="slider" data-only="2" hidden>
-        <label class="lbl" for="lcRelief">Relief</label><output id="lcReliefOut">0.26</output>
-        <input id="lcRelief" type="range" min="0" max="90" step="1" value="26">
-      </div>
-      <div class="slider" data-only="2" hidden>
-        <label class="lbl" for="lcFreq">Terrain scale</label><output id="lcFreqOut">4.00</output>
-        <input id="lcFreq" type="range" min="60" max="1100" step="10" value="400">
-      </div>
-      <div class="slider" data-only="2" hidden>
-        <label class="lbl" for="lcThick">Slab thickness</label><output id="lcThickOut">0.44</output>
-        <input id="lcThick" type="range" min="6" max="240" step="2" value="44">
-      </div>
-      <div class="slider" data-only="2" hidden>
-        <label class="lbl" for="lcTwirl">Twirl</label><output id="lcTwirlOut">1.90 rad</output>
-        <input id="lcTwirl" type="range" min="0" max="300" step="5" value="190">
-      </div>
-      <div class="slider">
-        <label class="lbl" for="rSteps">Ray steps</label><output id="rStepsOut">320</output>
-        <input id="rSteps" type="range" min="48" max="320" step="8" value="320">
-      </div>
-      <div class="slider">
-        <label class="lbl" for="rEps" title="How close a ray must get before it counts as a hit. Higher is tighter — it removes the banding on grazing surfaces, and costs march steps.">Surface precision</label><output id="rEpsOut">12.0</output>
-        <input id="rEps" type="range" min="10" max="120" step="2" value="120">
-      </div>
-      <div class="slider">
-        <label class="lbl" for="rOmega" title="How far past the safe distance each march step reaches. Above 1 it converges in fewer steps; too far and it spends them backing out of overshoots instead.">Step relaxation</label><output id="rOmegaOut">1.30×</output>
-        <input id="rOmega" type="range" min="100" max="190" step="2" value="130">
-      </div>
-      <div>
-        <p class="lbl" id="bndLbl">Bounds</p>
-        <div class="seg" role="group" aria-labelledby="bndLbl">
-          <button type="button" data-bnd="0" aria-pressed="false" title="One sphere around everything">Sphere</button>
-          <button type="button" data-bnd="1" aria-pressed="false" title="A box fitted to the object — far tighter on a thin slab">Box</button>
-          <button type="button" data-bnd="2" aria-pressed="true" title="Box for the chrome slab, sphere for the rest">Auto</button>
-        </div>
-      </div>
-      <div class="slider">
-        <label class="lbl" for="rPad" title="Slack added to the bounding volume. Too little clips the object at its edges; too much marches empty space.">Bound padding</label><output id="rPadOut">0.05</output>
-        <input id="rPad" type="range" min="0" max="60" step="1" value="5">
-      </div>
-      <div class="slider" id="densRow" data-only="0">
-        <label class="lbl" for="density">Cell density</label><output id="densityOut">19 µm pitch</output>
-        <input id="density" type="range" min="9" max="22" step="0.5" value="15">
-      </div>
-      <div>
-        <p class="lbl" id="warpLbl">Domain warp</p>
-        <div class="transport" role="group" aria-labelledby="warpLbl">
-          <button type="button" data-warp="0" aria-pressed="true" title="Noise displacement of the whole space">Noise</button>
-          <button type="button" data-warp="1" aria-pressed="false" title="Whirl the space about Y">Twist</button>
-          <button type="button" data-warp="2" aria-pressed="false" title="Bend the space about Z">Bend</button>
-        </div>
-      </div>
-      <div>
-        <p class="lbl" id="wmLbl">Warp mode</p>
-        <div class="seg" role="group" aria-labelledby="wmLbl">
-          <button type="button" data-wm="0" aria-pressed="true" title="Bends the geometry itself. The silhouette moves, and every march step pays for it.">Space</button>
-          <button type="button" data-wm="1" aria-pressed="false" title="Bends only the light on the surface. Same crinkle for a fraction of the cost, but the silhouette stays smooth.">Surface</button>
-        </div>
-      </div>
-      <div class="slider">
-        <label class="lbl" for="warpAmt">Warp strength</label><output id="warpAmtOut">0.74</output>
-        <input id="warpAmt" type="range" min="0" max="100" step="1" value="74">
-      </div>
-      <div class="slider">
-        <label class="lbl" for="warpFreq">Warp scale</label><output id="warpFreqOut">3.75 /unit</output>
-        <input id="warpFreq" type="range" min="30" max="400" step="5" value="375">
-      </div>
-      <div>
-        <p class="lbl" id="resLbl">Resolution</p>
-        <div class="seg" role="group" aria-labelledby="resLbl">
-          <button type="button" data-res="0" aria-pressed="false">Auto</button>
-          <button type="button" data-res="1" aria-pressed="true">Half</button>
-          <button type="button" data-res="2" aria-pressed="false">Native</button>
-        </div>
-      </div>
-      <div>
-        <p class="lbl" id="aaLbl">Antialiasing</p>
-        <div class="seg" role="group" aria-labelledby="aaLbl">
-          <button type="button" data-aa="0" aria-pressed="false">Off</button>
-          <button type="button" data-aa="1" aria-pressed="true">FXAA</button>
-          <button type="button" data-aa="2" aria-pressed="false">SSAA ×4</button>
-        </div>
-      </div>
-      <div class="slider" id="thickRow" data-only="1" hidden>
-        <label class="lbl" for="thick">Line width</label><output id="thickOut">11.2 µm</output>
-        <input id="thick" type="range" min="6" max="70" step="1" value="28">
-      </div>
-      <div class="slider" data-only="01">
-        <label class="lbl" for="spike">Spike rate</label><output id="spikeOut">6.0 Hz</output>
-        <input id="spike" type="range" min="0" max="100" step="1" value="55">
-      </div>
-      <div class="swatches">
-        <label class="lbl" for="colA">Structure</label><label class="lbl" for="colB">Accent</label>
-        <input type="color" id="colA" value="#2FD9C0" aria-label="Structure colour">
-        <input type="color" id="colB" value="#FFC98A" aria-label="Accent colour">
-      </div>
+
       <div class="transport">
-        <button type="button" id="playBtn" aria-pressed="true" title="Camera flight and field (space)">Flight</button>
-        <button type="button" id="morphBtn" aria-pressed="true" title="Animate the field (M)">Morph</button>
-        <button type="button" id="spikeBtn" aria-pressed="true" title="Travelling impulse lights (I)">Impulses</button>
-      </div>
-      <div class="transport">
-        <button type="button" id="saveBtn" title="Open the page with everything set the way it is now">Save as default</button>
+        <button type="button" id="saveBtn" title="Open the page with everything set the way it is now — including the fly camera and the saved views">Save as default</button>
         <button type="button" id="resetBtn" title="Forget the saved settings and go back to the built-in ones">Reset</button>
       </div>
-      <p class="hint" id="cloudNote">Checking for saved settings\u2026</p>
-      <p class="hint" id="hint">Drag to steer · scroll or pinch to range in · R new view · 1-3 resolution · space, M, I, A, F, H, U</p>
+      <p class="hint" id="cloudNote">Checking for saved settings…</p>
+      <p class="hint" id="hint">Drag to steer · scroll to range in · R new view · 1-3 resolution · 5-0 saved views, shift+5-0 to store · shift+` fly</p>
     </section>
   </div>
-</div>
-<div class="corner">
-<button type="button" id="fsToggle" aria-pressed="false" title="Full screen (F)" aria-label="Full screen">
-  <svg id="icoFull" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <path d="M8.6 3.4H3.4v5.2M15.4 3.4h5.2v5.2M20.6 15.4v5.2h-5.2M3.4 15.4v5.2h5.2"/>
-  </svg>
-  <svg id="icoExit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
-    <path d="M3.4 8.6h5.2V3.4M20.6 8.6h-5.2V3.4M15.4 20.6v-5.2h5.2M8.6 20.6v-5.2H3.4"/>
-  </svg>
-</button>
-<button type="button" id="uiToggle" aria-pressed="false" aria-controls="hud" title="Hide panels (H)">
-  <svg id="icoOpen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <path d="M1.8 12S5.9 4.9 12 4.9 22.2 12 22.2 12 18.1 19.1 12 19.1 1.8 12 1.8 12Z"/><circle cx="12" cy="12" r="3.1"/>
-  </svg>
-  <svg id="icoShut" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
-    <path d="M9.9 5.2A9.4 9.4 0 0 1 12 4.9c6.1 0 10.2 7.1 10.2 7.1a18 18 0 0 1-3.1 4M6.3 6.8A18 18 0 0 0 1.8 12S5.9 19.1 12 19.1a9.6 9.6 0 0 0 4-.85"/><path d="M10 10a2.8 2.8 0 0 0 4 4"/><path d="M2.6 2.6l18.8 18.8"/>
-  </svg>
-  <span id="uiToggleLbl">Hide panels</span>
-</button>
 </div>
 
 <div class="fault" id="fault"><p>This view needs WebGL. The field is marched on the GPU one ray per pixel, so there is no fallback image to show — try a browser with hardware acceleration enabled.</p></div>
@@ -382,7 +346,7 @@ uniform float uEps;       // how close to the surface a ray must get to count as
 uniform float uOmega;     // over-relaxation: how far past the safe radius a step reaches
 uniform float uBound;     // bounding volume: 0 sphere, 1 box, 2 pick per object
 uniform float uBoundPad;  // slack added to it
-uniform float uWarpMode;  // 0 warps the space, 1 warps only the shading normal
+uniform float uWarpMode;  // noise warp: 0 bends the space, 1 pushes the surface
 
 const vec3 SPIKE = vec3(0.608, 0.482, 1.000);
 const vec3 RIM   = vec3(0.620, 0.898, 1.000);
@@ -682,10 +646,8 @@ vec3 domainWarp(vec3 p, out float lip){
   // noise displacement — the domain warp proper. Smoothstep value noise is
   // C1, so the displaced space stays continuous; its per-axis gradient peaks
   // at 1.5 per unit cell, and 2.2 covers the 3-channel worst case.
-  // In surface mode this whole block is skipped: the space is left alone, the
-  // distance stays exact, and the crinkle is put back at the hit instead.
-  // Twist and bend stay real warps either way — they change the shape, which
-  // is not something a shading trick can stand in for.
+  // In object mode this block is skipped and the same noise is applied to the
+  // surface instead (see map). Twist and bend stay space warps either way.
   if(uWarpOn.x > 0.5 && uWarpMode < 0.5){
     float f = uWarpFreq;
     float A = 0.55 * amt;
@@ -693,29 +655,6 @@ vec3 domainWarp(vec3 p, out float lip){
     lip *= 1.0 + A * f * 2.2;
   }
   return p;
-}
-
-// The same noise field the space warp uses, read as one scalar channel.
-float warpH(vec3 p){
-  return vn3(p*uWarpFreq + vec3(0.0, uMorph*0.045, 0.0)).x;
-}
-
-// Surface warp: tilt the shading normal by the slope of that field instead of
-// moving the space it sits in. Four noise reads once per pixel, against one
-// per march step — and because the distance field is left exact, the march
-// keeps its full step length rather than being divided down by a Lipschitz
-// bound. The trade is that the silhouette stays smooth: this bends the light,
-// not the shape.
-vec3 warpNormal(vec3 p, vec3 n){
-  if(uWarpMode < 0.5 || uWarpOn.x < 0.5 || uWarpAmt <= 0.0) return n;
-  float e = 0.30 / max(uWarpFreq, 0.5);      // a fraction of one lobe
-  vec3 g = vec3(warpH(p + vec3(e,0.0,0.0)) - warpH(p - vec3(e,0.0,0.0)),
-                warpH(p + vec3(0.0,e,0.0)) - warpH(p - vec3(0.0,e,0.0)),
-                warpH(p + vec3(0.0,0.0,e)) - warpH(p - vec3(0.0,0.0,e))) / (2.0*e);
-  g -= dot(g, n) * n;                        // only the sideways slope tilts it
-  // the gradient scales with frequency, so dividing it back out leaves the
-  // strength slider meaning the same thing at every scale
-  return normalize(n - (0.60 * uWarpAmt / max(uWarpFreq, 0.5)) * g);
 }
 
 // the undistorted scene: both objects, evaluated in whatever space it is given
@@ -761,8 +700,36 @@ float scene(vec3 p, out float sd){
 #endif
 }
 
+// Object warp: rather than bending the space the object sits in, push the
+// object's own surface in and out along its normal by the same noise field.
+// It is real geometry — the silhouette moves and the normals follow — but the
+// step penalty is only paid where a lobe can actually reach. Further out the
+// ray subtracts the deepest a lobe could ever pull the surface toward it and
+// keeps its full-length step, which the space warp can never do because the
+// whole domain is distorted everywhere at once.
 float map(vec3 p, out float sd, out float lip){
-  return scene(domainWarp(p, lip), sd) / lip;
+  vec3 q = domainWarp(p, lip);
+  float d = scene(q, sd);
+  if(uWarpMode > 0.5 && uWarpOn.x > 0.5 && uWarpAmt > 0.0){
+    // The height is a fraction of one lobe, not a fixed length: a bump as deep
+    // as the features it sits on stops being relief and just inflates them
+    // into each other, which is what a flat amplitude does to the neurite
+    // lattice. Tying it to the scale keeps the slope — and so the cost —
+    // constant however fine the noise is set.
+    float A = 0.45 * uWarpAmt / max(uWarpFreq, 1.0);
+    float reach = 0.5 * A;                   // vn3 spans -0.5 .. 0.5
+    if(d > 2.0 * reach){
+      // Out of every lobe's reach, so subtract the deepest one could pull the
+      // surface this way and keep the full-length step. The switch sits a
+      // whole reach clear of where this bottoms out, which is what stops the
+      // far branch ever reading as a hit in its own right.
+      d -= reach;
+    } else {
+      d -= A * vn3(q*uWarpFreq + vec3(0.0, uMorph*0.045, 0.0)).x;
+      lip *= 1.0 + A * uWarpFreq * 1.5;      // smoothstep noise peaks at 1.5/cell
+    }
+  }
+  return d / lip;
 }
 float map(vec3 p, out float sd){
   float lip;
@@ -902,8 +869,7 @@ vec3 render(vec2 fc){
 
       if(hit > 0.5){
         vec3 p = ro + rd*t;
-        vec3 gn = calcNormal(p);           // the real surface, for occlusion
-        vec3 n  = warpNormal(p, gn);       // and the one the light sees
+        vec3 n = calcNormal(p);
         float C = uScene > 0.5 ? 0.42 : 1.45 / uScale;
         float somaMix = 1.0 - smoothstep(C*0.18, C*0.62, sdHit);
 
@@ -916,7 +882,7 @@ vec3 render(vec2 fc){
         vec3 hv = normalize(key - rd);
         float spec = pow(max(dot(n, hv), 0.0), 48.0);
         float aoLip;
-        float ao = clamp(map(p + gn*0.05, dmy, aoLip) * aoLip * sceneLip() / 0.05, 0.0, 1.0) * 0.72 + 0.28;
+        float ao = clamp(map(p + n*0.05, dmy, aoLip) * aoLip * sceneLip() / 0.05, 0.0, 1.0) * 0.72 + 0.28;
         float sp = spikeAt(p);
 
         col = base * (0.05 + 0.62*dif) * ao;
@@ -1032,7 +998,6 @@ void main(){
   function fault(){
     document.getElementById("fault").style.display = "grid";
     document.getElementById("hud").style.display = "none";
-    document.querySelector(".corner").style.display = "none";
   }
 
   // ANGLE translates GLSL to HLSL at LINK time, so a shader that compiles
@@ -1145,7 +1110,7 @@ void main(){
     warpAmt: 0.74,
     warpFreq: 3.75,
     warpOn: [1, 0, 0],
-    warpMode: 0,                    // 0 warps the space, 1 warps only the shading
+    warpMode: 0,                    // noise warp: 0 bends the space, 1 the surface
     lcOn: [1, 1, 1, 1, 1],
     // a phone cannot afford the pinned 320-step budget the desktop opens with,
     // so it keeps the frame-time controller instead
@@ -1171,7 +1136,11 @@ void main(){
     velAz: 0, velEl: 0,
     // free navigation: world position, look angles, metres per second
     fly: 0,
-    flyPos: [0, 0, 3], flyYaw: 0, flyPitch: 0, flySpeed: 0.60
+    flyPos: [0, 0, 3], flyYaw: 0, flyPitch: 0, flySpeed: 0.60,
+    // six camera slots, recalled with 5-0 and stored with shift+5-0
+    favs: [null, null, null, null, null, null],
+    // which console groups are open
+    groups: [1, 1, 1]
   };
 
   var rgbCache = {};
@@ -1191,7 +1160,14 @@ void main(){
     var R = 1.74, K = 1;
     if(state.warpOn[2]) K *= Math.sqrt(1 + Math.pow(1.60 * state.warpAmt * R, 2));
     if(state.warpOn[1]) K *= Math.sqrt(1 + Math.pow(1.70 * state.warpAmt * R, 2));
-    if(state.warpOn[0] && state.warpMode === 0) K *= 1 + 0.55 * state.warpAmt * state.warpFreq * 2.2;
+    if(state.warpOn[0]){
+      var kn = 0.55 * state.warpAmt * state.warpFreq;
+      // the object warp raises the bound only inside the band it can reach,
+      // so the budget it needs is a fraction of the space warp's
+      // the object warp's height scales with its own frequency, so its bound
+      // does not grow with the scale slider — and it is only paid in the band
+      K *= state.warpMode === 0 ? 1 + kn * 2.2 : 1 + 0.34 * state.warpAmt;
+    }
     if(state.scene === 2 && state.lcOn[1]) K *= 1 + state.lcRelief * state.lcFreq * 3.0;
     return Math.min(K, 3.2);
   }
@@ -1208,7 +1184,7 @@ void main(){
     var minDim = Math.min(cw, ch) || 1;
     state.fit = ch > cw * 1.25 ? 0.92 : 1.0;
     if(document.getElementById("hud").classList.contains("hidden")){ state.shift = 0; return; }
-    var top = document.querySelector(".ident").getBoundingClientRect().bottom;
+    var top = parseFloat(getComputedStyle(document.getElementById("hud")).paddingTop) || 0;
     // The hud is a flex column; a console taller than the gap the header leaves
     // simply overflows the viewport, so cap it against what is actually free.
     // Below 761px the panels stack and the stylesheet's own cap applies.
@@ -1354,62 +1330,93 @@ void main(){
   }
 
   var el = {
-    path: document.getElementById("tPath"), range: document.getElementById("tRange"),
-    az: document.getElementById("tAz"), el: document.getElementById("tEl"),
-    soma: document.getElementById("tSoma"), fib: document.getElementById("tFib"),
-    hz: document.getElementById("tHz"), steps: document.getElementById("tSteps"),
-    fps: document.getElementById("tFps"), res: document.getElementById("tRes"),
-    nat: document.getElementById("tNat"),
-    scale: document.getElementById("tScale"),
-    morph: document.getElementById("tMorph")
+    fps: document.getElementById("tFps"),
+    avg: document.getElementById("tAvg"),
+    res: document.getElementById("tRes")
   };
-  var MODES = ["Orbit", "Fly-through", "Drift"];
 
   var last = performance.now(), ema = 16.7, acc = 0, frames = 0, tele = 0;
 
-  function telemetry(){
-    var r = Math.sqrt(eye[0]*eye[0] + eye[1]*eye[1] + eye[2]*eye[2]);
-    var azd = Math.atan2(eye[0], eye[2]) * 180 / Math.PI;
-    if(azd < 0) azd += 360;
-    var eld = Math.asin(Math.max(-1, Math.min(1, eye[1] / (r || 1)))) * 180 / Math.PI;
-    var C = 1.45 / state.density;
-    el.path.textContent = state.fly ? "Fly " + state.flySpeed.toFixed(2) + "/s" : MODES[state.mode];
-    el.morph.textContent = state.morph ? "Morph " + (state.mClock % 100).toFixed(1) : "Static";
-    el.range.textContent = r.toFixed(2);
-    el.az.textContent = azd.toFixed(1);
-    el.el.textContent = eld.toFixed(1);
-    if(state.scene === 2){
-      el.soma.textContent = "—";
-      el.fib.textContent  = "—";
-    } else if(state.scene === 1){
-      el.soma.textContent = (2.0 * (0.11 + state.thick) * UM_PER_UNIT).toFixed(1);
-      el.fib.textContent  = (2.0 * state.thick * UM_PER_UNIT).toFixed(1);
-    } else {
-      el.soma.textContent = (2.0 * 0.82 / (2.1 * state.density) * UM_PER_UNIT).toFixed(1);
-      el.fib.textContent  = (2.0 * 0.27 / (2.1 * state.density) * UM_PER_UNIT).toFixed(1);
+  // Every frame time of the last five seconds, in a ring so nothing is
+  // reallocated or shifted per frame. 1024 slots covers five seconds at any
+  // rate a display can actually show.
+  var HN = 1024, hMs = new Float32Array(HN), hT = new Float64Array(HN), hHead = 0, hLen = 0;
+  function fpsPush(now, ms){
+    hMs[hHead] = ms; hT[hHead] = now;
+    hHead = (hHead + 1) % HN;
+    if(hLen < HN) hLen++;
+  }
+  // frames in the window over the time they took — a true mean rate, not the
+  // mean of per-frame rates, which a single stall would skew
+  function fpsWindow(now, out){
+    var count = 0, span = 0;
+    for(var i = 1; i <= hLen; i++){
+      var k = (hHead - i + HN) % HN;
+      if(now - hT[k] > 5000) break;
+      span += hMs[k]; count++;
+      if(out) out.push(k);
     }
-    el.hz.textContent = state.spikeOn ? (state.spike * 11).toFixed(1) : "0.0";
-    el.steps.textContent = String(marchSteps());
+    return span > 0 ? count * 1000 / span : 0;
+  }
+
+  var gCan = document.getElementById("fpsGraph");
+  var gCtx = gCan && gCan.getContext ? gCan.getContext("2d") : null;
+  function drawGraph(now){
+    if(!gCtx) return;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var cw = Math.max(40, Math.round((gCan.clientWidth || 200) * dpr));
+    var chh = Math.max(20, Math.round((gCan.clientHeight || 34) * dpr));
+    if(gCan.width !== cw || gCan.height !== chh){ gCan.width = cw; gCan.height = chh; }
+    gCtx.clearRect(0, 0, cw, chh);
+    var idx = [];
+    fpsWindow(now, idx);
+    var m = idx.length;
+    if(m < 2) return;
+    idx.reverse();                                  // oldest first
+    var peak = 0;
+    for(var i = 0; i < m; i++) peak = Math.max(peak, 1000 / Math.max(hMs[idx[i]], 0.5));
+    var top = peak > 120 ? 240 : peak > 60 ? 120 : 60;
+    var lw = Math.max(1, Math.round(dpr));
+    // 60 fps line, so the shape has something to be read against
+    if(top > 60){
+      var y60 = Math.round(chh - chh * (60 / top)) + 0.5;
+      gCtx.strokeStyle = "rgba(198,211,220,.16)"; gCtx.lineWidth = 1;
+      gCtx.beginPath(); gCtx.moveTo(0, y60); gCtx.lineTo(cw, y60); gCtx.stroke();
+    }
+    gCtx.beginPath();
+    for(var j = 0; j < m; j++){
+      var x = j * (cw - lw) / (m - 1) + lw * 0.5;
+      var f = Math.min(1000 / Math.max(hMs[idx[j]], 0.5), top);
+      var y = chh - (chh - lw) * (f / top) - lw * 0.5;
+      if(j === 0) gCtx.moveTo(x, y); else gCtx.lineTo(x, y);
+    }
+    gCtx.strokeStyle = "rgba(47,217,192,.85)"; gCtx.lineWidth = lw;
+    gCtx.stroke();
+    gCtx.lineTo(cw, chh); gCtx.lineTo(lw * 0.5, chh); gCtx.closePath();
+    gCtx.fillStyle = "rgba(47,217,192,.13)"; gCtx.fill();
+  }
+
+  function fmtFps(v){ return v < 10 ? v.toFixed(1) : v.toFixed(0); }
+
+  function telemetry(){
+    var now = performance.now();
     // telemetry runs before the console is wired, so check the control exists
     if(rSteps && !state.stepsPin){
       rSteps.value = state.steps;
       rStepsOut.textContent = "auto " + marchSteps();
       paint(rSteps);
     }
-    var fps = 1000 / Math.max(ema, 1);
-    el.fps.textContent = fps < 10 ? fps.toFixed(1) : fps.toFixed(0);
+    el.fps.textContent = fmtFps(1000 / Math.max(ema, 1));
+    el.avg.textContent = fmtFps(fpsWindow(now, null));
     el.res.textContent = RW + "×" + RH;
-    var native = (canvas.clientWidth || window.innerWidth) * (window.devicePixelRatio || 1);
-    el.nat.textContent = (W / Math.max(native, 1)).toFixed(2) + "× native";
-    el.scale.textContent = state.scene === 2 ? "20 × 20 × " + (state.lcThick * 20).toFixed(2) + " slab"
-                         : state.scene === 1 ? "16 Bézier curves"
-                         : Math.round(C * UM_PER_UNIT) + " µm";
+    drawGraph(now);
   }
 
   function frame(now){
     var raw = now - last;                       // true cost of the last frame
     var dt = Math.min(raw / 1000, 0.05);        // clamped, only for the clocks
     last = now;
+    fpsPush(now, raw);
     if(state.running) state.clock += dt;
     if(state.morph) state.mClock += dt;
     if(state.running || state.morph) state.pClock += dt;
@@ -1553,8 +1560,19 @@ void main(){
   // ---- navigation toggle ----------------------------------------------
   var navBtns = document.querySelectorAll("[data-nav]");
   var pathRow = document.getElementById("pathRow");
-  var hintEl = document.getElementById("hint"), autoHint = null;
-  var FLY_HINT = "WASD move · Q/E down/up · shift sprint · right-drag look · wheel speed · R new view";
+  var hintEl = document.getElementById("hint");
+  var autoHint = hintEl ? hintEl.textContent : "";
+  var FLY_HINT = "WASD move · Q/E down/up · shift sprint · right-drag look · wheel speed · R new view · 5-0 saved views";
+  // one owner for the hint line: a transient message parks the standing one
+  var hintBusy = 0, hintT = 0;
+  function showHint(){ if(hintEl && !hintBusy) hintEl.textContent = state.fly ? FLY_HINT : autoHint; }
+  function toast(msg){
+    if(!hintEl) return;
+    clearTimeout(hintT);
+    hintBusy = 1;
+    hintEl.textContent = msg;
+    hintT = setTimeout(function(){ hintBusy = 0; showHint(); }, 1300);
+  }
   function setFly(on){
     // hand the camera over exactly where the auto path left it
     if(on && !state.fly) aimAt(eye, tgt);
@@ -1565,10 +1583,7 @@ void main(){
       b.setAttribute("aria-pressed", parseInt(b.dataset.nav, 10) === state.fly ? "true" : "false");
     });
     if(pathRow) pathRow.hidden = !!state.fly;
-    if(hintEl){
-      if(autoHint === null) autoHint = hintEl.textContent;
-      hintEl.textContent = state.fly ? FLY_HINT : autoHint;
-    }
+    showHint();
     reframe(); telemetry();
   }
   Array.prototype.forEach.call(navBtns, function(btn){
@@ -1689,8 +1704,8 @@ void main(){
     state.steps = 56;
     state.stepsPin = false;         // let the controller own it, and the readout say so
     marchCap = 96;
-    document.getElementById("hint").textContent =
-      "Software rendering — enable hardware acceleration in your browser for full speed";
+    autoHint = "Software rendering — enable hardware acceleration in your browser for full speed";
+    showHint();
   }
 
   var playBtn = document.getElementById("playBtn");
@@ -1845,44 +1860,33 @@ void main(){
     btn.addEventListener("click", function(){ setAA(parseInt(btn.dataset.aa, 10)); btn.blur(); });
   });
 
-  // SVGElement has no `hidden` IDL property — set the content attribute
-  function showIcon(node, on){
-    if(on) node.removeAttribute("hidden"); else node.setAttribute("hidden", "");
-  }
-
-  var hud = document.getElementById("hud");
-  var uiToggle = document.getElementById("uiToggle");
-  var icoOpen = document.getElementById("icoOpen"), icoShut = document.getElementById("icoShut");
-  var uiLbl = document.getElementById("uiToggleLbl");
-  function setHud(v){
-    hud.classList.toggle("hidden", !v);
-    showIcon(icoOpen, v); showIcon(icoShut, !v);
-    uiLbl.textContent = v ? "Hide panels" : "Show panels";
-    uiToggle.title = (v ? "Hide panels" : "Show panels") + " (H)";
-    uiToggle.setAttribute("aria-pressed", v ? "false" : "true");
+  // ---- folding groups --------------------------------------------------
+  function setGroup(i, open){
+    state.groups[i] = open ? 1 : 0;
+    var head = document.querySelector(".grph[data-grp='" + i + "']");
+    var body = document.querySelector(".grpb[data-grpb='" + i + "']");
+    if(head) head.setAttribute("aria-expanded", open ? "true" : "false");
+    if(body) body.hidden = !open;
     reframe();
   }
-  uiToggle.addEventListener("click", function(){
-    setBare(false);
-    setHud(hud.classList.contains("hidden"));
-    uiToggle.blur();
+  Array.prototype.forEach.call(document.querySelectorAll(".grph"), function(head){
+    head.addEventListener("click", function(){
+      var i = parseInt(head.dataset.grp, 10);
+      setGroup(i, !state.groups[i]);
+      head.blur();
+    });
   });
-
-  // U strips the page back to the render alone — panels and corner buttons
-  var corner = document.querySelector(".corner");
-  var bare = false;
-  function setBare(v){
-    if(bare === v) return;
-    bare = v;
-    corner.hidden = v;
-    setHud(!v);
+  function syncGroups(){
+    for(var i = 0; i < state.groups.length; i++) setGroup(i, !!state.groups[i]);
   }
+  syncGroups();
 
+  // ---- panels -----------------------------------------------------------
+  var hud = document.getElementById("hud");
+  function setHud(v){ hud.classList.toggle("hidden", !v); reframe(); }
   setHud(true);
 
-  // ---- full screen -----------------------------------------------------
-  var fsToggle = document.getElementById("fsToggle");
-  var icoFull = document.getElementById("icoFull"), icoExit = document.getElementById("icoExit");
+  // ---- full screen ------------------------------------------------------
   var root = document.documentElement;
   var enter = root.requestFullscreen || root.webkitRequestFullscreen;
   var leave = document.exitFullscreen || document.webkitExitFullscreen;
@@ -1891,36 +1895,53 @@ void main(){
 
   function inFullscreen(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
 
-  function dropFullscreenButton(){
-    fsToggle.setAttribute("hidden", "");
-    document.querySelector(".ident").classList.add("solo");
-    reframe();
-  }
-
-  function syncFullscreen(){
-    var on = inFullscreen();
-    showIcon(icoFull, !on); showIcon(icoExit, on);
-    fsToggle.setAttribute("aria-pressed", on ? "true" : "false");
-    fsToggle.title = (on ? "Exit full screen" : "Full screen") + " (F)";
-    fsToggle.setAttribute("aria-label", on ? "Exit full screen" : "Full screen");
-    resize();
-  }
-
   function toggleFullscreen(){
     if(!fsAllowed) return;
     try{
       var r = inFullscreen() ? leave.call(document) : enter.call(root);
-      if(r && r.catch) r.catch(dropFullscreenButton);
-    }catch(err){ dropFullscreenButton(); }
+      if(r && r.catch) r.catch(function(){ fsAllowed = false; });
+    }catch(err){ fsAllowed = false; }
   }
 
   if(fsAllowed){
-    fsToggle.addEventListener("click", function(){ toggleFullscreen(); fsToggle.blur(); });
-    document.addEventListener("fullscreenchange", syncFullscreen);
-    document.addEventListener("webkitfullscreenchange", syncFullscreen);
-    syncFullscreen();
-  } else {
-    dropFullscreenButton();
+    document.addEventListener("fullscreenchange", relayout);
+    document.addEventListener("webkitfullscreenchange", relayout);
+  }
+
+  // ---- saved viewpoints --------------------------------------------------
+  // Six slots. Shift stores where the camera is; the bare digit puts it back,
+  // including which way it was flying — a slot saved on the auto path returns
+  // to that path at the same point, one saved in fly mode returns to fly mode.
+  var FAV_KEY = {Digit5:0, Digit6:1, Digit7:2, Digit8:3, Digit9:4, Digit0:5,
+                 Numpad5:0, Numpad6:1, Numpad7:2, Numpad8:3, Numpad9:4, Numpad0:5};
+  var FAV_LBL = ["5", "6", "7", "8", "9", "0"];
+  function favStore(i){
+    state.favs[i] = {
+      fly: state.fly,
+      pos: state.flyPos.slice(), yaw: state.flyYaw, pitch: state.flyPitch,
+      mode: state.mode, clock: state.clock,
+      az: state.dragAz, el: state.dragEl, zoom: state.zoom
+    };
+    toast("View " + FAV_LBL[i] + " stored");
+  }
+  function favRecall(i){
+    var f = state.favs[i];
+    if(!f){ toast("View " + FAV_LBL[i] + " is empty"); return; }
+    // switch modes first: turning flight on aims the camera where the auto
+    // path left it, which would overwrite the position being restored
+    if(!!f.fly !== !!state.fly) setFly(!!f.fly);
+    state.flyPos = f.pos.slice(); state.flyYaw = f.yaw; state.flyPitch = f.pitch;
+    state.clock = f.clock; state.zoom = f.zoom;
+    state.dragAz = f.az; state.dragEl = f.el;
+    state.velAz = 0; state.velEl = 0;
+    // set the path buttons directly — clicking one resets the steering
+    state.mode = f.mode;
+    Array.prototype.forEach.call(segBtns, function(b){
+      b.setAttribute("aria-pressed", parseInt(b.dataset.mode, 10) === state.mode ? "true" : "false");
+    });
+    camera(state.clock);
+    toast("View " + FAV_LBL[i]);
+    telemetry();
   }
 
   // WASDQE belong to fly mode while it is on; A would otherwise cycle the AA
@@ -1949,8 +1970,15 @@ void main(){
     if(RES_KEY[e.code] !== undefined){ setRes(RES_KEY[e.code]); }
     if(e.key === "a" || e.key === "A"){ setAA((state.aa + 1) % 3); }
     if(e.key === "f" || e.key === "F"){ toggleFullscreen(); }
-    if(e.key === "h" || e.key === "H"){ setBare(false); setHud(hud.classList.contains("hidden")); }
-    if(e.key === "u" || e.key === "U"){ setBare(!bare); }
+    if(e.key === "h" || e.key === "H" || e.key === "u" || e.key === "U"){
+      setHud(hud.classList.contains("hidden"));
+    }
+    // shift+` hands the camera over without reaching for the console
+    if(e.code === "Backquote" && e.shiftKey){ e.preventDefault(); setFly(!state.fly); }
+    if(FAV_KEY[e.code] !== undefined && !e.ctrlKey && !e.metaKey && !e.altKey){
+      e.preventDefault();
+      if(e.shiftKey) favStore(FAV_KEY[e.code]); else favRecall(FAV_KEY[e.code]);
+    }
   });
 
   canvas.addEventListener("webglcontextlost", function(e){ e.preventDefault(); });
@@ -1961,7 +1989,8 @@ void main(){
   var SAVE_KEY = "cortical.defaults.v2";
   var SAVE_KEYS = ["scene","mode","fly","aa","resPin","bound","boundPad","omega","eps",
     "steps","stepsPin","warpAmt","warpFreq","warpOn","warpMode","lcOn","lcRelief","lcFreq","lcThick",
-    "lcTwirl","colors","density","spike","spikeOn","thick","zoom","flySpeed","running","morph"];
+    "lcTwirl","colors","density","spike","spikeOn","thick","zoom","flySpeed","running","morph",
+    "flyPos","flyYaw","flyPitch","favs","groups"];
 
   // this browser
   function readStore(){
@@ -2071,6 +2100,7 @@ void main(){
     var pin = state.stepsPin;
     slide(rSteps, state.steps);      // its handler pins the budget as a side effect
     state.stepsPin = pin;
+    syncGroups();
     applyScene();                    // reloads this object's colours into the swatches
     resize(); telemetry();
   }
