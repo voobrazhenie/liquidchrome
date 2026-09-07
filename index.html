@@ -267,6 +267,13 @@
           <button type="button" data-warp="2" aria-pressed="false" title="Bend the space about Z">Bend</button>
         </div>
       </div>
+      <div>
+        <p class="lbl" id="wmLbl">Warp mode</p>
+        <div class="seg" role="group" aria-labelledby="wmLbl">
+          <button type="button" data-wm="0" aria-pressed="true" title="Bends the geometry itself. The silhouette moves, and every march step pays for it.">Space</button>
+          <button type="button" data-wm="1" aria-pressed="false" title="Bends only the light on the surface. Same crinkle for a fraction of the cost, but the silhouette stays smooth.">Surface</button>
+        </div>
+      </div>
       <div class="slider">
         <label class="lbl" for="warpAmt">Warp strength</label><output id="warpAmtOut">0.74</output>
         <input id="warpAmt" type="range" min="0" max="100" step="1" value="74">
@@ -375,6 +382,7 @@ uniform float uEps;       // how close to the surface a ray must get to count as
 uniform float uOmega;     // over-relaxation: how far past the safe radius a step reaches
 uniform float uBound;     // bounding volume: 0 sphere, 1 box, 2 pick per object
 uniform float uBoundPad;  // slack added to it
+uniform float uWarpMode;  // 0 warps the space, 1 warps only the shading normal
 
 const vec3 SPIKE = vec3(0.608, 0.482, 1.000);
 const vec3 RIM   = vec3(0.620, 0.898, 1.000);
@@ -674,13 +682,40 @@ vec3 domainWarp(vec3 p, out float lip){
   // noise displacement — the domain warp proper. Smoothstep value noise is
   // C1, so the displaced space stays continuous; its per-axis gradient peaks
   // at 1.5 per unit cell, and 2.2 covers the 3-channel worst case.
-  if(uWarpOn.x > 0.5){
+  // In surface mode this whole block is skipped: the space is left alone, the
+  // distance stays exact, and the crinkle is put back at the hit instead.
+  // Twist and bend stay real warps either way — they change the shape, which
+  // is not something a shading trick can stand in for.
+  if(uWarpOn.x > 0.5 && uWarpMode < 0.5){
     float f = uWarpFreq;
     float A = 0.55 * amt;
     p += A * vn3(p*f + vec3(0.0, uMorph*0.045, 0.0));
     lip *= 1.0 + A * f * 2.2;
   }
   return p;
+}
+
+// The same noise field the space warp uses, read as one scalar channel.
+float warpH(vec3 p){
+  return vn3(p*uWarpFreq + vec3(0.0, uMorph*0.045, 0.0)).x;
+}
+
+// Surface warp: tilt the shading normal by the slope of that field instead of
+// moving the space it sits in. Four noise reads once per pixel, against one
+// per march step — and because the distance field is left exact, the march
+// keeps its full step length rather than being divided down by a Lipschitz
+// bound. The trade is that the silhouette stays smooth: this bends the light,
+// not the shape.
+vec3 warpNormal(vec3 p, vec3 n){
+  if(uWarpMode < 0.5 || uWarpOn.x < 0.5 || uWarpAmt <= 0.0) return n;
+  float e = 0.30 / max(uWarpFreq, 0.5);      // a fraction of one lobe
+  vec3 g = vec3(warpH(p + vec3(e,0.0,0.0)) - warpH(p - vec3(e,0.0,0.0)),
+                warpH(p + vec3(0.0,e,0.0)) - warpH(p - vec3(0.0,e,0.0)),
+                warpH(p + vec3(0.0,0.0,e)) - warpH(p - vec3(0.0,0.0,e))) / (2.0*e);
+  g -= dot(g, n) * n;                        // only the sideways slope tilts it
+  // the gradient scales with frequency, so dividing it back out leaves the
+  // strength slider meaning the same thing at every scale
+  return normalize(n - (0.60 * uWarpAmt / max(uWarpFreq, 0.5)) * g);
 }
 
 // the undistorted scene: both objects, evaluated in whatever space it is given
@@ -867,7 +902,8 @@ vec3 render(vec2 fc){
 
       if(hit > 0.5){
         vec3 p = ro + rd*t;
-        vec3 n = calcNormal(p);
+        vec3 gn = calcNormal(p);           // the real surface, for occlusion
+        vec3 n  = warpNormal(p, gn);       // and the one the light sees
         float C = uScene > 0.5 ? 0.42 : 1.45 / uScale;
         float somaMix = 1.0 - smoothstep(C*0.18, C*0.62, sdHit);
 
@@ -880,7 +916,7 @@ vec3 render(vec2 fc){
         vec3 hv = normalize(key - rd);
         float spec = pow(max(dot(n, hv), 0.0), 48.0);
         float aoLip;
-        float ao = clamp(map(p + n*0.05, dmy, aoLip) * aoLip * sceneLip() / 0.05, 0.0, 1.0) * 0.72 + 0.28;
+        float ao = clamp(map(p + gn*0.05, dmy, aoLip) * aoLip * sceneLip() / 0.05, 0.0, 1.0) * 0.72 + 0.28;
         float sp = spikeAt(p);
 
         col = base * (0.05 + 0.62*dif) * ao;
@@ -1025,7 +1061,7 @@ void main(){
 
   var UNIFORMS = ["uRes","uTime","uEye","uTgt","uRoll","uScale","uSpike","uSteps","uFov",
     "uShift","uMorph","uPulse","uScene","uThick","uWarpAmt","uWarpFreq","uWarpOn",
-    "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps","uOmega","uBound","uBoundPad"];
+    "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps","uOmega","uBound","uBoundPad","uWarpMode"];
   var DEFS = ["#define SCENE_BRAIN\n", "#define SCENE_NEURON\n", "#define SCENE_CHROME\n"];
 
   // One program per object, built the first time that object is shown. Each
@@ -1109,6 +1145,7 @@ void main(){
     warpAmt: 0.74,
     warpFreq: 3.75,
     warpOn: [1, 0, 0],
+    warpMode: 0,                    // 0 warps the space, 1 warps only the shading
     lcOn: [1, 1, 1, 1, 1],
     // a phone cannot afford the pinned 320-step budget the desktop opens with,
     // so it keeps the frame-time controller instead
@@ -1154,7 +1191,7 @@ void main(){
     var R = 1.74, K = 1;
     if(state.warpOn[2]) K *= Math.sqrt(1 + Math.pow(1.60 * state.warpAmt * R, 2));
     if(state.warpOn[1]) K *= Math.sqrt(1 + Math.pow(1.70 * state.warpAmt * R, 2));
-    if(state.warpOn[0]) K *= 1 + 0.55 * state.warpAmt * state.warpFreq * 2.2;
+    if(state.warpOn[0] && state.warpMode === 0) K *= 1 + 0.55 * state.warpAmt * state.warpFreq * 2.2;
     if(state.scene === 2 && state.lcOn[1]) K *= 1 + state.lcRelief * state.lcFreq * 3.0;
     return Math.min(K, 3.2);
   }
@@ -1424,6 +1461,7 @@ void main(){
     gl.uniform1f(U.uOmega, state.omega);
     gl.uniform1f(U.uBound, state.bound);
     gl.uniform1f(U.uBoundPad, state.boundPad);
+    gl.uniform1f(U.uWarpMode, state.warpMode);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -1693,6 +1731,16 @@ void main(){
       btn.blur();
     });
   });
+  var wmBtns = document.querySelectorAll("[data-wm]");
+  Array.prototype.forEach.call(wmBtns, function(btn){
+    btn.addEventListener("click", function(){
+      state.warpMode = parseInt(btn.dataset.wm, 10);
+      Array.prototype.forEach.call(wmBtns, function(b){
+        b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+      });
+      telemetry(); btn.blur();
+    });
+  });
   var wAmt = document.getElementById("warpAmt"), wAmtOut = document.getElementById("warpAmtOut");
   var wFrq = document.getElementById("warpFreq"), wFrqOut = document.getElementById("warpFreqOut");
   wAmt.addEventListener("input", function(){
@@ -1912,7 +1960,7 @@ void main(){
   // below them is backend-agnostic, so a remote store replaces just these two.
   var SAVE_KEY = "cortical.defaults.v2";
   var SAVE_KEYS = ["scene","mode","fly","aa","resPin","bound","boundPad","omega","eps",
-    "steps","stepsPin","warpAmt","warpFreq","warpOn","lcOn","lcRelief","lcFreq","lcThick",
+    "steps","stepsPin","warpAmt","warpFreq","warpOn","warpMode","lcOn","lcRelief","lcFreq","lcThick",
     "lcTwirl","colors","density","spike","spikeOn","thick","zoom","flySpeed","running","morph"];
 
   // this browser
@@ -2003,6 +2051,7 @@ void main(){
     pressSeg("res", state.resPin);
     pressSeg("aa", state.aa);
     pressSeg("bnd", state.bound);
+    pressSeg("wm", state.warpMode);
     setFly(!!state.fly);
     for(var i = 0; i < 3; i++) markToggle("warp", i, state.warpOn, state.warpOn[i]);
     for(var j = 0; j < 5; j++) markToggle("lc", j, state.lcOn, state.lcOn[j]);
