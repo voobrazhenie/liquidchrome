@@ -308,6 +308,36 @@
         </div>
       </div>
 
+      <div class="grp">
+        <button type="button" class="grph" data-grp="3" aria-expanded="true" aria-controls="grpb3">Shadows</button>
+        <div class="grpb" id="grpb3" data-grpb="3">
+          <div class="transport">
+            <button type="button" id="shOn" aria-pressed="false" title="Cast shadows from a sun that stays put, instead of the light that follows the camera">Shadows</button>
+          </div>
+          <div class="slider">
+            <label class="lbl" for="sunAz">Sun across</label><output id="sunAzOut">52&#176;</output>
+            <input id="sunAz" type="range" min="0" max="360" step="1" value="52">
+          </div>
+          <div class="slider">
+            <label class="lbl" for="sunEl">Sun up</label><output id="sunElOut">34&#176;</output>
+            <input id="sunEl" type="range" min="-89" max="89" step="1" value="34">
+          </div>
+          <div class="slider">
+            <label class="lbl" for="shSoft">Softness</label><output id="shSoftOut">0.25</output>
+            <input id="shSoft" type="range" min="0" max="100" step="1" value="25">
+          </div>
+          <div class="slider">
+            <label class="lbl" for="shDark">Darkness</label><output id="shDarkOut">0.85</output>
+            <input id="shDark" type="range" min="0" max="100" step="1" value="85">
+          </div>
+          <div class="slider">
+            <label class="lbl" for="shReach">Reach</label><output id="shReachOut">3.00</output>
+            <input id="shReach" type="range" min="50" max="600" step="10" value="300">
+          </div>
+          <p class="hint">Press <b>L</b>, then drag, to swing the sun around. Softness 0 and darkness 1 give a hard black edge.</p>
+        </div>
+      </div>
+
       <div class="transport">
         <button type="button" id="benchBtn" title="A fixed camera run over the object with the clock stepped by frame, not by time — the same work on every machine, so the numbers compare">Benchmark</button>
       </div>
@@ -371,6 +401,16 @@ uniform float uOmega;     // over-relaxation: how far past the safe radius a ste
 uniform float uBound;     // bounding volume: 0 sphere, 1 box, 2 pick per object
 uniform float uBoundPad;  // slack added to it
 uniform float uWarpMode;  // noise warp: 0 bends the space, 1 pushes the surface
+// ---- the sun ----
+// Off by default, and off is an exact no-op: with uShadowOn at zero the key light
+// is the same view-following one it has always been and not a single ray is cast.
+uniform float uShadowOn;
+uniform float uSunAz;      // where the sun stands: around, then up
+uniform float uSunEl;
+uniform float uShadowSoft; // 0 razor sharp, 1 a wide penumbra
+uniform float uShadowDark; // 0 no shadow at all, 1 pure black
+uniform float uShadowReach;// how far a shadow ray looks before giving up
+uniform float uSunMark;    // draw the sun in the sky, while it is being aimed
 
 const vec3 SPIKE = vec3(0.608, 0.482, 1.000);
 const vec3 RIM   = vec3(0.620, 0.898, 1.000);
@@ -768,8 +808,51 @@ vec3 calcNormal(vec3 p){
     e.yxy * map(p + e.yxy, t) + e.xxx * map(p + e.xxx, t));
 }
 
+#ifndef SHADOW_MAX
+#define SHADOW_MAX 64
+#endif
+
+// A second march, from the surface toward the sun. Nothing is in the way and the
+// point is lit; something is and it is not.
+//
+// The near-miss trick (Quilez): the closest a ray passed to anything, divided by
+// how far it had gone, is how much of the sun's disc that thing covered — so a
+// penumbra falls out of the same march, with no extra rays. Big k is a small disc
+// and a hard edge; small k is a wide one.
+//
+// The distance has to be un-compressed the way the ambient term already does it:
+// the warp shrinks what map() reports, and a shadow ray that believes the shrunk
+// number crawls and never arrives.
+float softShadow(vec3 ro, vec3 rd, float tmax, float k){
+  float res = 1.0, t = 0.015, dmy, lip;
+  for(int i = 0; i < SHADOW_MAX; i++){
+    if(t > tmax) break;
+    float h = map(ro + rd*t, dmy, lip) * lip * sceneLip();
+    // a real hit is black whatever k says, which is what lets a sharp shadow be
+    // properly black rather than merely dark
+    if(h < 0.0015) return 0.0;
+    res = min(res, k*h/t);
+    t += clamp(h, 0.008, 0.25);
+  }
+  return clamp(res, 0.0, 1.0);
+}
+
+// Around, then up — the same way the camera builds its own eye, so a sun at the
+// camera's azimuth really is behind you.
+vec3 sunDir(){
+  float ce = cos(uSunEl);
+  return vec3(ce*sin(uSunAz), sin(uSunEl), ce*cos(uSunAz));
+}
+
 vec3 bgCol(vec3 rd){
-  return mix(vec3(0.010, 0.015, 0.026), vec3(0.020, 0.032, 0.055), rd.y*0.5 + 0.5);
+  vec3 c = mix(vec3(0.010, 0.015, 0.026), vec3(0.020, 0.032, 0.055), rd.y*0.5 + 0.5);
+  // While the sun is being aimed it is drawn where it stands, because dragging a
+  // light you cannot see is guesswork. It goes away when the mode does.
+  if(uSunMark > 0.5){
+    float a = max(dot(rd, sunDir()), 0.0);
+    c += vec3(1.00, 0.94, 0.82) * (pow(a, 900.0) * 1.4 + pow(a, 24.0) * 0.06);
+  }
+  return c;
 }
 
 // ---- bounding volume -------------------------------------------------
@@ -898,7 +981,10 @@ vec3 render(vec2 fc){
         float somaMix = 1.0 - smoothstep(C*0.18, C*0.62, sdHit);
 
         vec3 base = mix(uColA, uColB, somaMix);
-        vec3 key = normalize(-rd + vec3(0.30, 0.62, 0.10));
+        // With the sun on it *is* the key light, so the shading and the shadows
+        // always agree. With it off this is the view-following light it has
+        // always been, to the bit.
+        vec3 key = uShadowOn > 0.5 ? sunDir() : normalize(-rd + vec3(0.30, 0.62, 0.10));
         float dif = max(dot(n, key), 0.0);
         float bak = max(dot(n, -key), 0.0) * 0.28;
         float ndv = max(dot(n, -rd), 0.0);
@@ -909,12 +995,25 @@ vec3 render(vec2 fc){
         float ao = clamp(map(p + n*0.05, dmy, aoLip) * aoLip * sceneLip() / 0.05, 0.0, 1.0) * 0.72 + 0.28;
         float sp = spikeAt(p);
 
-        col = base * (0.05 + 0.62*dif) * ao;
-        col += SPIKE * vec3(0.88, 0.84, 1.0) * bak * 0.55;
+        // A face turned away from the sun is already dark and does not need a ray.
+        float sh = 1.0;
+        if(uShadowOn > 0.5 && dif > 0.0){
+          sh = softShadow(p + n*0.01, key, uShadowReach, mix(96.0, 2.0, uShadowSoft));
+        }
+        float lit = 1.0 - uShadowDark * (1.0 - sh);
+        // Darkness also decides how much of the fill a shadow is allowed to take.
+        // At 1 a shadowed pixel loses everything and is black; at 0 both of these
+        // are exactly 1 and nothing below has changed.
+        float fill = mix(1.0, lit, uShadowDark);
+        dif *= lit;
+        spec *= lit;
+
+        col = base * (0.05*fill + 0.62*dif) * ao;
+        col += SPIKE * vec3(0.88, 0.84, 1.0) * bak * 0.55 * fill;
         col += SPIKE * sp * (0.70 + 2.2*somaMix) * uSpike;
-        col += uColB * somaMix * somaMix * 0.42;
-        col += uColA * 0.06;
-        col += RIM * fres * (0.62 + 0.80*ao) * (0.85 + 0.55*somaMix);
+        col += uColB * somaMix * somaMix * 0.42 * fill;
+        col += uColA * 0.06 * fill;
+        col += RIM * fres * (0.62 + 0.80*ao) * (0.85 + 0.55*somaMix) * fill;
         col += RIM * spec * (0.45 + 3.2*fres);
 
         float fog = 1.0 - exp(-(uScene > 0.5 ? 0.22 : 0.52) * max(t - tNear, 0.0));
@@ -1050,7 +1149,8 @@ void main(){
 
   var UNIFORMS = ["uRes","uTime","uEye","uTgt","uRoll","uScale","uSpike","uSteps","uFov",
     "uShift","uMorph","uPulse","uScene","uThick","uWarpAmt","uWarpFreq","uWarpOn",
-    "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps","uOmega","uBound","uBoundPad","uWarpMode"];
+    "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps","uOmega","uBound","uBoundPad","uWarpMode",
+    "uShadowOn","uSunAz","uSunEl","uShadowSoft","uShadowDark","uShadowReach","uSunMark"];
   var DEFS = ["#define SCENE_BRAIN\n", "#define SCENE_NEURON\n", "#define SCENE_CHROME\n"];
 
   // One program per object, built the first time that object is shown. Each
@@ -1140,6 +1240,10 @@ void main(){
     // so it keeps the frame-time controller instead
     eps: 12.00, stepsPin: !mobile, omega: 1.30,
     bound: 2, boundPad: 0.05,
+    // the sun: off, and a three-quarter key for when it is switched on. Written
+    // as the degrees the sliders show, so the two never disagree on first load.
+    shadowOn: 0, sunAz: 52 * Math.PI / 180, sunEl: 34 * Math.PI / 180,
+    shadowSoft: 0.25, shadowDark: 0.85, shadowReach: 3.00,
     lcRelief: 0.26, lcFreq: 4.00, lcThick: 0.022, lcTwirl: 1.90,
     // structure + accent colour per object: brain, neuron, LiquidChrome
     colors: [["#2FD9C0", "#FFC98A"], ["#2FD9C0", "#FFC98A"], ["#009DFF", "#FF4271"]],
@@ -1164,7 +1268,7 @@ void main(){
     // six camera slots, recalled with 5-0 and stored with shift+5-0
     favs: [null, null, null, null, null, null],
     // which console groups are open
-    groups: [1, 1, 1]
+    groups: [1, 1, 1, 1]
   };
 
   var rgbCache = {};
@@ -1573,6 +1677,13 @@ void main(){
     gl.uniform1f(U.uBound, state.bound);
     gl.uniform1f(U.uBoundPad, state.boundPad);
     gl.uniform1f(U.uWarpMode, state.warpMode);
+    gl.uniform1f(U.uShadowOn, state.shadowOn ? 1 : 0);
+    gl.uniform1f(U.uSunAz, state.sunAz);
+    gl.uniform1f(U.uSunEl, state.sunEl);
+    gl.uniform1f(U.uShadowSoft, state.shadowSoft);
+    gl.uniform1f(U.uShadowDark, state.shadowDark);
+    gl.uniform1f(U.uShadowReach, state.shadowReach);
+    gl.uniform1f(U.uSunMark, sunMode ? 1 : 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -1643,6 +1754,8 @@ void main(){
     if(e.pointerId !== pid) return;
     var dx = e.clientX - px, dy = e.clientY - py;
     px = e.clientX; py = e.clientY;
+    // the sun gets the drag first, and the camera is not told about it at all
+    if(sunMode){ sunDrag(dx, dy); return; }
     if(state.fly){ flyLook(dx, dy); return; }
     state.velAz = -dx * 0.0032;
     state.velEl =  dy * 0.0024;
@@ -1672,9 +1785,15 @@ void main(){
   var hintEl = document.getElementById("hint");
   var autoHint = hintEl ? hintEl.textContent : "";
   var FLY_HINT = "WASD move · Q/E down/up · shift sprint · right-drag look · wheel speed · R new view · 5-0 saved views";
+  var SUN_HINT = "Drag to swing the sun · L or Esc gives the mouse back to the camera";
+  // while this is on the drag belongs to the sun, not the camera
+  var sunMode = false;
   // one owner for the hint line: a transient message parks the standing one
   var hintBusy = 0, hintT = 0;
-  function showHint(){ if(hintEl && !hintBusy) hintEl.textContent = state.fly ? FLY_HINT : autoHint; }
+  function showHint(){
+    if(!hintEl || hintBusy) return;
+    hintEl.textContent = sunMode ? SUN_HINT : (state.fly ? FLY_HINT : autoHint);
+  }
   function toast(msg){
     if(!hintEl) return;
     clearTimeout(hintT);
@@ -1889,7 +2008,8 @@ void main(){
       telemetry(); btn.blur();
     });
   });
-  function lcSlider(id, key, scale, fmt){
+  // one labelled slider: scale it into state, format the reading, repaint
+  function numSlider(id, key, scale, fmt){
     var inp = document.getElementById(id), out = document.getElementById(id + "Out");
     inp.addEventListener("input", function(){
       state[key] = parseFloat(inp.value) * scale;
@@ -1898,10 +2018,43 @@ void main(){
     });
     paint(inp);
   }
-  lcSlider("lcRelief", "lcRelief", 0.01,  function(v){ return v.toFixed(2); });
-  lcSlider("lcFreq",   "lcFreq",   0.01,  function(v){ return v.toFixed(2); });
-  lcSlider("lcThick",  "lcThick",  0.0005, function(v){ return (v * 20).toFixed(2); });
-  lcSlider("lcTwirl",  "lcTwirl",  0.01,  function(v){ return v.toFixed(2) + " rad"; });
+  // ---- the sun ----
+  var DEG = Math.PI / 180;
+  var shOnBtn = document.getElementById("shOn");
+  function setShadows(on){
+    state.shadowOn = on ? 1 : 0;
+    shOnBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    telemetry();
+  }
+  shOnBtn.addEventListener("click", function(){ setShadows(!state.shadowOn); shOnBtn.blur(); });
+
+  var degOut = function(v){ return Math.round(v / DEG) + "\u00b0"; };
+  numSlider("sunAz",   "sunAz",       DEG,  degOut);
+  numSlider("sunEl",   "sunEl",       DEG,  degOut);
+  numSlider("shSoft",  "shadowSoft",  0.01, function(v){ return v.toFixed(2); });
+  numSlider("shDark",  "shadowDark",  0.01, function(v){ return v.toFixed(2); });
+  numSlider("shReach", "shadowReach", 0.01, function(v){ return v.toFixed(2); });
+
+  // Aiming a light you cannot see is guesswork, so L hands the drag to the sun
+  // and puts it in the sky while it is being moved. The camera does not budge.
+  function setSunMode(on){
+    sunMode = !!on;
+    // the mode would do nothing visible with the sun switched off
+    if(sunMode && !state.shadowOn) setShadows(true);
+    showHint();
+  }
+  function sunDrag(dx, dy){
+    state.sunAz = (state.sunAz - dx * 0.005) % (Math.PI * 2);
+    if(state.sunAz < 0) state.sunAz += Math.PI * 2;
+    state.sunEl = Math.max(-1.552, Math.min(1.552, state.sunEl + dy * 0.005));
+    slide(document.getElementById("sunAz"), state.sunAz / DEG);
+    slide(document.getElementById("sunEl"), state.sunEl / DEG);
+  }
+
+  numSlider("lcRelief", "lcRelief", 0.01,  function(v){ return v.toFixed(2); });
+  numSlider("lcFreq",   "lcFreq",   0.01,  function(v){ return v.toFixed(2); });
+  numSlider("lcThick",  "lcThick",  0.0005, function(v){ return (v * 20).toFixed(2); });
+  numSlider("lcTwirl",  "lcTwirl",  0.01,  function(v){ return v.toFixed(2) + " rad"; });
 
   var colA = document.getElementById("colA"), colB = document.getElementById("colB");
   colA.addEventListener("input", function(){ state.colors[state.scene][0] = colA.value; });
@@ -2098,12 +2251,14 @@ void main(){
     if(e.key === "m" || e.key === "M"){ setMorph(!state.morph); }
     if(e.key === "i" || e.key === "I"){ setSpikes(!state.spikeOn); }
     if(e.key === "r" || e.key === "R"){ randomView(); }
+    if(e.key === "l" || e.key === "L"){ setSunMode(!sunMode); }
     if(RES_KEY[e.code] !== undefined){ setRes(RES_KEY[e.code]); }
     if(e.key === "a" || e.key === "A"){ setAA((state.aa + 1) % 3); }
     if(e.key === "f" || e.key === "F"){ toggleFullscreen(); }
     if(e.key === "h" || e.key === "H" || e.key === "u" || e.key === "U"){
       setHud(hud.classList.contains("hidden"));
     }
+    if(e.code === "Escape" && sunMode){ e.preventDefault(); setSunMode(false); return; }
     if(e.code === "Escape" && !repEl.hidden){
       e.preventDefault();
       if(bench.on) benchStop(); else repEl.hidden = true;
@@ -2309,6 +2464,13 @@ void main(){
     } else {
       L.push("Neuron     line width " + state.thick.toFixed(3));
     }
+    // a run with a second ray per lit pixel is not the same run without one
+    if(state.shadowOn){
+      L.push("Shadows    sun " + Math.round(state.sunAz / (Math.PI/180)) + "\u00b0 / " +
+             Math.round(state.sunEl / (Math.PI/180)) + "\u00b0 \u00b7 soft " +
+             state.shadowSoft.toFixed(2) + " \u00b7 dark " + state.shadowDark.toFixed(2) +
+             " \u00b7 reach " + state.shadowReach.toFixed(2));
+    }
     L.push("");
     L.push("avg        " + avg.toFixed(1) + " fps   (" + (sum / ms.length).toFixed(2) + " ms)");
     L.push("median     " + med.toFixed(1) + " fps");
@@ -2362,7 +2524,8 @@ void main(){
   var SAVE_KEYS = ["scene","mode","fly","aa","resPin","bound","boundPad","omega","eps",
     "steps","stepsPin","warpAmt","warpFreq","warpOn","warpMode","lcOn","lcRelief","lcFreq","lcThick",
     "lcTwirl","colors","density","spike","spikeOn","thick","zoom","flySpeed","running","morph",
-    "flyPos","flyYaw","flyPitch","favs","groups"];
+    "flyPos","flyYaw","flyPitch","favs","groups",
+    "shadowOn","sunAz","sunEl","shadowSoft","shadowDark","shadowReach"];
 
   // this browser
   function readStore(){
@@ -2474,6 +2637,12 @@ void main(){
     var pin = state.stepsPin;
     slide(rSteps, state.steps);      // its handler pins the budget as a side effect
     state.stepsPin = pin;
+    setShadows(!!state.shadowOn);
+    slide(document.getElementById("sunAz"),   state.sunAz / (Math.PI / 180));
+    slide(document.getElementById("sunEl"),   state.sunEl / (Math.PI / 180));
+    slide(document.getElementById("shSoft"),  state.shadowSoft * 100);
+    slide(document.getElementById("shDark"),  state.shadowDark * 100);
+    slide(document.getElementById("shReach"), state.shadowReach * 100);
     syncGroups();
     applyScene();                    // reloads this object's colours into the swatches
     resize(); telemetry();
@@ -2543,6 +2712,12 @@ void main(){
   if(document.fonts && document.fonts.ready) document.fonts.ready.then(reframe);
   telemetry();
   requestAnimationFrame(frame);
+
+  // A way in for the headless checks, which have to pose the camera and freeze
+  // the clocks before they can compare two frames. Reading and writing state is
+  // all it offers; it draws nothing and changes nothing on its own.
+  window.__state = state;
+  Object.defineProperty(window, "__sunMode", { get: function(){ return sunMode; } });
 })();
 </script>
 
