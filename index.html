@@ -195,6 +195,7 @@
               <button type="button" data-lc="2" aria-pressed="true" title="An undeformed copy in the same place">3 Copy</button>
               <button type="button" data-lc="3" aria-pressed="true" title="Keep only where the two overlap">4 Intersect</button>
               <button type="button" data-lc="4" aria-pressed="true" title="Twirl the result">5 Twirl</button>
+              <button type="button" data-lc="5" aria-pressed="false" title="A plain cube hanging over the slab. Its shadow is one you can check by eye — switch the relief off and the ground is flat enough to read it.">6 Test cube</button>
             </div>
           </div>
           <div class="slider" data-only="2" hidden>
@@ -411,6 +412,7 @@ uniform float uShadowSoft; // 0 razor sharp, 1 a wide penumbra
 uniform float uShadowDark; // 0 no shadow at all, 1 pure black
 uniform float uShadowReach;// how far a shadow ray looks before giving up
 uniform float uSunMark;    // draw the sun in the sky, while it is being aimed
+uniform float uLcCube;     // the test cube, floating over the slab
 
 const vec3 SPIKE = vec3(0.608, 0.482, 1.000);
 const vec3 RIM   = vec3(0.620, 0.898, 1.000);
@@ -588,6 +590,13 @@ float sceneLip(){
 }
 
 #ifdef SCENE_CHROME
+// The test cube: a plain box hanging over the slab, clear of whatever the
+// relief is doing. Nothing about it is clever — that is the point. A cube on
+// flat ground throws a shadow anyone can check by eye, which no amount of
+// rippled chrome will ever let you do.
+const float CUBE_R = 0.20;
+float cubeY(){ return uLcThick + uLcRelief + 0.30; }
+
 float sdBox(vec3 p, vec3 b){
   vec3 q = abs(p) - b;
   return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
@@ -661,6 +670,15 @@ float liquid(vec3 p, out float sd){
 
   // tint by altitude: the crests take the accent colour
   sd = (0.5 - 0.5 * clamp(h / max(uLcRelief, 1e-3), -1.0, 1.0)) * 0.42;
+
+  // 6 - the test cube. Taken in the untwirled coordinates so it stays put, and
+  // divided by the same bound as the slab so the caller's one rule — this
+  // number times lip is the real distance — still holds when the cube is the
+  // nearest thing.
+  if(uLcCube > 0.5){
+    float dc = sdBox(p - vec3(0.0, cubeY(), 0.0), vec3(CUBE_R)) / lip;
+    if(dc < d){ d = dc; sd = 0.42; }   // plain structure colour, no crest tint
+  }
   return d;
 }
 
@@ -836,9 +854,13 @@ float softShadow(vec3 ro, vec3 rd, float tmax, float k, float t0){
     if(t > tmax) break;
     float safe = map(ro + rd*t, dmy, lip);   // guaranteed clear: step by this
     float near = safe * lip * sceneLip();    // probably the surface: judge by this
-    // a real hit is black whatever k says, which is what lets a sharp shadow be
-    // properly black rather than merely dark
-    if(near < 0.0015) return 0.0;
+    // Inside something, so black whatever k says — and inside is the sign, not
+    // a distance. Calling a hit at some small positive number instead is a
+    // cliff: on a ridge lit edge-on by a low sun, two neighbouring pixels whose
+    // rays pass at a thousandth of a unit either side of it come back opposite,
+    // which is the salt-and-pepper that looked like shadow in the sunlight. The
+    // near-miss term below already darkens the approach, and continuously.
+    if(near < 0.0) return 0.0;
     res = min(res, k*near/t);
     t += clamp(safe, 0.0015, 0.25);
   }
@@ -876,6 +898,7 @@ vec3 boundHalf(){
   // intersecting with the undeformed copy clips the relief straight back off
   bool isect = uLcOn.x > 0.5 && uLcOn.z > 0.5 && uLcOn.w > 0.5;
   float ry = uLcThick + (isect ? 0.0 : relief);
+  if(uLcCube > 0.5) ry = max(ry, cubeY() + CUBE_R);
   // bend tips space about Z, which lifts the slab out of an axis-aligned box
   if(uWarpOn.z > 0.5) ry = 1.74;
   return vec3(1.4143, ry, 1.4143);
@@ -1006,10 +1029,16 @@ vec3 render(vec2 fc){
         // A face turned away from the sun is already dark and does not need a ray.
         float sh = 1.0;
         if(uShadowOn > 0.5 && dif > 0.0){
+          // Two things decide how far clear of the surface the ray has to start.
           // A ray leaving at a shallow angle stays within the surface's own
-          // roughness a long way out, so how far to start clear of it depends on
-          // how low the sun sits on this particular face.
-          float off = mix(0.045, 0.012, dif);
+          // roughness a long way out, so the lower the sun sits on this face the
+          // further out it goes. And this point is not exactly on the surface:
+          // the march lands on an over-estimate of where it is, and a ray that
+          // ran out of budget is walked the rest of the way by that same
+          // over-estimate — both can leave it a little way inside. trueD is how
+          // far that could be, so clearing it is what stops a shadow ray being
+          // born underground and reporting black on a face in full sun.
+          float off = mix(0.045, 0.012, dif) + max(trueD, 0.0);
           sh = softShadow(p + n*off, key, uShadowReach, mix(96.0, 2.0, uShadowSoft), off);
         }
         float lit = 1.0 - uShadowDark * (1.0 - sh);
@@ -1162,7 +1191,7 @@ void main(){
   var UNIFORMS = ["uRes","uTime","uEye","uTgt","uRoll","uScale","uSpike","uSteps","uFov",
     "uShift","uMorph","uPulse","uScene","uThick","uWarpAmt","uWarpFreq","uWarpOn",
     "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps","uOmega","uBound","uBoundPad","uWarpMode",
-    "uShadowOn","uSunAz","uSunEl","uShadowSoft","uShadowDark","uShadowReach","uSunMark"];
+    "uShadowOn","uSunAz","uSunEl","uShadowSoft","uShadowDark","uShadowReach","uSunMark","uLcCube"];
   var DEFS = ["#define SCENE_BRAIN\n", "#define SCENE_NEURON\n", "#define SCENE_CHROME\n"];
 
   // One program per object, built the first time that object is shown. Each
@@ -1247,7 +1276,7 @@ void main(){
     warpFreq: 3.75,
     warpOn: [1, 0, 0],
     warpMode: 0,                    // noise warp: 0 bends the space, 1 the surface
-    lcOn: [1, 1, 1, 1, 1],
+    lcOn: [1, 1, 1, 1, 1, 0],       // 1-5 are the build steps; 6 is the test cube
     // a phone cannot afford the pinned 320-step budget the desktop opens with,
     // so it keeps the frame-time controller instead
     eps: 12.00, stepsPin: !mobile, omega: 1.30,
@@ -1681,6 +1710,7 @@ void main(){
     gl.uniform3f(U.uColB, cb[0], cb[1], cb[2]);
     gl.uniform4f(U.uLcOn, state.lcOn[0], state.lcOn[1], state.lcOn[2], state.lcOn[3]);
     gl.uniform1f(U.uLcTwirl, state.lcOn[4] ? state.lcTwirl : 0.0);
+    gl.uniform1f(U.uLcCube, state.lcOn[5] ? 1 : 0);
     gl.uniform1f(U.uLcRelief, state.lcRelief);
     gl.uniform1f(U.uLcFreq, state.lcFreq);
     gl.uniform1f(U.uLcThick, state.lcThick);
@@ -2644,7 +2674,7 @@ void main(){
     pressSeg("wm", state.warpMode);
     setFly(!!state.fly);
     for(var i = 0; i < 3; i++) markToggle("warp", i, state.warpOn, state.warpOn[i]);
-    for(var j = 0; j < 5; j++) markToggle("lc", j, state.lcOn, state.lcOn[j]);
+    for(var j = 0; j < 6; j++) markToggle("lc", j, state.lcOn, state.lcOn[j]);
     setRunning(!!state.running); setMorph(!!state.morph); setSpikes(!!state.spikeOn);
     slide(dens, state.density);
     slide(spk, state.spike * 100);
