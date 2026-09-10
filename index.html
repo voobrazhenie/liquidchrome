@@ -315,27 +315,47 @@
           <div class="transport">
             <button type="button" id="shOn" aria-pressed="true" title="Cast shadows from a sun that stays put, instead of the light that follows the camera">Shadows</button>
           </div>
-          <div class="slider">
+          <div>
+            <p class="lbl" id="shSrcLbl">How</p>
+            <div class="seg" role="group" aria-labelledby="shSrcLbl">
+              <button type="button" data-shsrc="0" aria-pressed="true" title="March a second ray from the surface to the sun. The only one that can throw a shadow from one thing onto another, and the only one that costs a ray.">Ray march</button>
+              <button type="button" data-shsrc="1" aria-pressed="false" title="Read the shadow off a sphere you painted. Whatever you put on it lands on the object, and it costs one texture fetch.">Sphere</button>
+              <button type="button" data-shsrc="2" aria-pressed="false" title="No ray and no texture: how square-on the surface is to the sun. It cannot throw a shadow onto anything else, but it turns with the sun and it is nearly free.">Sun angle</button>
+            </div>
+          </div>
+          <div class="slider" data-shs="012">
             <label class="lbl" for="sunAz">Sun across</label><output id="sunAzOut">52&#176;</output>
             <input id="sunAz" type="range" min="0" max="360" step="1" value="52">
           </div>
-          <div class="slider">
+          <div class="slider" data-shs="012">
             <label class="lbl" for="sunEl">Sun up</label><output id="sunElOut">34&#176;</output>
             <input id="sunEl" type="range" min="-89" max="89" step="1" value="34">
           </div>
-          <div class="slider">
+          <div class="slider" data-shs="0">
             <label class="lbl" for="shSoft">Softness</label><output id="shSoftOut">0.25</output>
             <input id="shSoft" type="range" min="0" max="100" step="1" value="25">
           </div>
-          <div class="slider">
-            <label class="lbl" for="shDark">Darkness</label><output id="shDarkOut">0.85</output>
-            <input id="shDark" type="range" min="0" max="100" step="1" value="85">
-          </div>
-          <div class="slider">
+          <div class="slider" data-shs="0">
             <label class="lbl" for="shReach">Reach</label><output id="shReachOut">3.00</output>
             <input id="shReach" type="range" min="50" max="600" step="10" value="300">
           </div>
-          <p class="hint"><b>Left-drag</b> swings the sun, <b>right-drag</b> still turns the camera; <b>L</b> hands the left button back. Softness 0 and darkness 1 give a hard black edge.</p>
+          <div data-shs="1" hidden>
+            <p class="lbl" id="shMcLbl">Shadow sphere</p>
+            <div class="transport wrap" id="shMcSeg" role="group" aria-labelledby="shMcLbl"></div>
+          </div>
+          <div class="slider">
+            <label class="lbl" for="shLevel" title="Where the edge between light and shadow sits. Only bites once Contrast is up.">Level</label><output id="shLevelOut">0.50</output>
+            <input id="shLevel" type="range" min="0" max="100" step="1" value="50">
+          </div>
+          <div class="slider">
+            <label class="lbl" for="shContrast" title="How abruptly it crosses that edge. At 1 it is a hard line and the shadow has a boundary you can see.">Contrast</label><output id="shContrastOut">0.00</output>
+            <input id="shContrast" type="range" min="0" max="100" step="1" value="0">
+          </div>
+          <div class="slider">
+            <label class="lbl" for="shDark" title="How much of the shadow is applied. At 1 a shadowed pixel is black.">Amount</label><output id="shDarkOut">0.85</output>
+            <input id="shDark" type="range" min="0" max="100" step="1" value="85">
+          </div>
+          <p class="hint"><b>Left-drag</b> swings the sun, <b>right-drag</b> still turns the camera; <b>L</b> hands the left button back. For a hard black edge put <b>Contrast</b> and <b>Amount</b> to 1 and move <b>Level</b>.</p>
         </div>
       </div>
 
@@ -350,7 +370,9 @@
             <div class="transport wrap" id="mcSeg" role="group" aria-labelledby="mcLbl"></div>
           </div>
           <div class="transport">
-            <button type="button" id="mcAdd" title="Load a matcap sphere from this computer. It joins the list above and is used straight away.">Add a sphere&hellip;</button>
+            <button type="button" id="mcAdd" title="Load a matcap sphere from this computer. It joins the list above and is used straight away.">Add&hellip;</button>
+            <button type="button" id="mcSave" title="Keep the chosen sphere: on this device, and in the cloud so it follows the page to any computer.">Keep</button>
+            <button type="button" id="mcDel" title="Remove the chosen sphere, here and in the cloud. The two built-in ones stay.">Delete</button>
           </div>
           <input type="file" id="mcFile" accept="image/*" hidden>
           <p class="hint">A matcap is a photograph of a sphere: the surface is coloured by which way it points on screen, so whatever lit that sphere lights this. It overrides the sun.</p>
@@ -439,6 +461,15 @@ uniform float uLcCube;     // the test cube, floating over the slab
 // texture fetch.
 uniform float uMatcapOn;
 uniform sampler2D uMatcap;
+// ---- how a shadow is arrived at ----
+// Three ways, and only the first spends a ray. Whichever produced it the answer
+// is one number — 1 is full light, 0 is black — and all three go through the
+// same shaping and the same application, so the controls mean the same thing in
+// each and switching between them is a fair comparison.
+uniform float uShadowSrc;   // 0 marched, 1 a painted sphere, 2 the sun's own angle
+uniform float uShLevel;     // where the edge between light and shadow sits
+uniform float uShContrast;  // how abruptly it crosses it: 1 is a hard line
+uniform sampler2D uShMatcap;
 
 const vec3 SPIKE = vec3(0.608, 0.482, 1.000);
 const vec3 RIM   = vec3(0.620, 0.898, 1.000);
@@ -893,6 +924,16 @@ float softShadow(vec3 ro, vec3 rd, float tmax, float k, float t0){
   return clamp(res, 0.0, 1.0);
 }
 
+// Level slides the edge between light and shadow; contrast squeezes the ramp
+// around it until it is a step. This is where a soft grey shadow becomes a hard
+// black one with a boundary you can see, and it is the same curve whichever of
+// the three sources produced the number. At contrast 0 it is the identity, so
+// the ray march is left exactly as it was unless the slider is reached for.
+float shapeShadow(float s){
+  float w = mix(0.5, 0.0015, uShContrast);
+  return mix(s, smoothstep(uShLevel - w, uShLevel + w, s), uShContrast);
+}
+
 // Around, then up — the same way the camera builds its own eye, so a sun at the
 // camera's azimuth really is behind you.
 vec3 sunDir(){
@@ -1050,6 +1091,9 @@ vec3 render(vec2 fc){
       } else if(hit > 0.5){
         vec3 p = ro + rd*t;
         vec3 n = calcNormal(p);
+        // where this pixel sits on a sphere facing the camera, which is what a
+        // painted shadow sphere is looked up by
+        vec2 mn = mat2(cr, sr, -sr, cr) * vec2(dot(uu, n), dot(vv, n));
         float C = uScene > 0.5 ? 0.42 : 1.45 / uScale;
         float somaMix = 1.0 - smoothstep(C*0.18, C*0.62, sdHit);
 
@@ -1068,20 +1112,38 @@ vec3 render(vec2 fc){
         float ao = clamp(map(p + n*0.05, dmy, aoLip) * aoLip * sceneLip() / 0.05, 0.0, 1.0) * 0.72 + 0.28;
         float sp = spikeAt(p);
 
-        // A face turned away from the sun is already dark and does not need a ray.
         float sh = 1.0;
-        if(uShadowOn > 0.5 && dif > 0.0){
-          // Two things decide how far clear of the surface the ray has to start.
-          // A ray leaving at a shallow angle stays within the surface's own
-          // roughness a long way out, so the lower the sun sits on this face the
-          // further out it goes. And this point is not exactly on the surface:
-          // the march lands on an over-estimate of where it is, and a ray that
-          // ran out of budget is walked the rest of the way by that same
-          // over-estimate — both can leave it a little way inside. trueD is how
-          // far that could be, so clearing it is what stops a shadow ray being
-          // born underground and reporting black on a face in full sun.
-          float off = mix(0.045, 0.012, dif) + max(trueD, 0.0);
-          sh = softShadow(p + n*off, key, uShadowReach, mix(96.0, 2.0, uShadowSoft), off);
+        if(uShadowOn > 0.5){
+          if(uShadowSrc < 0.5){
+            // A face turned away from the sun is already dark and needs no ray.
+            if(dif > 0.0){
+              // Two things decide how far clear of the surface the ray starts. A
+              // ray leaving at a shallow angle stays within the surface's own
+              // roughness a long way out, so the lower the sun sits on this face
+              // the further out it goes. And this point is not exactly on the
+              // surface: the march lands on an over-estimate of where it is, and
+              // a ray that ran out of budget is walked the rest of the way by
+              // that same over-estimate — both can leave it a little inside.
+              // trueD is how far that could be, so clearing it is what stops a
+              // shadow ray being born underground and reporting black on a face
+              // in full sun.
+              float off = mix(0.045, 0.012, dif) + max(trueD, 0.0);
+              sh = softShadow(p + n*off, key, uShadowReach, mix(96.0, 2.0, uShadowSoft), off);
+            }
+          } else if(uShadowSrc < 1.5){
+            // A sphere someone painted the shadow onto. Read in linear light,
+            // because that is where a brightness is an average of anything.
+            vec3 t2 = pow(max(texture2D(uShMatcap, mn * 0.5 + 0.5).rgb, 0.0), vec3(2.2));
+            sh = dot(t2, vec3(0.2126, 0.7152, 0.0722));
+          } else {
+            // No ray and no texture: how square-on the surface is to the sun,
+            // opened out across the whole range so the shaping has room to work.
+            // It cannot throw a shadow from one thing onto another and never
+            // will — but it turns with the sun, it costs a dot product, and with
+            // the contrast up it draws a hard terminator wherever you aim it.
+            sh = dot(n, key) * 0.5 + 0.5;
+          }
+          sh = shapeShadow(sh);
         }
         float lit = 1.0 - uShadowDark * (1.0 - sh);
         // Darkness also decides how much of the fill a shadow is allowed to take.
@@ -1234,7 +1296,7 @@ void main(){
     "uShift","uMorph","uPulse","uScene","uThick","uWarpAmt","uWarpFreq","uWarpOn",
     "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps","uOmega","uBound","uBoundPad","uWarpMode",
     "uShadowOn","uSunAz","uSunEl","uShadowSoft","uShadowDark","uShadowReach","uSunMark","uLcCube",
-    "uMatcapOn","uMatcap"];
+    "uMatcapOn","uMatcap","uShadowSrc","uShLevel","uShContrast","uShMatcap"];
   var DEFS = ["#define SCENE_BRAIN\n", "#define SCENE_NEURON\n", "#define SCENE_CHROME\n"];
 
   // One program per object, built the first time that object is shown. Each
@@ -1292,44 +1354,53 @@ void main(){
   // No mipmaps and clamped edges, so a sphere that is not a power of two is
   // still a legal texture in WebGL 1. It starts as one grey pixel: a decode
   // takes a moment and a black frame in the meantime looks like a fault.
-  var mcTex = gl.createTexture();
-  var mcReady = false, mcAt = -1;
-  gl.bindTexture(gl.TEXTURE_2D, mcTex);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
-                new Uint8Array([128, 128, 128, 255]));
+  // Two of these: one sphere is the material, the other carries a shadow. They
+  // are the same thing loaded onto different texture units, so they are the same
+  // code with the unit passed in.
+  function sphereSlot(unit){
+    var tex = gl.createTexture();
+    var slot = { tex: tex, unit: unit, ready: false, at: -1 };
+    gl.activeTexture(unit);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+                  new Uint8Array([128, 128, 128, 255]));
+    gl.activeTexture(gl.TEXTURE0);
 
-  function uploadMatcap(src, done){
-    var img = new Image();
-    img.onload = function(){
-      // this runs from a decode, between frames, so put the unit back afterwards
-      gl.activeTexture(gl.TEXTURE1);
-      gl.bindTexture(gl.TEXTURE_2D, mcTex);
-      // v runs up the sphere and row 0 of an image is its top, so the rows go in
-      // the other way round
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-      gl.activeTexture(gl.TEXTURE0);
-      mcReady = true;
-      if(done) done(true);
+    slot.load = function(src, done){
+      var img = new Image();
+      img.onload = function(){
+        // this runs from a decode, between frames, so put the unit back after
+        gl.activeTexture(unit);
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        // v runs up the sphere and row 0 of an image is its top, so the rows go
+        // in the other way round
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.activeTexture(gl.TEXTURE0);
+        slot.ready = true;
+        if(done) done(true);
+      };
+      img.onerror = function(){ if(done) done(false); };
+      img.src = src;
     };
-    img.onerror = function(){ if(done) done(false); };
-    img.src = src;
+    // The state says which sphere is wanted; this is what makes it so. Keeping
+    // the upload here rather than in a button handler means a restored setting,
+    // or anything else that writes the state, lands on the card by itself.
+    slot.sync = function(want){
+      var i = Math.max(0, Math.min(MATCAPS.length - 1, want | 0));
+      if(i === slot.at) return;
+      slot.at = i;
+      slot.load(MATCAPS[i].src);
+    };
+    return slot;
   }
-
-  // The state says which sphere is wanted; this is what makes it so. Keeping the
-  // upload here rather than in the button handler means a restored setting, or
-  // anything else that writes the state, lands on the card by itself.
-  function syncMatcap(){
-    var i = Math.max(0, Math.min(MATCAPS.length - 1, state.matcap | 0));
-    if(i === mcAt) return;
-    mcAt = i;
-    uploadMatcap(MATCAPS[i].src);
-  }
+  var mcSlot = sphereSlot(gl.TEXTURE1);   // the material
+  var shSlot = sphereSlot(gl.TEXTURE2);   // the shadow
 
   // A Chrome with hardware acceleration switched off falls back to a software
   // rasteriser, which is orders of magnitude slower than any real GPU. Worth
@@ -1383,6 +1454,9 @@ void main(){
     // degrees the sliders show, so the two never disagree on first load.
     shadowOn: 1, sunAz: 52 * Math.PI / 180, sunEl: 34 * Math.PI / 180,
     shadowSoft: 0.25, shadowDark: 0.85, shadowReach: 3.00,
+    // how the shadow is arrived at, and the shaping every source shares.
+    // shadowDark is what the console calls Amount; the key is older than the name.
+    shadowSrc: 0, shadowLevel: 0.50, shadowContrast: 0.00, shadowMc: 0,
     lcRelief: 0.26, lcFreq: 4.00, lcThick: 0.022, lcTwirl: 1.90,
     // structure + accent colour per object: brain, neuron, LiquidChrome
     colors: [["#2FD9C0", "#FFC98A"], ["#2FD9C0", "#FFC98A"], ["#009DFF", "#FF4271"]],
@@ -1811,11 +1885,20 @@ void main(){
     gl.uniform4f(U.uLcOn, state.lcOn[0], state.lcOn[1], state.lcOn[2], state.lcOn[3]);
     gl.uniform1f(U.uLcTwirl, state.lcOn[4] ? state.lcTwirl : 0.0);
     gl.uniform1f(U.uLcCube, state.lcOn[5] ? 1 : 0);
-    syncMatcap();
+    mcSlot.sync(state.matcap);
+    shSlot.sync(state.shadowMc);
     gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, mcTex);
+    gl.bindTexture(gl.TEXTURE_2D, mcSlot.tex);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, shSlot.tex);
+    gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(U.uMatcap, 1);
-    gl.uniform1f(U.uMatcapOn, state.matcapOn && mcReady ? 1 : 0);
+    gl.uniform1i(U.uShMatcap, 2);
+    gl.uniform1f(U.uMatcapOn, state.matcapOn && mcSlot.ready ? 1 : 0);
+    // asking for a painted sphere that has not decoded yet would black the frame
+    gl.uniform1f(U.uShadowSrc, state.shadowSrc === 1 && !shSlot.ready ? 0 : state.shadowSrc);
+    gl.uniform1f(U.uShLevel, state.shadowLevel);
+    gl.uniform1f(U.uShContrast, state.shadowContrast);
     gl.uniform1f(U.uLcRelief, state.lcRelief);
     gl.uniform1f(U.uLcFreq, state.lcFreq);
     gl.uniform1f(U.uLcThick, state.lcThick);
@@ -2190,9 +2273,34 @@ void main(){
   var degOut = function(v){ return Math.round(v / DEG) + "\u00b0"; };
   numSlider("sunAz",   "sunAz",       DEG,  degOut);
   numSlider("sunEl",   "sunEl",       DEG,  degOut);
-  numSlider("shSoft",  "shadowSoft",  0.01, function(v){ return v.toFixed(2); });
-  numSlider("shDark",  "shadowDark",  0.01, function(v){ return v.toFixed(2); });
-  numSlider("shReach", "shadowReach", 0.01, function(v){ return v.toFixed(2); });
+  var f2 = function(v){ return v.toFixed(2); };
+  numSlider("shSoft",     "shadowSoft",     0.01, f2);
+  numSlider("shDark",     "shadowDark",     0.01, f2);
+  numSlider("shReach",    "shadowReach",    0.01, f2);
+  numSlider("shLevel",    "shadowLevel",    0.01, f2);
+  numSlider("shContrast", "shadowContrast", 0.01, f2);
+
+  // Which way the shadow is worked out, and which controls that leaves standing.
+  var shSrcBtns = document.querySelectorAll("[data-shsrc]");
+  var shScoped = document.querySelectorAll("[data-shs]");
+  function applyShadowSrc(){
+    var v = String(state.shadowSrc);
+    Array.prototype.forEach.call(shScoped, function(el){
+      el.hidden = el.getAttribute("data-shs").indexOf(v) < 0;
+    });
+    Array.prototype.forEach.call(shSrcBtns, function(b){
+      b.setAttribute("aria-pressed",
+        parseInt(b.dataset.shsrc, 10) === state.shadowSrc ? "true" : "false");
+    });
+    reframe(); telemetry();
+  }
+  Array.prototype.forEach.call(shSrcBtns, function(b){
+    b.addEventListener("click", function(){
+      state.shadowSrc = parseInt(b.dataset.shsrc, 10);
+      applyShadowSrc(); b.blur();
+    });
+  });
+  applyShadowSrc();
 
   // Aiming a light you cannot see is guesswork, so L hands the drag to the sun
   // and puts it in the sky while it is being moved. The camera does not budge.
@@ -2210,39 +2318,63 @@ void main(){
     slide(document.getElementById("sunEl"), state.sunEl / DEG);
   }
 
-  // ---- the matcap ----
+  // ---- the spheres, and the two places they are used ----
   var mcOnBtn = document.getElementById("mcOn");
   var mcSeg = document.getElementById("mcSeg");
+  var shMcSeg = document.getElementById("shMcSeg");
   var mcFile = document.getElementById("mcFile");
   function setMatcapOn(on){
     state.matcapOn = on ? 1 : 0;
     mcOnBtn.setAttribute("aria-pressed", on ? "true" : "false");
     telemetry();
   }
-  function setMatcap(i){
-    state.matcap = Math.max(0, Math.min(MATCAPS.length - 1, i | 0));
-    Array.prototype.forEach.call(mcSeg.children, function(b, k){
-      b.setAttribute("aria-pressed", k === state.matcap ? "true" : "false");
-    });
-    telemetry();                       // the texture follows on the next frame
-  }
-  function drawMatcaps(){
-    mcSeg.innerHTML = "";
+  // One list, two choosers: the material picks from it and so does the shadow.
+  function drawSpheres(seg, key){
+    if(!seg) return;
+    seg.innerHTML = "";
     MATCAPS.forEach(function(m, i){
       var b = document.createElement("button");
       b.type = "button";
       b.textContent = m.name;
-      b.title = m.name;
-      b.setAttribute("aria-pressed", i === state.matcap ? "true" : "false");
-      b.addEventListener("click", function(){ setMatcap(i); b.blur(); });
-      mcSeg.appendChild(b);
+      b.title = m.id ? m.name + (m.saved ? " \u00b7 kept" : " \u00b7 not kept yet") : m.name + " \u00b7 built in";
+      b.setAttribute("aria-pressed", i === state[key] ? "true" : "false");
+      b.addEventListener("click", function(){ pickSphere(key, i); b.blur(); });
+      seg.appendChild(b);
     });
   }
+  function drawSpheresBoth(){ drawSpheres(mcSeg, "matcap"); drawSpheres(shMcSeg, "shadowMc"); }
+  function pickSphere(key, i){
+    state[key] = Math.max(0, Math.min(MATCAPS.length - 1, i | 0));
+    drawSpheresBoth();                 // the texture follows on the next frame
+    telemetry();
+  }
+  function setMatcap(i){ pickSphere("matcap", i); }
+
   mcOnBtn.addEventListener("click", function(){ setMatcapOn(!state.matcapOn); mcOnBtn.blur(); });
   document.getElementById("mcAdd").addEventListener("click", function(){ mcFile.click(); this.blur(); });
-  // A loaded sphere lives for the session. It is not written into the saved
-  // defaults: those go to one small cloud document, and an image would not fit
-  // in it — only which of the built-in two was chosen comes back.
+
+  // A sphere that came off a phone camera can be several megabytes, and it is
+  // going into a store with a size limit on it. Nothing here needs more than
+  // 512 across, so bring it down to that and re-encode; PNG unless that comes
+  // out large, in which case a high-quality JPEG.
+  function fitSphere(src, done){
+    var img = new Image();
+    img.onload = function(){
+      var w = img.naturalWidth || 1, h = img.naturalHeight || 1;
+      var k = Math.min(1, 512 / Math.max(w, h));
+      if(k >= 1 && src.length < 400000){ done(src); return; }
+      var c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(w * k));
+      c.height = Math.max(1, Math.round(h * k));
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      var out = c.toDataURL("image/png");
+      if(out.length > 500000) out = c.toDataURL("image/jpeg", 0.92);
+      done(out);
+    };
+    img.onerror = function(){ done(null); };
+    img.src = src;
+  }
+
   mcFile.addEventListener("change", function(){
     var f = mcFile.files && mcFile.files[0];
     mcFile.value = "";
@@ -2250,20 +2382,106 @@ void main(){
     var r = new FileReader();
     r.onload = function(){
       var name = (f.name.replace(/\.[^.]+$/, "") || "Loaded").slice(0, 12);
-      uploadMatcap(String(r.result), function(ok){
-        if(!ok){ toast("That file is not an image this browser can read"); return; }
-        MATCAPS.push({ name: name, src: String(r.result) });
+      fitSphere(String(r.result), function(src){
+        if(!src){ toast("That file is not an image this browser can read"); return; }
+        MATCAPS.push({ name: name, src: src, id: sphereId(), saved: false });
         state.matcap = MATCAPS.length - 1;
-        mcAt = state.matcap;           // it is already on the card
-        drawMatcaps();
+        drawSpheresBoth();
         setMatcapOn(true);
-        toast(name + " loaded");
+        toast(name + " loaded \u00b7 Keep to hold on to it");
       });
     };
     r.readAsDataURL(f);
   });
-  drawMatcaps();
-  setMatcap(state.matcap);
+
+  // ---- keeping them ----
+  // Held twice: in this browser so it is there on the next reload with no
+  // network at all, and in the cloud so it follows the page to another machine.
+  // The cloud copy is one small document per sphere rather than a field in the
+  // settings, because an image will not fit alongside the settings.
+  var MC_KEY = "cortical.matcaps.v1";
+  var MC_URL = "https://firestore.googleapis.com/v1/projects/claudecode-3bb06" +
+               "/databases/(default)/documents/matcaps";
+  var MC_AUTH = "?key=AIzaSyA63gqdsNDdECCFA5DPFiI7R6LFBpGz5kI";
+  function sphereId(){
+    return "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+  function localSpheres(){
+    try{ return JSON.parse(localStorage.getItem(MC_KEY)) || []; }catch(e){ return []; }
+  }
+  function writeLocalSpheres(){
+    var keep = MATCAPS.filter(function(m){ return m.id && m.saved; })
+                      .map(function(m){ return { id: m.id, name: m.name, src: m.src }; });
+    try{ localStorage.setItem(MC_KEY, JSON.stringify(keep)); return true; }catch(e){ return false; }
+  }
+  function cloudSpheres(){
+    return fetch(MC_URL + MC_AUTH + "&pageSize=40", {cache: "no-store"})
+      .then(function(r){ if(r.status === 404) return null; if(!r.ok) throw 0; return r.json(); })
+      .then(function(d){
+        return ((d && d.documents) || []).map(function(doc){
+          var f = doc.fields || {};
+          return { id: String(doc.name).split("/").pop(),
+                   name: (f.name && f.name.stringValue) || "Sphere",
+                   src: (f.src && f.src.stringValue) || "",
+                   saved: true };
+        }).filter(function(m){ return m.src.indexOf("data:image") === 0; });
+      });
+  }
+  function cloudKeep(m){
+    return fetch(MC_URL + "/" + m.id + MC_AUTH, {
+      method: "PATCH", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ fields: { name: {stringValue: m.name}, src: {stringValue: m.src} } })
+    }).then(function(r){ if(!r.ok) throw 0; return true; });
+  }
+  function cloudDrop(id){
+    return fetch(MC_URL + "/" + id + MC_AUTH, {method: "DELETE"})
+      .then(function(r){ if(!r.ok) throw 0; return true; });
+  }
+
+  document.getElementById("mcSave").addEventListener("click", function(){
+    this.blur();
+    var m = MATCAPS[state.matcap];
+    if(!m || !m.id){ toast("The built-in spheres are already there"); return; }
+    m.saved = true;
+    var here = writeLocalSpheres();
+    drawSpheresBoth();
+    toast(here ? "Keeping " + m.name + "\u2026" : "Cannot keep it on this device");
+    cloudKeep(m).then(function(){ toast(m.name + " kept everywhere"); })
+                .catch(function(){ toast(here ? m.name + " kept on this device" : "Cannot keep " + m.name); });
+  });
+  document.getElementById("mcDel").addEventListener("click", function(){
+    this.blur();
+    var i = state.matcap, m = MATCAPS[i];
+    if(!m || !m.id){ toast("The two built-in spheres stay"); return; }
+    MATCAPS.splice(i, 1);
+    // anything pointing past the gap slides back with it
+    if(state.matcap >= i) state.matcap = Math.max(0, state.matcap - 1);
+    if(state.shadowMc >= i) state.shadowMc = Math.max(0, state.shadowMc - 1);
+    writeLocalSpheres();
+    drawSpheresBoth();
+    toast(m.name + " removed");
+    if(m.saved) cloudDrop(m.id).catch(function(){});
+  });
+
+  // Merge by id, so a sphere kept on another machine arrives without doubling
+  // up the one already here.
+  function addSpheres(list){
+    var added = 0;
+    (list || []).forEach(function(m){
+      if(!m || !m.id || !m.src) return;
+      for(var i = 0; i < MATCAPS.length; i++) if(MATCAPS[i].id === m.id) return;
+      MATCAPS.push({ id: m.id, name: m.name, src: m.src, saved: true });
+      added++;
+    });
+    if(added) drawSpheresBoth();
+    return added;
+  }
+
+  drawSpheresBoth();
+  addSpheres(localSpheres());
+  cloudSpheres().then(function(list){
+    if(addSpheres(list)) writeLocalSpheres();   // keep this browser's copy current
+  }).catch(function(){});
 
   numSlider("lcRelief", "lcRelief", 0.01,  function(v){ return v.toFixed(2); });
   numSlider("lcFreq",   "lcFreq",   0.01,  function(v){ return v.toFixed(2); });
@@ -2683,12 +2901,24 @@ void main(){
     if(state.matcapOn){
       L.push("Matcap     " + MATCAPS[state.matcap].name + " \u00b7 replaces the lighting");
     }
-    // a run with a second ray per lit pixel is not the same run without one
+    // only one of the three costs a ray, so which one was used is the first
+    // thing anyone comparing two runs needs to know
     if(!state.matcapOn && state.shadowOn){
-      L.push("Shadows    sun " + Math.round(state.sunAz / (Math.PI/180)) + "\u00b0 / " +
-             Math.round(state.sunEl / (Math.PI/180)) + "\u00b0 \u00b7 soft " +
-             state.shadowSoft.toFixed(2) + " \u00b7 dark " + state.shadowDark.toFixed(2) +
-             " \u00b7 reach " + state.shadowReach.toFixed(2));
+      var SH_SRC = ["ray march", "sphere", "sun angle"];
+      var line = "Shadows    " + SH_SRC[state.shadowSrc] +
+                 " \u00b7 level " + state.shadowLevel.toFixed(2) +
+                 " \u00b7 contrast " + state.shadowContrast.toFixed(2) +
+                 " \u00b7 amount " + state.shadowDark.toFixed(2);
+      if(state.shadowSrc !== 1){
+        line += "\n           sun " + Math.round(state.sunAz / (Math.PI/180)) + "\u00b0 / " +
+                Math.round(state.sunEl / (Math.PI/180)) + "\u00b0";
+      }
+      if(state.shadowSrc === 0){
+        line += " \u00b7 soft " + state.shadowSoft.toFixed(2) +
+                " \u00b7 reach " + state.shadowReach.toFixed(2);
+      }
+      if(state.shadowSrc === 1) line += "\n           sphere " + MATCAPS[state.shadowMc].name;
+      L.push(line);
     }
     L.push("");
     L.push("avg        " + avg.toFixed(1) + " fps   (" + (sum / ms.length).toFixed(2) + " ms)");
@@ -2745,7 +2975,8 @@ void main(){
     "lcTwirl","colors","density","spike","spikeOn","thick","zoom","flySpeed","running","morph",
     "flyPos","flyYaw","flyPitch","favs","groups",
     "shadowOn","sunAz","sunEl","shadowSoft","shadowDark","shadowReach",
-    "matcapOn","matcap"];
+    "matcapOn","matcap",
+    "shadowSrc","shadowLevel","shadowContrast","shadowMc"];
 
   // this browser
   function readStore(){
@@ -2863,7 +3094,10 @@ void main(){
     slide(document.getElementById("shSoft"),  state.shadowSoft * 100);
     slide(document.getElementById("shDark"),  state.shadowDark * 100);
     slide(document.getElementById("shReach"), state.shadowReach * 100);
-    setMatcapOn(!!state.matcapOn); setMatcap(state.matcap);
+    slide(document.getElementById("shLevel"),    state.shadowLevel * 100);
+    slide(document.getElementById("shContrast"), state.shadowContrast * 100);
+    applyShadowSrc();
+    setMatcapOn(!!state.matcapOn); drawSpheresBoth();
     syncGroups();
     applyScene();                    // reloads this object's colours into the swatches
     resize(); telemetry();
