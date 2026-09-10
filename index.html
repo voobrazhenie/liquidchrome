@@ -312,7 +312,7 @@
         <button type="button" class="grph" data-grp="3" aria-expanded="true" aria-controls="grpb3">Shadows</button>
         <div class="grpb" id="grpb3" data-grpb="3">
           <div class="transport">
-            <button type="button" id="shOn" aria-pressed="false" title="Cast shadows from a sun that stays put, instead of the light that follows the camera">Shadows</button>
+            <button type="button" id="shOn" aria-pressed="true" title="Cast shadows from a sun that stays put, instead of the light that follows the camera">Shadows</button>
           </div>
           <div class="slider">
             <label class="lbl" for="sunAz">Sun across</label><output id="sunAzOut">52&#176;</output>
@@ -820,19 +820,27 @@ vec3 calcNormal(vec3 p){
 // penumbra falls out of the same march, with no extra rays. Big k is a small disc
 // and a hard edge; small k is a wide one.
 //
-// The distance has to be un-compressed the way the ambient term already does it:
-// the warp shrinks what map() reports, and a shadow ray that believes the shrunk
-// number crawls and never arrives.
-float softShadow(vec3 ro, vec3 rd, float tmax, float k){
-  float res = 1.0, t = 0.015, dmy, lip;
+// One map() call gives two different numbers and they are not interchangeable.
+// The compressed one is the distance the field *guarantees* is clear, so it is
+// the only length a step may safely be. The un-compressed one is how far the
+// surface probably is, so it is the one to judge a near miss by.
+//
+// Stepping by the un-compressed number is what painted black on faces the sun
+// was plainly shining at: a step longer than the guarantee lands inside the very
+// surface it set off from, the march reads that as a hit, and the stronger the
+// warp or the relief the more of them there are — which is why it showed on
+// ripples and on nothing flat.
+float softShadow(vec3 ro, vec3 rd, float tmax, float k, float t0){
+  float res = 1.0, t = t0, dmy, lip;
   for(int i = 0; i < SHADOW_MAX; i++){
     if(t > tmax) break;
-    float h = map(ro + rd*t, dmy, lip) * lip * sceneLip();
+    float safe = map(ro + rd*t, dmy, lip);   // guaranteed clear: step by this
+    float near = safe * lip * sceneLip();    // probably the surface: judge by this
     // a real hit is black whatever k says, which is what lets a sharp shadow be
     // properly black rather than merely dark
-    if(h < 0.0015) return 0.0;
-    res = min(res, k*h/t);
-    t += clamp(h, 0.008, 0.25);
+    if(near < 0.0015) return 0.0;
+    res = min(res, k*near/t);
+    t += clamp(safe, 0.0015, 0.25);
   }
   return clamp(res, 0.0, 1.0);
 }
@@ -998,7 +1006,11 @@ vec3 render(vec2 fc){
         // A face turned away from the sun is already dark and does not need a ray.
         float sh = 1.0;
         if(uShadowOn > 0.5 && dif > 0.0){
-          sh = softShadow(p + n*0.01, key, uShadowReach, mix(96.0, 2.0, uShadowSoft));
+          // A ray leaving at a shallow angle stays within the surface's own
+          // roughness a long way out, so how far to start clear of it depends on
+          // how low the sun sits on this particular face.
+          float off = mix(0.045, 0.012, dif);
+          sh = softShadow(p + n*off, key, uShadowReach, mix(96.0, 2.0, uShadowSoft), off);
         }
         float lit = 1.0 - uShadowDark * (1.0 - sh);
         // Darkness also decides how much of the fill a shadow is allowed to take.
@@ -1240,9 +1252,9 @@ void main(){
     // so it keeps the frame-time controller instead
     eps: 12.00, stepsPin: !mobile, omega: 1.30,
     bound: 2, boundPad: 0.05,
-    // the sun: off, and a three-quarter key for when it is switched on. Written
-    // as the degrees the sliders show, so the two never disagree on first load.
-    shadowOn: 0, sunAz: 52 * Math.PI / 180, sunEl: 34 * Math.PI / 180,
+    // the sun: on, standing three-quarters behind the shoulder. Written as the
+    // degrees the sliders show, so the two never disagree on first load.
+    shadowOn: 1, sunAz: 52 * Math.PI / 180, sunEl: 34 * Math.PI / 180,
     shadowSoft: 0.25, shadowDark: 0.85, shadowReach: 3.00,
     lcRelief: 0.26, lcFreq: 4.00, lcThick: 0.022, lcTwirl: 1.90,
     // structure + accent colour per object: brain, neuron, LiquidChrome
@@ -1683,7 +1695,7 @@ void main(){
     gl.uniform1f(U.uShadowSoft, state.shadowSoft);
     gl.uniform1f(U.uShadowDark, state.shadowDark);
     gl.uniform1f(U.uShadowReach, state.shadowReach);
-    gl.uniform1f(U.uSunMark, sunMode ? 1 : 0);
+    gl.uniform1f(U.uSunMark, sunMode && state.shadowOn ? 1 : 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -1731,12 +1743,18 @@ void main(){
   }
 
   // ---- input ----------------------------------------------------------
-  var pointers = {}, lastPinch = 0, pid = null, px = 0, py = 0;
+  var pointers = {}, lastPinch = 0, pid = null, px = 0, py = 0, dragSun = false;
 
   canvas.addEventListener("pointerdown", function(e){
     canvas.setPointerCapture(e.pointerId);
     pointers[e.pointerId] = {x:e.clientX, y:e.clientY};
-    if(pid === null){ pid = e.pointerId; px = e.clientX; py = e.clientY; }
+    if(pid === null){
+      pid = e.pointerId; px = e.clientX; py = e.clientY;
+      // Which button opened the drag decides who it belongs to, and it keeps it
+      // to the end of the drag. A finger has no second button, so on a touch
+      // screen the camera keeps every drag and the sun is aimed by its sliders.
+      dragSun = sunMode && e.button === 0 && e.pointerType === "mouse";
+    }
   });
   canvas.addEventListener("pointermove", function(e){
     if(!pointers[e.pointerId]) return;
@@ -1754,8 +1772,8 @@ void main(){
     if(e.pointerId !== pid) return;
     var dx = e.clientX - px, dy = e.clientY - py;
     px = e.clientX; py = e.clientY;
-    // the sun gets the drag first, and the camera is not told about it at all
-    if(sunMode){ sunDrag(dx, dy); return; }
+    // a left drag in sun mode belongs to the sun, and the camera is not told
+    if(dragSun){ sunDrag(dx, dy); return; }
     if(state.fly){ flyLook(dx, dy); return; }
     state.velAz = -dx * 0.0032;
     state.velEl =  dy * 0.0024;
@@ -1765,7 +1783,7 @@ void main(){
   function release(e){
     delete pointers[e.pointerId];
     if(Object.keys(pointers).length < 2) lastPinch = 0;
-    if(e.pointerId === pid) pid = null;
+    if(e.pointerId === pid){ pid = null; dragSun = false; }
   }
   canvas.addEventListener("pointerup", release);
   canvas.addEventListener("pointercancel", release);
@@ -1774,8 +1792,8 @@ void main(){
     if(state.fly){ setFlySpeed(state.flySpeed * Math.exp(-Math.sign(e.deltaY) * 0.14)); telemetry(); return; }
     setZoom(state.zoom * (1 + Math.sign(e.deltaY) * 0.07));
   }, {passive:false});
-  // right-drag is the look control, so the context menu has to stand down
-  canvas.addEventListener("contextmenu", function(e){ if(state.fly) e.preventDefault(); });
+  // right-drag is the camera, in every mode, so the context menu has to stand down
+  canvas.addEventListener("contextmenu", function(e){ e.preventDefault(); });
 
   function setZoom(z){ state.zoom = Math.max(0.42, Math.min(1.8, z)); }
 
@@ -1785,15 +1803,21 @@ void main(){
   var hintEl = document.getElementById("hint");
   var autoHint = hintEl ? hintEl.textContent : "";
   var FLY_HINT = "WASD move · Q/E down/up · shift sprint · right-drag look · wheel speed · R new view · 5-0 saved views";
-  var SUN_HINT = "Drag to swing the sun · L or Esc gives the mouse back to the camera";
-  // while this is on the drag belongs to the sun, not the camera
-  var sunMode = false;
+  var SUN_HINT = "Left-drag swings the sun · right-drag steers · scroll to range in · R new view · L or Esc gives the left button to the camera";
+  // While this is on the LEFT drag belongs to the sun. The right one is the
+  // camera either way, so aiming the light never means losing the view. On by
+  // default: a sun nobody can move is a slider, and there are already two.
+  var sunMode = true;
   // one owner for the hint line: a transient message parks the standing one
   var hintBusy = 0, hintT = 0;
   function showHint(){
     if(!hintEl || hintBusy) return;
-    hintEl.textContent = sunMode ? SUN_HINT : (state.fly ? FLY_HINT : autoHint);
+    // the software-rendering warning outranks the rest: it is the reason the page
+    // is slow, and no note about which button does what is worth burying it
+    hintEl.textContent = state.fly ? FLY_HINT
+                       : (sunMode && !software) ? SUN_HINT : autoHint;
   }
+  showHint();                        // the sun has the mouse before anyone touches it
   function toast(msg){
     if(!hintEl) return;
     clearTimeout(hintT);
