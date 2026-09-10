@@ -101,6 +101,12 @@
   .transport.wrap{flex-wrap:wrap}
   .transport.wrap button{flex:1 1 44%;padding:9px 4px;font-size:11px}
   .transport button:hover{color:var(--chrome)}
+  .preview{display:flex;align-items:center;gap:10px}
+  .preview canvas{width:76px;height:76px;flex:none;border:1px solid var(--line);background:rgba(0,0,0,.35);image-rendering:auto}
+  .preview p{margin:0}
+  .preview[hidden]{display:none}
+  .slider output[contenteditable]{outline:none;cursor:text;border-bottom:1px dashed rgba(47,217,192,.35)}
+  .slider output[contenteditable]:focus{border-bottom-color:var(--fiber);color:var(--chrome)}
   .swatches{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;align-items:center}
   .swatches[hidden]{display:none}
   input[type=color]{appearance:none;-webkit-appearance:none;width:100%;height:26px;padding:0;border:1px solid var(--line);background:transparent;cursor:pointer}
@@ -313,6 +319,7 @@
         <button type="button" class="grph" data-grp="3" aria-expanded="true" aria-controls="grpb3">Shadows</button>
         <div class="grpb" id="grpb3" data-grpb="3">
           <div class="transport">
+            <button type="button" id="shOnly" aria-pressed="false" title="Draw the shadow itself and nothing else: white where the sun reaches, black where it does not.">Lit / unlit</button>
             <button type="button" id="shOn" aria-pressed="true" title="Cast shadows from a sun that stays put, instead of the light that follows the camera">Shadows</button>
           </div>
           <div>
@@ -342,6 +349,10 @@
           <div data-shs="1" hidden>
             <p class="lbl" id="shMcLbl">Shadow sphere</p>
             <div class="transport wrap" id="shMcSeg" role="group" aria-labelledby="shMcLbl"></div>
+          </div>
+          <div class="preview" data-shs="12" hidden>
+            <canvas id="shPrev" width="88" height="88" aria-hidden="true"></canvas>
+            <p class="lbl" id="shPrevLbl">The shadow as it will be applied &mdash; after Level, Contrast and Amount</p>
           </div>
           <div class="slider">
             <label class="lbl" for="shLevel" title="Where the edge between light and shadow sits. Only bites once Contrast is up.">Level</label><output id="shLevelOut">0.50</output>
@@ -376,6 +387,16 @@
           </div>
           <input type="file" id="mcFile" accept="image/*" hidden>
           <p class="hint">A matcap is a photograph of a sphere: the surface is coloured by which way it points on screen, so whatever lit that sphere lights this. It overrides the sun.</p>
+        </div>
+      </div>
+
+      <div class="grp">
+        <button type="button" class="grph" data-grp="5" aria-expanded="true" aria-controls="grpb5">Post</button>
+        <div class="grpb" id="grpb5" data-grpb="5">
+          <div class="slider">
+            <label class="lbl" for="pNoise" title="Film grain laid over the finished frame. Off unless you ask for it.">Noise</label><output id="pNoiseOut">0.00</output>
+            <input id="pNoise" type="range" min="0" max="200" step="1" value="0">
+          </div>
         </div>
       </div>
 
@@ -470,6 +491,10 @@ uniform float uShadowSrc;   // 0 marched, 1 a painted sphere, 2 the sun's own an
 uniform float uShLevel;     // where the edge between light and shadow sits
 uniform float uShContrast;  // how abruptly it crosses it: 1 is a hard line
 uniform sampler2D uShMatcap;
+uniform float uShadowOnly;  // draw the shadow term itself, lit against unlit
+uniform float uNoise;       // how much film grain the finished frame gets
+uniform float uOrtho;       // 1 = parallel rays, for standing where the sun does
+uniform float uOrthoSpan;   // half the width the parallel view covers
 
 const vec3 SPIKE = vec3(0.608, 0.482, 1.000);
 const vec3 RIM   = vec3(0.620, 0.898, 1.000);
@@ -884,7 +909,7 @@ vec3 calcNormal(vec3 p){
 }
 
 #ifndef SHADOW_MAX
-#define SHADOW_MAX 64
+#define SHADOW_MAX 96
 #endif
 
 // A second march, from the surface toward the sun. Nothing is in the way and the
@@ -919,7 +944,14 @@ float softShadow(vec3 ro, vec3 rd, float tmax, float k, float t0){
     // near-miss term below already darkens the approach, and continuously.
     if(near < 0.0) return 0.0;
     res = min(res, k*near/t);
-    t += clamp(safe, 0.0015, 0.25);
+    // The guaranteed step is the true distance divided by the warp's bound, and
+    // that bound can be twenty-something. A ray that only ever takes those steps
+    // never gets anywhere: it spends its whole budget in the first tenth of a
+    // unit and gives up, and giving up reads as LIT — which is the light leaking
+    // through the middle of a shadow. Both ways of failing leak light, so the
+    // step also grows with how far it has come: 7% per step is what it takes for
+    // ninety-six of them to cross the whole reach whatever the warp is doing.
+    t += clamp(max(safe, 0.08*t), 0.0015, 0.25);
   }
   return clamp(res, 0.0, 1.0);
 }
@@ -950,6 +982,54 @@ vec3 bgCol(vec3 rd){
     c += vec3(1.00, 0.94, 0.82) * (pow(a, 900.0) * 1.4 + pow(a, 24.0) * 0.06);
   }
   return c;
+}
+
+// A colour that is already in display terms, handed back through the tone map's
+// own inverse so that the tone map and the gamma at the end of render() cancel
+// against it and it comes out as the number that went in.
+vec3 display(vec3 c){
+  vec3 lin = pow(max(c, 0.0), vec3(2.2));
+  return lin / max(1.0 - lin, vec3(0.02));
+}
+
+// One number for how much sun reaches this point, by whichever of the three
+// routes is switched on. 1 is full light, 0 is black. It is the same call from
+// the lit material and from a matcap, which is what lets a shadow sit over
+// either of them.
+float shadowAt(vec3 p, vec3 n, vec2 mn, vec3 key, float trueD){
+  if(uShadowOn < 0.5) return 1.0;
+  float sh;
+  if(uShadowSrc < 0.5){
+    // A face turned away from the sun has no sun on it, which is what being in
+    // shadow means — so it is in shadow, and no ray is needed to find that out.
+    float nl = dot(n, key);
+    sh = 0.0;
+    if(nl > 0.0){
+      // Two things decide how far clear of the surface the ray starts. A ray
+      // leaving at a shallow angle stays within the surface's own roughness a
+      // long way out, so the lower the sun sits on this face the further out it
+      // goes. And this point is not exactly on the surface: the march lands on
+      // an over-estimate of where it is, and a ray that ran out of budget is
+      // walked the rest of the way by that same over-estimate. trueD is how far
+      // that could be, so clearing it is what stops a shadow ray being born
+      // underground and reporting black on a face in full sun.
+      float off = mix(0.045, 0.012, nl) + max(trueD, 0.0);
+      sh = softShadow(p + n*off, key, uShadowReach, mix(96.0, 2.0, uShadowSoft), off);
+    }
+  } else if(uShadowSrc < 1.5){
+    // A sphere someone painted the shadow onto, read in linear light because
+    // that is where a brightness is an average of anything.
+    vec3 t2 = pow(max(texture2D(uShMatcap, mn * 0.5 + 0.5).rgb, 0.0), vec3(2.2));
+    sh = dot(t2, vec3(0.2126, 0.7152, 0.0722));
+  } else {
+    // No ray and no texture: how square-on the surface is to the sun, opened out
+    // across the whole range so the shaping has room to work. It cannot throw a
+    // shadow from one thing onto another and never will — but it turns with the
+    // sun, it costs a dot product, and with the contrast up it draws a hard
+    // terminator wherever you aim it.
+    sh = dot(n, key) * 0.5 + 0.5;
+  }
+  return shapeShadow(sh);
 }
 
 // ---- bounding volume -------------------------------------------------
@@ -990,8 +1070,17 @@ vec3 render(vec2 fc){
   vec3 ww = normalize(uTgt - uEye);
   vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));
   vec3 vv = cross(uu, ww);
-  vec3 rd = normalize(uv.x*uu + uv.y*vv + uFov*ww);
-  vec3 ro = uEye;
+  // Standing where the sun does, the rays have to be parallel: the sun is a
+  // direction and not a place, and a perspective eye put at one would show a
+  // view no shadow in this scene was ever computed from.
+  vec3 rd, ro;
+  if(uOrtho > 0.5){
+    ro = uEye + (uv.x*uu + uv.y*vv) * uOrthoSpan;
+    rd = ww;
+  } else {
+    rd = normalize(uv.x*uu + uv.y*vv + uFov*ww);
+    ro = uEye;
+  }
 
   vec3 col = bgCol(rd);
   float glow = 0.0;
@@ -1072,96 +1161,61 @@ vec3 render(vec2 fc){
         hit = 1.0; sdHit = sd;
       }
 
-      if(hit > 0.5 && uMatcapOn > 0.5){
+      if(hit > 0.5){
         vec3 p = ro + rd*t;
         vec3 n = calcNormal(p);
-        // uu and vv are the camera basis before the roll is applied, and the
-        // roll is applied to the screen coordinates instead — so undo it here,
-        // or the sphere quietly counter-rotates as the camera leans.
+        // Where this pixel sits on a sphere facing the camera — what any painted
+        // sphere is looked up by. uu and vv are the camera basis before the roll
+        // is applied, and the roll goes on the screen coordinates instead, so it
+        // is taken back out here or the sphere counter-rotates as the view leans.
         vec2 mn = mat2(cr, sr, -sr, cr) * vec2(dot(uu, n), dot(vv, n));
-        vec3 mc = texture2D(uMatcap, mn * 0.5 + 0.5).rgb;
-        // The sphere is already in display colours and everything below still
-        // runs a tone map and a gamma over it. Feeding it the tone map's own
-        // inverse makes the pair cancel, so the pixel that comes out is the
-        // pixel that went in.
-        vec3 lin = pow(max(mc, 0.0), vec3(2.2));
-        col = lin / max(1.0 - lin, vec3(0.02));
-        float fog = 1.0 - exp(-(uScene > 0.5 ? 0.22 : 0.52) * max(t - tNear, 0.0));
-        col = mix(col, bgCol(rd) * 1.15, fog * 0.78);
-      } else if(hit > 0.5){
-        vec3 p = ro + rd*t;
-        vec3 n = calcNormal(p);
-        // where this pixel sits on a sphere facing the camera, which is what a
-        // painted shadow sphere is looked up by
-        vec2 mn = mat2(cr, sr, -sr, cr) * vec2(dot(uu, n), dot(vv, n));
-        float C = uScene > 0.5 ? 0.42 : 1.45 / uScale;
-        float somaMix = 1.0 - smoothstep(C*0.18, C*0.62, sdHit);
-
-        vec3 base = mix(uColA, uColB, somaMix);
         // With the sun on it *is* the key light, so the shading and the shadows
         // always agree. With it off this is the view-following light it has
         // always been, to the bit.
         vec3 key = uShadowOn > 0.5 ? sunDir() : normalize(-rd + vec3(0.30, 0.62, 0.10));
-        float dif = max(dot(n, key), 0.0);
-        float bak = max(dot(n, -key), 0.0) * 0.28;
-        float ndv = max(dot(n, -rd), 0.0);
-        float fres = 0.035 + 0.965 * pow(1.0 - ndv, 5.0);
-        vec3 hv = normalize(key - rd);
-        float spec = pow(max(dot(n, hv), 0.0), 48.0);
-        float aoLip;
-        float ao = clamp(map(p + n*0.05, dmy, aoLip) * aoLip * sceneLip() / 0.05, 0.0, 1.0) * 0.72 + 0.28;
-        float sp = spikeAt(p);
-
-        float sh = 1.0;
-        if(uShadowOn > 0.5){
-          if(uShadowSrc < 0.5){
-            // A face turned away from the sun is already dark and needs no ray.
-            if(dif > 0.0){
-              // Two things decide how far clear of the surface the ray starts. A
-              // ray leaving at a shallow angle stays within the surface's own
-              // roughness a long way out, so the lower the sun sits on this face
-              // the further out it goes. And this point is not exactly on the
-              // surface: the march lands on an over-estimate of where it is, and
-              // a ray that ran out of budget is walked the rest of the way by
-              // that same over-estimate — both can leave it a little inside.
-              // trueD is how far that could be, so clearing it is what stops a
-              // shadow ray being born underground and reporting black on a face
-              // in full sun.
-              float off = mix(0.045, 0.012, dif) + max(trueD, 0.0);
-              sh = softShadow(p + n*off, key, uShadowReach, mix(96.0, 2.0, uShadowSoft), off);
-            }
-          } else if(uShadowSrc < 1.5){
-            // A sphere someone painted the shadow onto. Read in linear light,
-            // because that is where a brightness is an average of anything.
-            vec3 t2 = pow(max(texture2D(uShMatcap, mn * 0.5 + 0.5).rgb, 0.0), vec3(2.2));
-            sh = dot(t2, vec3(0.2126, 0.7152, 0.0722));
-          } else {
-            // No ray and no texture: how square-on the surface is to the sun,
-            // opened out across the whole range so the shaping has room to work.
-            // It cannot throw a shadow from one thing onto another and never
-            // will — but it turns with the sun, it costs a dot product, and with
-            // the contrast up it draws a hard terminator wherever you aim it.
-            sh = dot(n, key) * 0.5 + 0.5;
-          }
-          sh = shapeShadow(sh);
-        }
-        float lit = 1.0 - uShadowDark * (1.0 - sh);
-        // Darkness also decides how much of the fill a shadow is allowed to take.
-        // At 1 a shadowed pixel loses everything and is black; at 0 both of these
-        // are exactly 1 and nothing below has changed.
-        float fill = mix(1.0, lit, uShadowDark);
-        dif *= lit;
-        spec *= lit;
-
-        col = base * (0.05*fill + 0.62*dif) * ao;
-        col += SPIKE * vec3(0.88, 0.84, 1.0) * bak * 0.55 * fill;
-        col += SPIKE * sp * (0.70 + 2.2*somaMix) * uSpike;
-        col += uColB * somaMix * somaMix * 0.42 * fill;
-        col += uColA * 0.06 * fill;
-        col += RIM * fres * (0.62 + 0.80*ao) * (0.85 + 0.55*somaMix) * fill;
-        col += RIM * spec * (0.45 + 3.2*fres);
-
+        float sh = shadowAt(p, n, mn, key, trueD);
         float fog = 1.0 - exp(-(uScene > 0.5 ? 0.22 : 0.52) * max(t - tNear, 0.0));
+
+        if(uShadowOnly > 0.5){
+          // the shadow term and nothing else: what is lit, against what is not
+          col = display(vec3(sh));
+        } else if(uMatcapOn > 0.5){
+          // A matcap replaces the material outright, but the shadow still sits
+          // over it — multiplied in display terms, because the sphere is a
+          // picture and that is how a picture is darkened.
+          vec3 mc = texture2D(uMatcap, mn * 0.5 + 0.5).rgb * mix(1.0, sh, uShadowDark);
+          col = display(mc);
+        } else {
+          float C = uScene > 0.5 ? 0.42 : 1.45 / uScale;
+          float somaMix = 1.0 - smoothstep(C*0.18, C*0.62, sdHit);
+
+          vec3 base = mix(uColA, uColB, somaMix);
+          float dif = max(dot(n, key), 0.0);
+          float bak = max(dot(n, -key), 0.0) * 0.28;
+          float ndv = max(dot(n, -rd), 0.0);
+          float fres = 0.035 + 0.965 * pow(1.0 - ndv, 5.0);
+          vec3 hv = normalize(key - rd);
+          float spec = pow(max(dot(n, hv), 0.0), 48.0);
+          float aoLip;
+          float ao = clamp(map(p + n*0.05, dmy, aoLip) * aoLip * sceneLip() / 0.05, 0.0, 1.0) * 0.72 + 0.28;
+          float sp = spikeAt(p);
+
+          float lit = 1.0 - uShadowDark * (1.0 - sh);
+          // Amount also decides how much of the fill a shadow is allowed to take.
+          // At 1 a shadowed pixel loses everything and is black; at 0 both of
+          // these are exactly 1 and nothing below has changed.
+          float fill = mix(1.0, lit, uShadowDark);
+          dif *= lit;
+          spec *= lit;
+
+          col = base * (0.05*fill + 0.62*dif) * ao;
+          col += SPIKE * vec3(0.88, 0.84, 1.0) * bak * 0.55 * fill;
+          col += SPIKE * sp * (0.70 + 2.2*somaMix) * uSpike;
+          col += uColB * somaMix * somaMix * 0.42 * fill;
+          col += uColA * 0.06 * fill;
+          col += RIM * fres * (0.62 + 0.80*ao) * (0.85 + 0.55*somaMix) * fill;
+          col += RIM * spec * (0.45 + 3.2*fres);
+        }
         col = mix(col, bgCol(rd) * 1.15, fog * 0.78);
       }
     }
@@ -1174,7 +1228,7 @@ vec3 render(vec2 fc){
 
   vec2 sv = fc/uRes - 0.5;
   col *= 1.0 - 0.55 * dot(sv, sv);
-  col += (hash33(vec3(fc, uTime)).x - 0.5) * 0.022;
+  col += (hash33(vec3(fc, uTime)).x - 0.5) * 0.022 * uNoise;
 
   return col;
 }
@@ -1296,7 +1350,8 @@ void main(){
     "uShift","uMorph","uPulse","uScene","uThick","uWarpAmt","uWarpFreq","uWarpOn",
     "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps","uOmega","uBound","uBoundPad","uWarpMode",
     "uShadowOn","uSunAz","uSunEl","uShadowSoft","uShadowDark","uShadowReach","uSunMark","uLcCube",
-    "uMatcapOn","uMatcap","uShadowSrc","uShLevel","uShContrast","uShMatcap"];
+    "uMatcapOn","uMatcap","uShadowSrc","uShLevel","uShContrast","uShMatcap",
+    "uShadowOnly","uNoise","uOrtho","uOrthoSpan"];
   var DEFS = ["#define SCENE_BRAIN\n", "#define SCENE_NEURON\n", "#define SCENE_CHROME\n"];
 
   // One program per object, built the first time that object is shown. Each
@@ -1457,6 +1512,8 @@ void main(){
     // how the shadow is arrived at, and the shaping every source shares.
     // shadowDark is what the console calls Amount; the key is older than the name.
     shadowSrc: 0, shadowLevel: 0.50, shadowContrast: 0.00, shadowMc: 0,
+    shadowOnly: 0,                  // draw the shadow term itself instead of the object
+    noise: 0.00,                    // film grain over the finished frame
     lcRelief: 0.26, lcFreq: 4.00, lcThick: 0.022, lcTwirl: 1.90,
     // structure + accent colour per object: brain, neuron, LiquidChrome
     colors: [["#2FD9C0", "#FFC98A"], ["#2FD9C0", "#FFC98A"], ["#009DFF", "#FF4271"]],
@@ -1483,7 +1540,7 @@ void main(){
     // the matcap: off, and which sphere it would use
     matcapOn: 0, matcap: 0,
     // which console groups are open
-    groups: [1, 1, 1, 1, 1]
+    groups: [1, 1, 1, 1, 1, 1]
   };
 
   var rgbCache = {};
@@ -1641,8 +1698,25 @@ void main(){
     state.flyPos[2] += (f[2]*mz + r[2]*mx) * v;
   }
 
+  // The sun as a direction, the same way the shader builds it.
+  function sunVec(){
+    var ce = Math.cos(state.sunEl);
+    return [ce * Math.sin(state.sunAz), Math.sin(state.sunEl), ce * Math.cos(state.sunAz)];
+  }
+
   function camera(t){
     var az, el, r;
+    if(sunView){
+      // Stand where the sun does and look back along it. The projection goes
+      // parallel at the same time (see uOrtho): the sun is a direction and not
+      // a place, so a perspective eye put at one would show a view that no
+      // shadow in this scene was ever worked out from.
+      var sv = sunVec(), R = SCENE_R[state.scene] * 2.6;
+      eye = [sv[0]*R, sv[1]*R, sv[2]*R];
+      tgt = [0, 0, 0];
+      roll = 0.0;
+      return;
+    }
     if(state.fly){
       eye = [state.flyPos[0], state.flyPos[1], state.flyPos[2]];
       var f = flyFwd();
@@ -1827,6 +1901,7 @@ void main(){
     el.fps.textContent = fmtFps(1000 / Math.max(ema, 1));
     el.avg.textContent = fmtFps(fpsWindow(now, null));
     el.res.textContent = RW + "×" + RH;
+    drawShadowPreview(false);
   }
 
   function frame(now){
@@ -1899,6 +1974,10 @@ void main(){
     gl.uniform1f(U.uShadowSrc, state.shadowSrc === 1 && !shSlot.ready ? 0 : state.shadowSrc);
     gl.uniform1f(U.uShLevel, state.shadowLevel);
     gl.uniform1f(U.uShContrast, state.shadowContrast);
+    gl.uniform1f(U.uShadowOnly, state.shadowOnly && state.shadowOn ? 1 : 0);
+    gl.uniform1f(U.uNoise, state.noise);
+    gl.uniform1f(U.uOrtho, sunView ? 1 : 0);
+    gl.uniform1f(U.uOrthoSpan, SCENE_R[state.scene] * 1.45 * state.zoom);
     gl.uniform1f(U.uLcRelief, state.lcRelief);
     gl.uniform1f(U.uLcFreq, state.lcFreq);
     gl.uniform1f(U.uLcThick, state.lcThick);
@@ -1971,7 +2050,7 @@ void main(){
       // Which button opened the drag decides who it belongs to, and it keeps it
       // to the end of the drag. A finger has no second button, so on a touch
       // screen the camera keeps every drag and the sun is aimed by its sliders.
-      dragSun = sunMode && e.button === 0 && e.pointerType === "mouse";
+      dragSun = (sunMode || sunView) && e.button === 0 && e.pointerType === "mouse";
     }
   });
   canvas.addEventListener("pointermove", function(e){
@@ -2022,17 +2101,21 @@ void main(){
   var autoHint = hintEl ? hintEl.textContent : "";
   var FLY_HINT = "WASD move · Q/E down/up · shift sprint · right-drag look · wheel speed · R new view · 5-0 saved views";
   var SUN_HINT = "Left-drag swings the sun · right-drag steers · scroll to range in · R new view · L or Esc gives the left button to the camera";
+  var SUNVIEW_HINT = "Standing where the sun does, rays parallel · left-drag moves the sun · wheel widens the view · * or Esc gives the camera back";
   // While this is on the LEFT drag belongs to the sun. The right one is the
   // camera either way, so aiming the light never means losing the view. On by
   // default: a sun nobody can move is a slider, and there are already two.
   var sunMode = true;
+  // Standing where the sun does. Not saved: it is a way of looking, not a setting.
+  var sunView = false;
   // one owner for the hint line: a transient message parks the standing one
   var hintBusy = 0, hintT = 0;
   function showHint(){
     if(!hintEl || hintBusy) return;
     // the software-rendering warning outranks the rest: it is the reason the page
     // is slow, and no note about which button does what is worth burying it
-    hintEl.textContent = state.fly ? FLY_HINT
+    hintEl.textContent = sunView ? SUNVIEW_HINT
+                       : state.fly ? FLY_HINT
                        : (sunMode && !software) ? SUN_HINT : autoHint;
   }
   showHint();                        // the sun has the mouse before anyone touches it
@@ -2169,6 +2252,12 @@ void main(){
     paint(thk); telemetry();
   });
   paint(dens); paint(spk); paint(thk);
+  editable(densOut, function(){ densOut.textContent = Math.round(1.45 / state.density * UM_PER_UNIT) + " \u00b5m pitch"; },
+           function(v){ state.density = 1.45 * UM_PER_UNIT / Math.max(v, 1e-3); dens.value = state.density; paint(dens); });
+  editable(spkOut, function(){ spkOut.textContent = (state.spike * 11).toFixed(1) + " Hz"; },
+           function(v){ state.spike = v / 11; spk.value = state.spike * 100; paint(spk); });
+  editable(thkOut, function(){ thkOut.textContent = (state.thick * 2 * UM_PER_UNIT).toFixed(1) + " \u00b5m"; },
+           function(v){ state.thick = v / (2 * UM_PER_UNIT); thk.value = state.thick * 1000; paint(thk); });
 
   if(software){
     state.steps = 56;
@@ -2240,6 +2329,10 @@ void main(){
   });
 
   paint(wAmt); paint(wFrq);
+  editable(wAmtOut, function(){ wAmtOut.textContent = state.warpAmt.toFixed(2); },
+           function(v){ state.warpAmt = v; wAmt.value = v * 100; paint(wAmt); });
+  editable(wFrqOut, function(){ wFrqOut.textContent = state.warpFreq.toFixed(2) + " /unit"; },
+           function(v){ state.warpFreq = v; wFrq.value = v * 100; paint(wFrq); });
 
   var lcBtns = document.querySelectorAll("[data-lc]");
   Array.prototype.forEach.call(lcBtns, function(btn){
@@ -2250,8 +2343,31 @@ void main(){
       telemetry(); btn.blur();
     });
   });
-  // one labelled slider: scale it into state, format the reading, repaint
-  function numSlider(id, key, scale, fmt){
+  // Type a number straight into a readout. The slider is a convenience and not
+  // the range: what is typed is taken as it is, even when the thumb has to sit
+  // at one end to show it. Setting .value on a range input clamps by itself, so
+  // the thumb goes as far as it can and the number stays where it was put.
+  function editable(out, show, write){
+    if(!out) return;
+    out.setAttribute("contenteditable", "true");
+    out.spellcheck = false;
+    out.title = "Type a value \u2014 it may go past the ends of the slider";
+    out.addEventListener("keydown", function(e){
+      e.stopPropagation();                    // the page's own keys stand down
+      if(e.key === "Enter"){ e.preventDefault(); out.blur(); }
+      else if(e.key === "Escape"){ e.preventDefault(); show(); out.blur(); }
+    });
+    out.addEventListener("blur", function(){
+      var v = parseFloat(String(out.textContent).replace(/[^-+0-9.eE]/g, ""));
+      if(isFinite(v)) write(v);
+      show(); telemetry();
+    });
+  }
+
+  // one labelled slider: scale it into state, format the reading, repaint.
+  // toState turns what is typed into what the state holds, when the reading is
+  // in different units from the value behind it.
+  function numSlider(id, key, scale, fmt, toState){
     var inp = document.getElementById(id), out = document.getElementById(id + "Out");
     inp.addEventListener("input", function(){
       state[key] = parseFloat(inp.value) * scale;
@@ -2259,6 +2375,11 @@ void main(){
       paint(inp); telemetry();
     });
     paint(inp);
+    editable(out, function(){ out.textContent = fmt(state[key]); }, function(v){
+      state[key] = toState ? toState(v) : v;
+      inp.value = state[key] / scale;
+      paint(inp);
+    });
   }
   // ---- the sun ----
   var DEG = Math.PI / 180;
@@ -2269,16 +2390,25 @@ void main(){
     telemetry();
   }
   shOnBtn.addEventListener("click", function(){ setShadows(!state.shadowOn); shOnBtn.blur(); });
+  var shOnlyBtn = document.getElementById("shOnly");
+  function setShadowOnly(on){
+    state.shadowOnly = on ? 1 : 0;
+    shOnlyBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    telemetry();
+  }
+  shOnlyBtn.addEventListener("click", function(){ setShadowOnly(!state.shadowOnly); shOnlyBtn.blur(); });
 
   var degOut = function(v){ return Math.round(v / DEG) + "\u00b0"; };
-  numSlider("sunAz",   "sunAz",       DEG,  degOut);
-  numSlider("sunEl",   "sunEl",       DEG,  degOut);
+  var toRad = function(v){ return v * DEG; };
+  numSlider("sunAz",   "sunAz",       DEG,  degOut, toRad);
+  numSlider("sunEl",   "sunEl",       DEG,  degOut, toRad);
   var f2 = function(v){ return v.toFixed(2); };
   numSlider("shSoft",     "shadowSoft",     0.01, f2);
   numSlider("shDark",     "shadowDark",     0.01, f2);
   numSlider("shReach",    "shadowReach",    0.01, f2);
   numSlider("shLevel",    "shadowLevel",    0.01, f2);
   numSlider("shContrast", "shadowContrast", 0.01, f2);
+  numSlider("pNoise",     "noise",          0.01, f2);
 
   // Which way the shadow is worked out, and which controls that leaves standing.
   var shSrcBtns = document.querySelectorAll("[data-shsrc]");
@@ -2302,6 +2432,95 @@ void main(){
   });
   applyShadowSrc();
 
+  // ---- the shadow, previewed ----
+  // The same curve the shader applies, run over a sphere facing the camera, so
+  // what Level, Contrast and Amount are doing can be read straight off instead
+  // of hunted for on whichever bit of the object happens to point the right way.
+  var shPrev = document.getElementById("shPrev");
+  var shPrevCtx = shPrev && shPrev.getContext ? shPrev.getContext("2d") : null;
+  var prevTex = { src: "", px: null, w: 0, h: 0 }, prevAt = 0;
+  var SRGB_LIN = (function(){
+    var a = new Float32Array(256);
+    for(var i = 0; i < 256; i++) a[i] = Math.pow(i / 255, 2.2);
+    return a;
+  })();
+
+  function shapeShadowJS(v){
+    var w = 0.5 + (0.0015 - 0.5) * state.shadowContrast;
+    var e0 = state.shadowLevel - w, e1 = state.shadowLevel + w;
+    var t = Math.min(1, Math.max(0, (v - e0) / Math.max(e1 - e0, 1e-6)));
+    return v + (t * t * (3 - 2 * t) - v) * state.shadowContrast;
+  }
+
+  // the chosen sphere, decoded once and kept until a different one is chosen
+  function prevPixels(m){
+    if(prevTex.src === m.src) return prevTex.px ? prevTex : null;
+    prevTex = { src: m.src, px: null, w: 0, h: 0 };
+    var img = new Image();
+    img.onload = function(){
+      if(prevTex.src !== m.src) return;
+      var c = document.createElement("canvas");
+      c.width = Math.min(128, img.naturalWidth || 128);
+      c.height = Math.min(128, img.naturalHeight || 128);
+      var cx = c.getContext("2d");
+      cx.drawImage(img, 0, 0, c.width, c.height);
+      try{
+        prevTex.px = cx.getImageData(0, 0, c.width, c.height).data;
+        prevTex.w = c.width; prevTex.h = c.height;
+        drawShadowPreview(true);
+      }catch(e){}
+    };
+    img.src = m.src;
+    return null;
+  }
+
+  function drawShadowPreview(force){
+    if(!shPrevCtx || !state.shadowOn || state.shadowSrc === 0) return;
+    var now = performance.now();
+    if(!force && now - prevAt < 90) return;
+    prevAt = now;
+    var N = shPrev.width, out = shPrevCtx.createImageData(N, N), d = out.data;
+    var tex = null, sun = null;
+    if(state.shadowSrc === 1){
+      tex = prevPixels(MATCAPS[state.shadowMc]);
+      if(!tex) return;
+    } else {
+      // the sun in the camera's own axes, which is where a sphere facing the
+      // camera lives
+      var w0 = [tgt[0]-eye[0], tgt[1]-eye[1], tgt[2]-eye[2]];
+      var wl = Math.hypot(w0[0], w0[1], w0[2]) || 1;
+      var W = [w0[0]/wl, w0[1]/wl, w0[2]/wl];
+      var ul = Math.hypot(-W[2], W[0]) || 1;
+      var Uu = [-W[2]/ul, 0, W[0]/ul];
+      var Vv = [Uu[1]*W[2] - Uu[2]*W[1], Uu[2]*W[0] - Uu[0]*W[2], Uu[0]*W[1] - Uu[1]*W[0]];
+      var sv = sunVec();
+      sun = [Uu[0]*sv[0] + Uu[1]*sv[1] + Uu[2]*sv[2],
+             Vv[0]*sv[0] + Vv[1]*sv[1] + Vv[2]*sv[2],
+             W[0]*sv[0]  + W[1]*sv[1]  + W[2]*sv[2]];
+    }
+    for(var y = 0; y < N; y++){
+      for(var x = 0; x < N; x++){
+        var fx = (x + 0.5) / N * 2 - 1, fy = 1 - (y + 0.5) / N * 2;
+        var r2 = fx*fx + fy*fy, i = (y*N + x) * 4;
+        if(r2 > 1.0){ d[i+3] = 0; continue; }
+        var sh;
+        if(tex){
+          var tx = Math.max(0, Math.min(tex.w - 1, Math.round((fx*0.5 + 0.5) * (tex.w - 1))));
+          var ty = Math.max(0, Math.min(tex.h - 1, Math.round((0.5 - fy*0.5) * (tex.h - 1))));
+          var q = (ty*tex.w + tx) * 4;
+          sh = 0.2126*SRGB_LIN[tex.px[q]] + 0.7152*SRGB_LIN[tex.px[q+1]] + 0.0722*SRGB_LIN[tex.px[q+2]];
+        } else {
+          var z = Math.sqrt(1 - r2);
+          sh = (fx*sun[0] + fy*sun[1] + z*sun[2]) * 0.5 + 0.5;
+        }
+        var lit = 1 - state.shadowDark * (1 - shapeShadowJS(sh));
+        var g = Math.round(255 * Math.min(1, Math.max(0, lit)));
+        d[i] = d[i+1] = d[i+2] = g; d[i+3] = 255;
+      }
+    }
+    shPrevCtx.putImageData(out, 0, 0);
+  }
+
   // Aiming a light you cannot see is guesswork, so L hands the drag to the sun
   // and puts it in the sky while it is being moved. The camera does not budge.
   function setSunMode(on){
@@ -2309,6 +2528,14 @@ void main(){
     // the mode would do nothing visible with the sun switched off
     if(sunMode && !state.shadowOn) setShadows(true);
     showHint();
+  }
+  // Looking from the sun, moving the view IS moving the sun; there is nothing
+  // else it could mean. Coming back out puts the camera where it was, because
+  // nothing about it was touched while this was on.
+  function setSunView(on){
+    sunView = !!on;
+    if(sunView && !state.shadowOn) setShadows(true);
+    showHint(); reframe(); telemetry();
   }
   function sunDrag(dx, dy){
     state.sunAz = (state.sunAz - dx * 0.005) % (Math.PI * 2);
@@ -2485,7 +2712,8 @@ void main(){
 
   numSlider("lcRelief", "lcRelief", 0.01,  function(v){ return v.toFixed(2); });
   numSlider("lcFreq",   "lcFreq",   0.01,  function(v){ return v.toFixed(2); });
-  numSlider("lcThick",  "lcThick",  0.0005, function(v){ return (v * 20).toFixed(2); });
+  numSlider("lcThick",  "lcThick",  0.0005, function(v){ return (v * 20).toFixed(2); },
+            function(v){ return v / 20; });
   numSlider("lcTwirl",  "lcTwirl",  0.01,  function(v){ return v.toFixed(2) + " rad"; });
 
   var colA = document.getElementById("colA"), colB = document.getElementById("colB");
@@ -2528,6 +2756,14 @@ void main(){
     paint(rPad); telemetry();
   });
   paint(rSteps); paint(rEps); paint(rOmega); paint(rPad);
+  editable(rStepsOut, function(){ rStepsOut.textContent = state.stepsPin ? String(state.steps) : "auto " + marchSteps(); },
+           function(v){ state.steps = Math.max(1, Math.round(v)); state.stepsPin = true; rSteps.value = state.steps; paint(rSteps); });
+  editable(rEpsOut, function(){ rEpsOut.textContent = state.eps.toFixed(1); },
+           function(v){ state.eps = v; rEps.value = v * 10; paint(rEps); });
+  editable(rOmegaOut, function(){ rOmegaOut.textContent = state.omega.toFixed(2) + "\u00d7"; },
+           function(v){ state.omega = v; rOmega.value = v * 100; paint(rOmega); });
+  editable(rPadOut, function(){ rPadOut.textContent = state.boundPad.toFixed(2); },
+           function(v){ state.boundPad = v; rPad.value = v * 100; paint(rPad); });
 
   var resBtns = document.querySelectorAll("[data-res]");
   // A page can only resize a window it opened itself, so in an ordinary tab
@@ -2684,12 +2920,14 @@ void main(){
     if(e.key === "i" || e.key === "I"){ setSpikes(!state.spikeOn); }
     if(e.key === "r" || e.key === "R"){ randomView(); }
     if(e.key === "l" || e.key === "L"){ setSunMode(!sunMode); }
+    if(e.key === "*" || e.code === "NumpadMultiply"){ e.preventDefault(); setSunView(!sunView); }
     if(RES_KEY[e.code] !== undefined){ setRes(RES_KEY[e.code]); }
     if(e.key === "a" || e.key === "A"){ setAA((state.aa + 1) % 3); }
     if(e.key === "f" || e.key === "F"){ toggleFullscreen(); }
     if(e.key === "h" || e.key === "H" || e.key === "u" || e.key === "U"){
       setHud(hud.classList.contains("hidden"));
     }
+    if(e.code === "Escape" && sunView){ e.preventDefault(); setSunView(false); return; }
     if(e.code === "Escape" && sunMode){ e.preventDefault(); setSunMode(false); return; }
     if(e.code === "Escape" && !repEl.hidden){
       e.preventDefault();
@@ -2976,7 +3214,7 @@ void main(){
     "flyPos","flyYaw","flyPitch","favs","groups",
     "shadowOn","sunAz","sunEl","shadowSoft","shadowDark","shadowReach",
     "matcapOn","matcap",
-    "shadowSrc","shadowLevel","shadowContrast","shadowMc"];
+    "shadowSrc","shadowLevel","shadowContrast","shadowMc","shadowOnly","noise"];
 
   // this browser
   function readStore(){
@@ -3097,6 +3335,8 @@ void main(){
     slide(document.getElementById("shLevel"),    state.shadowLevel * 100);
     slide(document.getElementById("shContrast"), state.shadowContrast * 100);
     applyShadowSrc();
+    setShadowOnly(!!state.shadowOnly);
+    slide(document.getElementById("pNoise"), state.noise * 100);
     setMatcapOn(!!state.matcapOn); drawSpheresBoth();
     syncGroups();
     applyScene();                    // reloads this object's colours into the swatches
@@ -3173,6 +3413,7 @@ void main(){
   // all it offers; it draws nothing and changes nothing on its own.
   window.__state = state;
   Object.defineProperty(window, "__sunMode", { get: function(){ return sunMode; } });
+  Object.defineProperty(window, "__sunView", { get: function(){ return sunView; } });
 })();
 </script>
 
