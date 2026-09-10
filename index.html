@@ -142,6 +142,7 @@
   .slider output[contenteditable]:focus{border-bottom-color:var(--fiber);color:var(--chrome)}
   .swatches{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;align-items:center}
   .swatches[hidden]{display:none}
+  .swatches.one{grid-template-columns:1fr}
   input[type=color]{appearance:none;-webkit-appearance:none;width:100%;height:26px;padding:0;border:1px solid var(--line);background:transparent;cursor:pointer}
   input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
   input[type=color]::-webkit-color-swatch{border:0}
@@ -429,13 +430,66 @@
             <button type="button" id="mcDel" title="Remove the chosen sphere, here and in the cloud. The two built-in ones stay.">Delete</button>
           </div>
           <input type="file" id="mcFile" accept="image/*" hidden>
+          <div class="transport">
+            <button type="button" id="nmOn" aria-pressed="false" title="Lay an image over the surface as a normal map. It moves the normal itself, so the matcap, the sun, the shadow and the rim all pick the detail up together.">Normal map</button>
+          </div>
+          <div>
+            <p class="lbl" id="nmLbl">Map</p>
+            <div class="transport wrap" id="nmSeg" role="group" aria-labelledby="nmLbl"></div>
+          </div>
+          <div class="transport">
+            <button type="button" id="nmAdd" title="Load a normal map from this computer. It joins the list above and is used as the map straight away.">Add</button>
+            <button type="button" id="nmSave" title="Keep the chosen map: on this device, and in the cloud so it follows the page to any computer.">Keep</button>
+            <button type="button" id="nmDel" title="Remove the chosen map, here and in the cloud. The two built-in ones stay.">Delete</button>
+          </div>
+          <div class="slider">
+            <label class="lbl" for="nmAmt" title="How far the map is allowed to move the surface normal. 0 leaves it alone, 1 is the map in full.">Amount</label><output id="nmAmtOut">1.00</output>
+            <input id="nmAmt" type="range" min="0" max="100" step="1" value="100">
+          </div>
+          <div class="slider">
+            <label class="lbl" for="nmScale" title="How many times over the map is laid across the object. Tiling is mirrored, so any image repeats without a seam.">Scale</label><output id="nmScaleOut">2.00</output>
+            <input id="nmScale" type="range" min="10" max="1600" step="5" value="200">
+          </div>
           <p class="hint">A matcap is a photograph of a sphere: the surface is coloured by which way it points on screen, so whatever lit that sphere lights this. It overrides the sun.</p>
         </div>
       </div>
 
       <div class="grp">
-        <button type="button" class="grph" data-grp="5" aria-expanded="true" aria-controls="grpb5">Post</button>
+        <button type="button" class="grph" data-grp="5" aria-expanded="true" aria-controls="grpb5">Transparency</button>
         <div class="grpb" id="grpb5" data-grpb="5">
+          <div class="transport">
+            <button type="button" id="glOn" aria-pressed="false" title="Let the eye through the surface instead of stopping it there. Off costs nothing at all; on, every pixel of the object marches again for each surface it is allowed through.">Transparent</button>
+          </div>
+          <div class="slider">
+            <label class="lbl" for="gOpacity" title="How much of the surface itself still shows, square on. 0 is invisible but for its edges, 1 is solid.">Opacity</label><output id="gOpacityOut">0.15</output>
+            <input id="gOpacity" type="range" min="0" max="100" step="1" value="15">
+          </div>
+          <div class="slider">
+            <label class="lbl" for="gEdge" title="How solid a grazing angle stays. This is the part that reads as glass rather than as a faded object.">Edge</label><output id="gEdgeOut">0.60</output>
+            <input id="gEdge" type="range" min="0" max="100" step="1" value="60">
+          </div>
+          <div class="slider">
+            <label class="lbl" for="gIor" title="How much the view bends on the way in. 1.00 is straight through, 1.33 water, 1.52 glass, 2.42 diamond.">Refraction</label><output id="gIorOut">1.45</output>
+            <input id="gIor" type="range" min="100" max="250" step="1" value="145">
+          </div>
+          <div class="swatches one">
+            <label class="lbl" for="gTint" title="The colour a ray still has after one unit of the body. White is water.">Tint</label>
+            <input type="color" id="gTint" value="#BFE9FF" aria-label="Glass tint">
+          </div>
+          <div class="slider">
+            <label class="lbl" for="gDensity" title="How fast the tint builds with the distance a ray crosses. At 0 the body is perfectly clear whatever the tint is.">Density</label><output id="gDensityOut">0.90</output>
+            <input id="gDensity" type="range" min="0" max="400" step="1" value="90">
+          </div>
+          <div class="slider">
+            <label class="lbl" for="gDepth" title="How many surfaces the eye may see through. 1 the front face and the sky behind it, 2 the far wall as well, more for what stands beyond the object. Each one costs another march.">Depth</label><output id="gDepthOut">2</output>
+            <input id="gDepth" type="range" min="1" max="4" step="1" value="2">
+          </div>
+        </div>
+      </div>
+
+      <div class="grp">
+        <button type="button" class="grph" data-grp="6" aria-expanded="true" aria-controls="grpb6">Post</button>
+        <div class="grpb" id="grpb6" data-grpb="6">
           <div class="slider">
             <label class="lbl" for="pNoise" title="Film grain laid over the finished frame. Off unless you ask for it.">Noise</label><output id="pNoiseOut">0.00</output>
             <input id="pNoise" type="range" min="0" max="200" step="1" value="0">
@@ -444,8 +498,8 @@
       </div>
 
       <div class="grp">
-        <button type="button" class="grph" data-grp="6" aria-expanded="true" aria-controls="grpb6">UI</button>
-        <div class="grpb" id="grpb6" data-grpb="6">
+        <button type="button" class="grph" data-grp="7" aria-expanded="true" aria-controls="grpb7">UI</button>
+        <div class="grpb" id="grpb7" data-grpb="7">
           <div class="slider">
             <label class="lbl" for="uiFont">Font size</label><output id="uiFontOut">12</output>
             <input id="uiFont" type="range" min="8" max="26" step="1" value="12">
@@ -560,6 +614,29 @@ uniform float uShadowOnly;  // draw the shadow term itself, lit against unlit
 uniform float uNoise;       // how much film grain the finished frame gets
 uniform float uOrtho;       // 1 = parallel rays, for standing where the sun does
 uniform float uOrthoSpan;   // half the width the parallel view covers
+
+// ---- normal map ----
+// An SDF has no seams to unwrap, so the map is projected down all three axes
+// and the three readings blended by which way the surface points. It moves the
+// normal itself and nothing else, so the matcap, the sun, the shadow and the
+// rim all pick the detail up together and agree about it.
+uniform float uNormalOn;
+uniform sampler2D uNormalMap;
+uniform float uNormalAmt;    // 0 the surface as it is, 1 the map in full
+uniform float uNormalScale;  // how many times over the map is laid down
+
+// ---- transparency ----
+// The eye does not have to stop at the surface. It bends into the body, takes
+// the body's colour on over the distance the crossing costs it, and ends on
+// whatever lies beyond. Off is an exact no-op: not one extra ray is cast and
+// the frame is the one it always was.
+uniform float uGlassOn;
+uniform float uGlassOpacity; // how much of the surface itself still shows
+uniform float uGlassEdge;    // how solid a grazing angle stays: glass's tell
+uniform float uGlassIor;     // 1 straight through, higher bends the view more
+uniform vec3  uGlassTint;    // the colour the body takes on
+uniform float uGlassDensity; // how fast it takes it on, per unit crossed
+uniform float uGlassDepth;   // how many surfaces the eye may see through
 
 const vec3 SPIKE = vec3(0.608, 0.482, 1.000);
 const vec3 RIM   = vec3(0.620, 0.898, 1.000);
@@ -1057,6 +1134,44 @@ vec3 display(vec3 c){
   return lin / max(1.0 - lin, vec3(0.02));
 }
 
+// The camera basis for this pixel, with the roll taken back out of it. A
+// painted sphere is looked up by where the surface points ON SCREEN, so
+// everything that shades wants these; they are the same for the whole pixel,
+// so they are set once at the top of render() rather than carried into every
+// call that needs them.
+vec3 gUU, gVV;
+float gCR, gSR;
+vec2 screenN(vec3 n){ return mat2(gCR, gSR, -gSR, gCR) * vec2(dot(gUU, n), dot(gVV, n)); }
+
+// How far the distance haze has closed over something this deep into the scene.
+float fogAt(float d){ return 1.0 - exp(-(uScene > 0.5 ? 0.22 : 0.52) * max(d, 0.0)); }
+
+// ---- the normal map --------------------------------------------------
+// Read three times, once down each axis, and blended by how square-on the
+// surface is to that axis — the fourth power, so a face that clearly belongs
+// to one plane is not muddied by the other two. The blend is the whiteout one:
+// the map's sideways push is added to the surface's own normal before the
+// three are summed, which keeps detail through the blend instead of averaging
+// it flat where the planes meet. Tiling is mirrored, so any image at all
+// repeats without a seam, whatever its size.
+vec2 tileUV(vec2 u){ vec2 f = fract(u * 0.5) * 2.0; return min(f, 2.0 - f); }
+vec3 bumpN(vec3 p, vec3 n){
+  // Amount at nothing hands the same normal straight back, bit for bit, rather
+  // than putting it through a normalize that could move its last digit.
+  if(uNormalOn < 0.5 || uNormalAmt <= 0.0) return n;
+  vec3 w = abs(n); w = w*w*w*w; w /= max(w.x + w.y + w.z, 1e-5);
+  vec3 tx = texture2D(uNormalMap, tileUV(p.zy * uNormalScale)).xyz * 2.0 - 1.0;
+  vec3 ty = texture2D(uNormalMap, tileUV(p.xz * uNormalScale)).xyz * 2.0 - 1.0;
+  vec3 tz = texture2D(uNormalMap, tileUV(p.xy * uNormalScale)).xyz * 2.0 - 1.0;
+  tx = vec3(tx.xy + n.zy, abs(tx.z) * n.x);
+  ty = vec3(ty.xy + n.xz, abs(ty.z) * n.y);
+  tz = vec3(tz.xy + n.xy, abs(tz.z) * n.z);
+  vec3 b = tx.zyx * w.x + ty.xzy * w.y + tz.xyz * w.z;
+  if(dot(b, b) < 1e-8) return n;
+  vec3 m = mix(n, normalize(b), uNormalAmt);
+  return dot(m, m) < 1e-8 ? n : normalize(m);
+}
+
 // One number for how much sun reaches this point, by whichever of the three
 // routes is switched on. 1 is full light, 0 is black. It is the same call from
 // the lit material and from a matcap, which is what lets a shadow sit over
@@ -1147,35 +1262,12 @@ bool autoBox(){
 #endif
 }
 
-vec3 render(vec2 fc){
-  vec2 uv = (fc - 0.5*uRes) / min(uRes.x, uRes.y);
-  uv.y -= uShift;
-  float cr = cos(uRoll), sr = sin(uRoll);
-  uv = mat2(cr, -sr, sr, cr) * uv;
-
-  vec3 ww = normalize(uTgt - uEye);
-  vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));
-  vec3 vv = cross(uu, ww);
-  // Standing where the sun does, the rays have to be parallel: the sun is a
-  // direction and not a place, and a perspective eye put at one would show a
-  // view no shadow in this scene was ever computed from.
-  vec3 rd, ro;
-  if(uOrtho > 0.5){
-    ro = uEye + (uv.x*uu + uv.y*vv) * uOrthoSpan;
-    rd = ww;
-  } else {
-    rd = normalize(uv.x*uu + uv.y*vv + uFov*ww);
-    ro = uEye;
-  }
-
-  vec3 col = bgCol(rd);
-  float glow = 0.0;
-
-  // rotations preserve radius; only the noise term can push the surface out
-  float pad = (uWarpOn.x > 0.5 ? 0.55 * uWarpAmt : 0.0) + uBoundPad;
-  bool useBox = uBound > 1.5 ? autoBox() : (uBound > 0.5);
-
-  float tNear = 0.0, tFar = -1.0;
+// Where a ray enters that volume and where it leaves it. Outside that span
+// there is nothing to march, so nothing is marched. A ray that passes through
+// the object and comes out the far side asks the same question again, which is
+// why this is a function and not four lines inside render().
+void bounds(vec3 ro, vec3 rd, float pad, bool useBox, out float tNear, out float tFar){
+  tNear = 0.0; tFar = -1.0;
   if(useBox){
     vec3 he = boundHalf() + pad;
     vec3 rs = rd + step(abs(rd), vec3(1e-6)) * 1e-6;   // never divide by zero
@@ -1195,11 +1287,210 @@ vec3 render(vec2 fc){
       tFar  = -b + hs;
     }
   }
+}
+
+// ---- shading ---------------------------------------------------------
+// What a surface looks like: where it is, which way it points, and how deep
+// into the haze it sits. Its own function because a see-through object shades
+// more than one surface per pixel and they all have to agree about the light.
+vec3 shade(vec3 p, vec3 n, vec3 rd, vec2 mn, float sdHit, float trueD, float fog){
+  vec3 col;
+  float dmy;
+  // With the sun on it *is* the key light, so the shading and the shadows
+  // always agree. With it off this is the view-following light it has
+  // always been, to the bit.
+  vec3 key = uShadowOn > 0.5 ? sunDir() : normalize(-rd + vec3(0.30, 0.62, 0.10));
+  float sh = shadowAt(p, n, mn, key, trueD);
+
+  if(uShadowOnly > 0.5){
+    // the shadow term and nothing else: what is lit, against what is not
+    col = display(vec3(sh));
+  } else if(uMatcapOn > 0.5){
+    // A matcap replaces the material outright, but the shadow still sits
+    // over it — multiplied in display terms, because the sphere is a
+    // picture and that is how a picture is darkened.
+    vec3 mc = texture2D(uMatcap, mn * 0.5 + 0.5).rgb * mix(1.0, sh, uShadowDark);
+    col = display(mc);
+  } else {
+    float C = uScene > 0.5 ? 0.42 : 1.45 / uScale;
+    float somaMix = 1.0 - smoothstep(C*0.18, C*0.62, sdHit);
+
+    vec3 base = mix(uColA, uColB, somaMix);
+    float dif = max(dot(n, key), 0.0);
+    float bak = max(dot(n, -key), 0.0) * 0.28;
+    float ndv = max(dot(n, -rd), 0.0);
+    float fres = 0.035 + 0.965 * pow(1.0 - ndv, 5.0);
+    vec3 hv = normalize(key - rd);
+    float spec = pow(max(dot(n, hv), 0.0), 48.0);
+    float aoLip;
+    float ao = clamp(map(p + n*0.05, dmy, aoLip) * aoLip * sceneLip() / 0.05, 0.0, 1.0) * 0.72 + 0.28;
+    float sp = spikeAt(p);
+
+    float lit = 1.0 - uShadowDark * (1.0 - sh);
+    // Amount also decides how much of the fill a shadow is allowed to take.
+    // At 1 a shadowed pixel loses everything and is black; at 0 both of
+    // these are exactly 1 and nothing below has changed.
+    float fill = mix(1.0, lit, uShadowDark);
+    dif *= lit;
+    spec *= lit;
+
+    col = base * (0.05*fill + 0.62*dif) * ao;
+    col += SPIKE * vec3(0.88, 0.84, 1.0) * bak * 0.55 * fill;
+    col += SPIKE * sp * (0.70 + 2.2*somaMix) * uSpike;
+    col += uColB * somaMix * somaMix * 0.42 * fill;
+    col += uColA * 0.06 * fill;
+    col += RIM * fres * (0.62 + 0.80*ao) * (0.85 + 0.55*somaMix) * fill;
+    col += RIM * spec * (0.45 + 3.2*fres);
+  }
+  return mix(col, bgCol(rd) * 1.15, fog * 0.78);
+}
+
+// ---- transparency ----------------------------------------------------
+#ifndef GLASS_MAX
+#define GLASS_MAX 4
+#endif
+
+// Sphere tracing from the inside. Within the body the field is negative and
+// its size is still the distance to the nearest wall, so the same safe step
+// works with the sign turned round. It stops the moment the field comes back
+// up to nothing: that is the far wall. Returns how far the crossing took, and
+// hit says whether a wall was reached at all.
+float insideMarch(vec3 ro, vec3 rd, float tmax, float budget,
+                  out float hit, out float sdHit, out vec3 nOut){
+  float t = 0.0, sd = 1e5, lip = 1.0, got = 0.0;
+  hit = 0.0; sdHit = 1e5; nOut = -rd;
+  for(int i = 0; i < MARCH_MAX; i++){
+    if(float(i) >= budget || t > tmax) break;
+    vec3 q = ro + rd*t;
+    float d = map(q, sd, lip);
+    float td = -d * lip * sceneLip();          // from inside, the way to the wall
+    float eps = uEps * (0.0009*t + 0.0005);
+    // The start sits a hair off the surface it came through, and on a thin
+    // wall that hair can still be outside it. Creep until the field really is
+    // negative rather than reporting the wall it just left as the far one.
+    if(got < 0.5){
+      if(td > eps) got = 1.0;
+      else { t += 0.0015; continue; }
+    } else if(td < eps){
+      hit = 1.0; sdHit = sd; nOut = calcNormal(q);
+      break;
+    }
+    t += max(td, 0.0015);
+  }
+  return t;
+}
+
+// The same walk from outside, for whatever lies beyond a surface the eye went
+// through. Plain sphere tracing: no over-relaxation and no glow — the pixel's
+// first ray has already paid for both of those.
+float outsideMarch(vec3 ro, vec3 rd, float t0, float tmax, float budget,
+                   out float hit, out float sdHit, out float trueD){
+  float t = t0, sd = 1e5, lip = 1.0, d = 1e5;
+  hit = 0.0; sdHit = 1e5;
+  for(int i = 0; i < MARCH_MAX; i++){
+    if(float(i) >= budget || t > tmax) break;
+    d = map(ro + rd*t, sd, lip);
+    float td = d * lip * sceneLip();
+    if(td < uEps * (0.0009*t + 0.0005)){ t += td; hit = 1.0; sdHit = sd; break; }
+    t += max(td, 0.0015);
+  }
+  trueD = d * lip * sceneLip();
+  return t;
+}
+
+// What the eye sees once it is allowed through the surface it landed on. One
+// walk, alternating: at each surface take the share of it that stays visible,
+// carry the rest on through, and let the body colour what is carried by how
+// far the crossing was. Depth is how many surfaces it may do that at; the
+// remainder, whatever is left of it, ends on the sky.
+vec3 glass(vec3 surf, vec3 p, vec3 n, vec3 rd, float travel, float pad, bool useBox){
+  vec3 acc = vec3(0.0), through = vec3(1.0);
+  vec3 org, dir = rd, nrm = n;
+  float inside = 0.0;
+  // A crossing is short and there are several of them, so they share out the
+  // budget the first ray had rather than each taking it whole.
+  float budget = max(16.0, uSteps * 0.5);
+  vec3 tint = clamp(uGlassTint, vec3(0.002), vec3(1.0));
+  float ior = max(uGlassIor, 1.0);
+
+  for(int layer = 0; layer < GLASS_MAX; layer++){
+    if(float(layer) >= uGlassDepth) break;
+    // ---- what this surface keeps for itself ----
+    // Straight on, only Opacity holds it; edge on, Fresnel does. That second
+    // term is what reads as glass rather than as a faded object.
+    float fres = 0.04 + 0.96 * pow(1.0 - abs(dot(nrm, dir)), 5.0);
+    float keep = clamp(mix(uGlassOpacity, 1.0, fres * uGlassEdge), 0.0, 1.0);
+    acc += through * surf * keep;
+    through *= 1.0 - keep;
+    if(dot(through, through) < 1e-6) return acc;
+
+    // ---- and the way on through it ----
+    float ent = dot(dir, nrm) < 0.0 ? 1.0 : 0.0;   // meeting the face from outside
+    vec3 fn = ent > 0.5 ? nrm : -nrm;              // the side the ray arrives on
+    vec3 nd = refract(dir, fn, ent > 0.5 ? 1.0/ior : ior);
+    if(dot(nd, nd) < 0.5) nd = reflect(dir, fn);   // too shallow: it cannot get out
+    else inside = 1.0 - inside;
+    dir = nd;
+    org = p + dir * 0.004;
+
+    float b0, b1; bounds(org, dir, pad, useBox, b0, b1);
+    float hit = 0.0, sdN = 1e5, tdN = 0.0, dist = 0.0;
+    vec3 nN = nrm;
+    if(inside > 0.5){
+      dist = insideMarch(org, dir, max(b1, 0.0), budget, hit, sdN, nN);
+      // Beer's law, written as the tint raised to the distance: the colour is
+      // what survives one unit of body, so white is water and anything else
+      // deepens the further the crossing had to go.
+      through *= pow(tint, vec3(max(dist, 0.0) * uGlassDensity));
+    } else if(b1 > b0){
+      dist = outsideMarch(org, dir, b0, b1, budget, hit, sdN, tdN);
+      if(hit > 0.5) nN = calcNormal(org + dir*dist);
+    }
+    if(hit < 0.5) break;                           // out into the open
+    travel += dist;
+    p = org + dir*dist;
+    nrm = bumpN(p, nN);
+    surf = shade(p, nrm, dir, screenN(nrm), sdN, tdN, fogAt(travel));
+  }
+  return acc + through * bgCol(dir);
+}
+
+vec3 render(vec2 fc){
+  vec2 uv = (fc - 0.5*uRes) / min(uRes.x, uRes.y);
+  uv.y -= uShift;
+  float cr = cos(uRoll), sr = sin(uRoll);
+  uv = mat2(cr, -sr, sr, cr) * uv;
+
+  vec3 ww = normalize(uTgt - uEye);
+  vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));
+  vec3 vv = cross(uu, ww);
+  gUU = uu; gVV = vv; gCR = cr; gSR = sr;
+  // Standing where the sun does, the rays have to be parallel: the sun is a
+  // direction and not a place, and a perspective eye put at one would show a
+  // view no shadow in this scene was ever computed from.
+  vec3 rd, ro;
+  if(uOrtho > 0.5){
+    ro = uEye + (uv.x*uu + uv.y*vv) * uOrthoSpan;
+    rd = ww;
+  } else {
+    rd = normalize(uv.x*uu + uv.y*vv + uFov*ww);
+    ro = uEye;
+  }
+
+  vec3 col = bgCol(rd);
+  float glow = 0.0;
+
+  // rotations preserve radius; only the noise term can push the surface out
+  float pad = (uWarpOn.x > 0.5 ? 0.55 * uWarpAmt : 0.0) + uBoundPad;
+  bool useBox = uBound > 1.5 ? autoBox() : (uBound > 0.5);
+
+  float tNear, tFar;
+  bounds(ro, rd, pad, useBox, tNear, tFar);
 
   if(tFar > tNear){
     {
       float t = tNear;
-      float sd = 1e5, sdHit = 1e5, dmy;
+      float sd = 1e5, sdHit = 1e5;
       float hit = 0.0, steps = 0.0, d = 1e5, lip = 1.0;
       // Over-relaxed sphere tracing: a plain march steps by the safe radius,
       // which is conservative on a surface it is running alongside. Stepping
@@ -1249,60 +1540,18 @@ vec3 render(vec2 fc){
 
       if(hit > 0.5){
         vec3 p = ro + rd*t;
-        vec3 n = calcNormal(p);
+        // The map moves the normal before anything reads it, so the matcap
+        // lookup, the light, the shadow and the rim all see the same surface.
+        vec3 n = bumpN(p, calcNormal(p));
         // Where this pixel sits on a sphere facing the camera — what any painted
         // sphere is looked up by. uu and vv are the camera basis before the roll
         // is applied, and the roll goes on the screen coordinates instead, so it
         // is taken back out here or the sphere counter-rotates as the view leans.
-        vec2 mn = mat2(cr, sr, -sr, cr) * vec2(dot(uu, n), dot(vv, n));
-        // With the sun on it *is* the key light, so the shading and the shadows
-        // always agree. With it off this is the view-following light it has
-        // always been, to the bit.
-        vec3 key = uShadowOn > 0.5 ? sunDir() : normalize(-rd + vec3(0.30, 0.62, 0.10));
-        float sh = shadowAt(p, n, mn, key, trueD);
-        float fog = 1.0 - exp(-(uScene > 0.5 ? 0.22 : 0.52) * max(t - tNear, 0.0));
-
-        if(uShadowOnly > 0.5){
-          // the shadow term and nothing else: what is lit, against what is not
-          col = display(vec3(sh));
-        } else if(uMatcapOn > 0.5){
-          // A matcap replaces the material outright, but the shadow still sits
-          // over it — multiplied in display terms, because the sphere is a
-          // picture and that is how a picture is darkened.
-          vec3 mc = texture2D(uMatcap, mn * 0.5 + 0.5).rgb * mix(1.0, sh, uShadowDark);
-          col = display(mc);
-        } else {
-          float C = uScene > 0.5 ? 0.42 : 1.45 / uScale;
-          float somaMix = 1.0 - smoothstep(C*0.18, C*0.62, sdHit);
-
-          vec3 base = mix(uColA, uColB, somaMix);
-          float dif = max(dot(n, key), 0.0);
-          float bak = max(dot(n, -key), 0.0) * 0.28;
-          float ndv = max(dot(n, -rd), 0.0);
-          float fres = 0.035 + 0.965 * pow(1.0 - ndv, 5.0);
-          vec3 hv = normalize(key - rd);
-          float spec = pow(max(dot(n, hv), 0.0), 48.0);
-          float aoLip;
-          float ao = clamp(map(p + n*0.05, dmy, aoLip) * aoLip * sceneLip() / 0.05, 0.0, 1.0) * 0.72 + 0.28;
-          float sp = spikeAt(p);
-
-          float lit = 1.0 - uShadowDark * (1.0 - sh);
-          // Amount also decides how much of the fill a shadow is allowed to take.
-          // At 1 a shadowed pixel loses everything and is black; at 0 both of
-          // these are exactly 1 and nothing below has changed.
-          float fill = mix(1.0, lit, uShadowDark);
-          dif *= lit;
-          spec *= lit;
-
-          col = base * (0.05*fill + 0.62*dif) * ao;
-          col += SPIKE * vec3(0.88, 0.84, 1.0) * bak * 0.55 * fill;
-          col += SPIKE * sp * (0.70 + 2.2*somaMix) * uSpike;
-          col += uColB * somaMix * somaMix * 0.42 * fill;
-          col += uColA * 0.06 * fill;
-          col += RIM * fres * (0.62 + 0.80*ao) * (0.85 + 0.55*somaMix) * fill;
-          col += RIM * spec * (0.45 + 3.2*fres);
-        }
-        col = mix(col, bgCol(rd) * 1.15, fog * 0.78);
+        vec2 mn = screenN(n);
+        col = shade(p, n, rd, mn, sdHit, trueD, fogAt(t - tNear));
+        // and it need not stop here. Switched off, none of this is reached.
+        if(uGlassOn > 0.5 && uShadowOnly < 0.5)
+          col = glass(col, p, n, rd, t - tNear, pad, useBox);
       }
     }
   }
@@ -1437,7 +1686,9 @@ void main(){
     "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps","uOmega","uBound","uBoundPad","uWarpMode",
     "uShadowOn","uSunAz","uSunEl","uShadowSoft","uShadowDark","uShadowReach","uSunMark","uLcCube",
     "uMatcapOn","uMatcap","uShadowSrc","uShLevel","uShContrast","uShMatcap",
-    "uShadowOnly","uNoise","uOrtho","uOrthoSpan","uShSteps","uShGrow"];
+    "uShadowOnly","uNoise","uOrtho","uOrthoSpan","uShSteps","uShGrow",
+    "uNormalOn","uNormalMap","uNormalAmt","uNormalScale",
+    "uGlassOn","uGlassOpacity","uGlassEdge","uGlassIor","uGlassTint","uGlassDensity","uGlassDepth"];
   var DEFS = ["#define SCENE_BRAIN\n", "#define SCENE_NEURON\n", "#define SCENE_CHROME\n"];
 
   // One program per object, built the first time that object is shown. Each
@@ -1542,6 +1793,7 @@ void main(){
   }
   var mcSlot = sphereSlot(gl.TEXTURE1);   // the material
   var shSlot = sphereSlot(gl.TEXTURE2);   // the shadow
+  var nmSlot = sphereSlot(gl.TEXTURE3);   // the normal map
 
   // A Chrome with hardware acceleration switched off falls back to a software
   // rasteriser, which is orders of magnitude slower than any real GPU. Worth
@@ -1626,8 +1878,14 @@ void main(){
     favs: [null, null, null, null, null, null],
     // the matcap: off, and which sphere it would use
     matcapOn: 0, matcap: 0,
+    // the normal map: off, which image off the same list, how much of it, and
+    // how many times over it is laid across the object
+    normalOn: 0, normalMc: 0, normalAmt: 1.00, normalScale: 2.00,
+    // transparency: off, and what it would look like if it were not
+    glassOn: 0, glassOpacity: 0.15, glassEdge: 0.60, glassIor: 1.45,
+    glassTint: "#BFE9FF", glassDensity: 0.90, glassDepth: 2,
     // which console groups are open
-    groups: [1, 1, 1, 1, 1, 1, 1],
+    groups: [1, 1, 1, 1, 1, 1, 1, 1],
     // the console's own look, and how wide it is
     uiFont: 12, uiAlpha: 0.94, uiBg: "#04070c", uiAccent: "#2fd9c0", uiWidth: 150,
     uncap: 0                        // draw as fast as the machine will, not as fast as the display
@@ -2044,14 +2302,31 @@ void main(){
     gl.uniform1f(U.uLcCube, state.lcOn[5] ? 1 : 0);
     mcSlot.sync(state.matcap);
     shSlot.sync(state.shadowMc);
+    nmSlot.sync(state.normalMc);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, mcSlot.tex);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, shSlot.tex);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, nmSlot.tex);
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(U.uMatcap, 1);
     gl.uniform1i(U.uShMatcap, 2);
+    gl.uniform1i(U.uNormalMap, 3);
     gl.uniform1f(U.uMatcapOn, state.matcapOn && mcSlot.ready ? 1 : 0);
+    // an image that has not decoded yet is one flat grey pixel, and a flat grey
+    // normal map tips every surface the same way — so wait for it
+    gl.uniform1f(U.uNormalOn, state.normalOn && nmSlot.ready ? 1 : 0);
+    gl.uniform1f(U.uNormalAmt, state.normalAmt);
+    gl.uniform1f(U.uNormalScale, state.normalScale);
+    gl.uniform1f(U.uGlassOn, state.glassOn ? 1 : 0);
+    gl.uniform1f(U.uGlassOpacity, state.glassOpacity);
+    gl.uniform1f(U.uGlassEdge, state.glassEdge);
+    gl.uniform1f(U.uGlassIor, state.glassIor);
+    var gt = rgb(state.glassTint);
+    gl.uniform3f(U.uGlassTint, gt[0], gt[1], gt[2]);
+    gl.uniform1f(U.uGlassDensity, state.glassDensity);
+    gl.uniform1f(U.uGlassDepth, state.glassDepth);
     // asking for a painted sphere that has not decoded yet would black the frame
     gl.uniform1f(U.uShadowSrc, state.shadowSrc === 1 && !shSlot.ready ? 0 : state.shadowSrc);
     gl.uniform1f(U.uShLevel, state.shadowLevel);
@@ -2514,6 +2789,25 @@ void main(){
   numSlider("shSteps",    "shadowSteps",    1,    function(v){ return String(Math.round(v)); },
             function(v){ return Math.max(4, Math.round(v)); });
 
+  // ---- the normal map, and seeing through things ----
+  numSlider("nmAmt",     "normalAmt",     0.01, f2);
+  numSlider("nmScale",   "normalScale",   0.01, f2);
+  numSlider("gOpacity",  "glassOpacity",  0.01, f2);
+  numSlider("gEdge",     "glassEdge",     0.01, f2);
+  numSlider("gIor",      "glassIor",      0.01, f2);
+  numSlider("gDensity",  "glassDensity",  0.01, f2);
+  numSlider("gDepth",    "glassDepth",    1,    function(v){ return String(Math.round(v)); },
+            function(v){ return Math.max(1, Math.min(4, Math.round(v))); });
+  var glOnBtn = document.getElementById("glOn");
+  function setGlassOn(on){
+    state.glassOn = on ? 1 : 0;
+    glOnBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    telemetry();
+  }
+  glOnBtn.addEventListener("click", function(){ setGlassOn(!state.glassOn); glOnBtn.blur(); });
+  var gTintIn = document.getElementById("gTint");
+  gTintIn.addEventListener("input", function(){ state.glassTint = gTintIn.value; });
+
   // Which way the shadow is worked out, and which controls that leaves standing.
   var shSrcBtns = document.querySelectorAll("[data-shsrc]");
   var shScoped = document.querySelectorAll("[data-shs]");
@@ -2654,13 +2948,19 @@ void main(){
   var mcOnBtn = document.getElementById("mcOn");
   var mcSeg = document.getElementById("mcSeg");
   var shMcSeg = document.getElementById("shMcSeg");
+  var nmSeg = document.getElementById("nmSeg");
   var mcFile = document.getElementById("mcFile");
+  var nmOnBtn = document.getElementById("nmOn");
+  // where the next Add drops what it loads
+  var loadInto = "matcap";
   function setMatcapOn(on){
     state.matcapOn = on ? 1 : 0;
     mcOnBtn.setAttribute("aria-pressed", on ? "true" : "false");
     telemetry();
   }
-  // One list, two choosers: the material picks from it and so does the shadow.
+  // One list, three choosers: the material picks from it, so does the shadow,
+  // and so does the normal map. An image is an image — which of the three it is
+  // being used as is the only thing that differs.
   function drawSpheres(seg, key){
     if(!seg) return;
     seg.innerHTML = "";
@@ -2674,16 +2974,31 @@ void main(){
       seg.appendChild(b);
     });
   }
-  function drawSpheresBoth(){ drawSpheres(mcSeg, "matcap"); drawSpheres(shMcSeg, "shadowMc"); }
+  function drawSpheresAll(){
+    drawSpheres(mcSeg, "matcap");
+    drawSpheres(shMcSeg, "shadowMc");
+    drawSpheres(nmSeg, "normalMc");
+  }
+  function setNormalOn(on){
+    state.normalOn = on ? 1 : 0;
+    nmOnBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    telemetry();
+  }
+  nmOnBtn.addEventListener("click", function(){ setNormalOn(!state.normalOn); nmOnBtn.blur(); });
   function pickSphere(key, i){
     state[key] = Math.max(0, Math.min(MATCAPS.length - 1, i | 0));
-    drawSpheresBoth();                 // the texture follows on the next frame
+    drawSpheresAll();                 // the texture follows on the next frame
     telemetry();
   }
   function setMatcap(i){ pickSphere("matcap", i); }
 
   mcOnBtn.addEventListener("click", function(){ setMatcapOn(!state.matcapOn); mcOnBtn.blur(); });
-  document.getElementById("mcAdd").addEventListener("click", function(){ mcFile.click(); this.blur(); });
+  document.getElementById("mcAdd").addEventListener("click", function(){
+    loadInto = "matcap"; mcFile.click(); this.blur();
+  });
+  document.getElementById("nmAdd").addEventListener("click", function(){
+    loadInto = "normalMc"; mcFile.click(); this.blur();
+  });
 
   // A sphere that came off a phone camera can be several megabytes, and it is
   // going into a store with a size limit on it. Nothing here needs more than
@@ -2717,9 +3032,9 @@ void main(){
       fitSphere(String(r.result), function(src){
         if(!src){ toast("That file is not an image this browser can read"); return; }
         MATCAPS.push({ name: name, src: src, id: sphereId(), saved: false });
-        state.matcap = MATCAPS.length - 1;
-        drawSpheresBoth();
-        setMatcapOn(true);
+        state[loadInto] = MATCAPS.length - 1;
+        drawSpheresAll();
+        if(loadInto === "normalMc") setNormalOn(true); else setMatcapOn(true);
         toast(name + " loaded \u00b7 Keep to hold on to it");
       });
     };
@@ -2770,30 +3085,36 @@ void main(){
       .then(function(r){ if(!r.ok) throw 0; return true; });
   }
 
-  document.getElementById("mcSave").addEventListener("click", function(){
-    this.blur();
-    var m = MATCAPS[state.matcap];
+  // Keep and Delete act on whichever chooser the buttons belong to, so an
+  // image loaded as a normal map can be held on to without having to be the
+  // material as well.
+  function keepSphere(key){
+    var m = MATCAPS[state[key]];
     if(!m || !m.id){ toast("The built-in spheres are already there"); return; }
     m.saved = true;
     var here = writeLocalSpheres();
-    drawSpheresBoth();
+    drawSpheresAll();
     toast(here ? "Keeping " + m.name + "\u2026" : "Cannot keep it on this device");
     cloudKeep(m).then(function(){ toast(m.name + " kept everywhere"); })
                 .catch(function(){ toast(here ? m.name + " kept on this device" : "Cannot keep " + m.name); });
-  });
-  document.getElementById("mcDel").addEventListener("click", function(){
-    this.blur();
-    var i = state.matcap, m = MATCAPS[i];
+  }
+  function dropSphere(key){
+    var i = state[key], m = MATCAPS[i];
     if(!m || !m.id){ toast("The two built-in spheres stay"); return; }
     MATCAPS.splice(i, 1);
-    // anything pointing past the gap slides back with it
+    // every chooser pointing past the gap slides back with it
     if(state.matcap >= i) state.matcap = Math.max(0, state.matcap - 1);
     if(state.shadowMc >= i) state.shadowMc = Math.max(0, state.shadowMc - 1);
+    if(state.normalMc >= i) state.normalMc = Math.max(0, state.normalMc - 1);
     writeLocalSpheres();
-    drawSpheresBoth();
+    drawSpheresAll();
     toast(m.name + " removed");
     if(m.saved) cloudDrop(m.id).catch(function(){});
-  });
+  }
+  document.getElementById("mcSave").addEventListener("click", function(){ this.blur(); keepSphere("matcap"); });
+  document.getElementById("mcDel").addEventListener("click", function(){ this.blur(); dropSphere("matcap"); });
+  document.getElementById("nmSave").addEventListener("click", function(){ this.blur(); keepSphere("normalMc"); });
+  document.getElementById("nmDel").addEventListener("click", function(){ this.blur(); dropSphere("normalMc"); });
 
   // Merge by id, so a sphere kept on another machine arrives without doubling
   // up the one already here.
@@ -2805,11 +3126,11 @@ void main(){
       MATCAPS.push({ id: m.id, name: m.name, src: m.src, saved: true });
       added++;
     });
-    if(added) drawSpheresBoth();
+    if(added) drawSpheresAll();
     return added;
   }
 
-  drawSpheresBoth();
+  drawSpheresAll();
   addSpheres(localSpheres());
   cloudSpheres().then(function(list){
     if(addSpheres(list)) writeLocalSpheres();   // keep this browser's copy current
@@ -3323,6 +3644,21 @@ void main(){
     if(state.matcapOn){
       L.push("Matcap     " + MATCAPS[state.matcap].name + " \u00b7 replaces the lighting");
     }
+    // both of these change what a frame costs — the map by a texture fetch on
+    // every shaded point, transparency by a whole march per surface it is let
+    // through — so a run with either on is not comparable with one without
+    if(state.normalOn){
+      L.push("Normal     " + MATCAPS[state.normalMc].name +
+             " \u00b7 " + state.normalAmt.toFixed(2) + " @ " + state.normalScale.toFixed(2));
+    }
+    if(state.glassOn){
+      L.push("Glass      depth " + state.glassDepth +
+             " \u00b7 opacity " + state.glassOpacity.toFixed(2) +
+             " \u00b7 edge " + state.glassEdge.toFixed(2) +
+             " \u00b7 ior " + state.glassIor.toFixed(2) +
+             "\n           tint " + state.glassTint +
+             " \u00b7 density " + state.glassDensity.toFixed(2));
+    }
     // only one of the three costs a ray, so which one was used is the first
     // thing anyone comparing two runs needs to know
     if(!state.matcapOn && state.shadowOn){
@@ -3400,7 +3736,8 @@ void main(){
     "lcTwirl","colors","density","spike","spikeOn","thick","zoom","flySpeed","running","morph",
     "flyPos","flyYaw","flyPitch","favs","groups",
     "shadowOn","sunAz","sunEl","shadowSoft","shadowDark","shadowReach",
-    "matcapOn","matcap",
+    "matcapOn","matcap","normalOn","normalMc","normalAmt","normalScale",
+    "glassOn","glassOpacity","glassEdge","glassIor","glassTint","glassDensity","glassDepth",
     "shadowSrc","shadowLevel","shadowContrast","shadowMc","shadowOnly","noise","shadowSteps",
     "uiFont","uiAlpha","uiBg","uiAccent","uiWidth","uncap"];
 
@@ -3531,7 +3868,18 @@ void main(){
     uiBgIn.value = state.uiBg; uiAccentIn.value = state.uiAccent;
     applyUI();
     slide(document.getElementById("pNoise"), state.noise * 100);
-    setMatcapOn(!!state.matcapOn); drawSpheresBoth();
+    setMatcapOn(!!state.matcapOn);
+    setNormalOn(!!state.normalOn);
+    slide(document.getElementById("nmAmt"),    state.normalAmt * 100);
+    slide(document.getElementById("nmScale"),  state.normalScale * 100);
+    setGlassOn(!!state.glassOn);
+    slide(document.getElementById("gOpacity"), state.glassOpacity * 100);
+    slide(document.getElementById("gEdge"),    state.glassEdge * 100);
+    slide(document.getElementById("gIor"),     state.glassIor * 100);
+    slide(document.getElementById("gDensity"), state.glassDensity * 100);
+    slide(document.getElementById("gDepth"),   state.glassDepth);
+    gTintIn.value = state.glassTint;
+    drawSpheresAll();
     syncGroups();
     applyScene();                    // reloads this object's colours into the swatches
     resize(); telemetry();
