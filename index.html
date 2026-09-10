@@ -50,11 +50,11 @@
 
   .foot{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap}
 
-  .telemetry{min-width:236px}
+  .telemetry{min-width:0;font-size:var(--ui-font)}
   .telemetry dl{display:grid;grid-template-columns:repeat(3,auto);justify-content:space-between;gap:1px 20px;margin:0;font-family:var(--mono)}
-  .telemetry dt{grid-row:1;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;font-size:9px}
-  .telemetry dd{grid-row:2;margin:0;font-size:15px;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--fiber)}
-  .telemetry dd i{font-style:normal;color:var(--dim);font-size:9.5px;margin-left:2px}
+  .telemetry dt{grid-row:1;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;font-size:.72em}
+  .telemetry dd{grid-row:2;margin:0;font-size:1.22em;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--fiber)}
+  .telemetry dd i{font-style:normal;color:var(--dim);font-size:.76em;margin-left:2px}
   #fpsGraph{display:block;width:100%;height:66px;margin-top:9px;border-top:1px solid var(--line)}
 
   /* Fixed to the corner rather than floated in the layout: flush with the top,
@@ -65,7 +65,7 @@
            display:flex;flex-direction:column;gap:9px;
            font-size:var(--ui-font);
            overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;pointer-events:auto;
-           border:0;border-left:1px solid var(--line);padding:10px 9px 14px}
+           border:0;border-left:1px solid var(--line);padding:10px 15px 16px 8px}
   .console::before,.console::after{display:none}
   .grip{position:absolute;left:0;top:0;bottom:0;width:10px;cursor:ew-resize;z-index:3;pointer-events:auto}
   .grip::before{content:"";position:absolute;left:4px;top:0;bottom:0;width:2px;background:transparent;transition:background .12s}
@@ -94,9 +94,21 @@
   /* what a group holds sits in from the header that names it */
   .grpb{display:flex;flex-direction:column;gap:10px;padding:2px 0 4px 10px}
   .grpb[hidden]{display:none}
-  .seg{display:flex;flex-wrap:wrap;border:1px solid var(--line)}
-  .seg button{flex:1 1 40%;min-width:0;appearance:none;background:transparent;border:0;border-right:1px solid var(--line);color:var(--dim);font-family:var(--cond);font-weight:600;font-size:1em;letter-spacing:.04em;padding:8px 3px;cursor:pointer;transition:color .15s,background .15s}
-  .seg button:last-child{border-right:0}
+  /* Squeeze before wrapping. A row of buttons shares the width equally and each
+     one may break its own label over two lines; wrapping the row is a last
+     resort, and only .transport.wrap asks for it. Every button keeps a border
+     of its own, so two sitting together never read as one. */
+  /* As many to a row as actually fit, and only then a second row. Every button
+     carries its own border with a gap around it, so two sitting side by side
+     always read as two — which a shared edge stops doing the moment a row
+     wraps. Labels stay on one line and are trimmed rather than broken; widen
+     the menu and the whole word comes back. */
+  .seg{display:flex;flex-wrap:wrap;gap:5px;border:0}
+  /* One line, always. A label that will not fit is trimmed rather than broken
+     mid-word or stacked a letter at a time — and the menu can be widened, at
+     which point the whole word comes back. */
+  .seg button{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;appearance:none;background:transparent;border:1px solid var(--line);color:var(--dim);font-family:var(--cond);font-weight:600;font-size:.94em;letter-spacing:.01em;padding:8px 6px;cursor:pointer;transition:color .15s,background .15s}
+
   .seg button[aria-pressed="true"]{background:rgba(47,217,192,.13);color:var(--fiber)}
   .seg button:hover{color:var(--chrome)}
 
@@ -112,13 +124,14 @@
   input[type=range]::-moz-range-thumb{width:10px;height:16px;background:var(--fiber);border:0;border-radius:1px}
 
   .transport{display:flex;gap:8px}
-  .transport{flex-wrap:wrap}
-  .transport button{flex:1 1 40%;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;appearance:none;background:transparent;border:1px solid var(--line);color:var(--dim);font-family:var(--cond);font-weight:600;font-size:1em;letter-spacing:.04em;padding:9px 5px;cursor:pointer;transition:background .15s,color .15s}
-  .transport button::before{content:"";width:6px;height:6px;flex:none;background:var(--dim);opacity:.5;transition:background .15s,opacity .15s,box-shadow .15s}
+  .transport{flex-wrap:wrap;gap:5px}
+  /* block rather than flex, so the trim has something to trim */
+  .transport button{flex:1 1 auto;min-width:0;display:block;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;appearance:none;background:transparent;border:1px solid var(--line);color:var(--dim);font-family:var(--cond);font-weight:600;font-size:.94em;letter-spacing:.01em;padding:9px 6px;cursor:pointer;transition:background .15s,color .15s}
+  .transport button::before{content:"";display:inline-block;vertical-align:middle;width:4px;height:4px;margin:-2px 4px 0 0;background:var(--dim);opacity:.5;transition:background .15s,opacity .15s,box-shadow .15s}
   .transport button[aria-pressed="true"]{background:rgba(47,217,192,.13);color:var(--fiber)}
   .transport button[aria-pressed="true"]::before{background:var(--fiber);opacity:1;box-shadow:0 0 7px var(--fiber)}
-  .transport.wrap{flex-wrap:wrap}
-  .transport.wrap button{flex:1 1 44%;padding:8px 4px;font-size:.92em}
+  .transport.wrap{flex-wrap:wrap;gap:6px}
+  .transport.wrap button{flex:1 1 40%;padding:8px 4px;font-size:.92em}
   .transport button:hover{color:var(--chrome)}
   .preview{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
   .preview p{flex:1 1 96px;min-width:0}
@@ -134,7 +147,9 @@
   input[type=color]::-webkit-color-swatch{border:0}
   input[type=color]::-moz-color-swatch{border:0}
   .transport button[aria-pressed="true"]:hover{color:var(--fiber);background:rgba(47,217,192,.19)}
-  .hint{font-family:var(--mono);font-size:.80em;line-height:1.5;color:var(--dim);letter-spacing:.03em;margin:0}
+  /* The explanations are gone. #hint keeps its place in the flow only while a
+     toast is in it, which is how "View 5 stored" still gets said. */
+  .hint{display:none;font-family:var(--mono);font-size:.80em;line-height:1.5;color:var(--fiber);letter-spacing:.03em;margin:0}
 
   :focus-visible{outline:1px solid var(--fiber);outline-offset:2px}
 
@@ -153,9 +168,8 @@
     .hud{padding:12px;padding-right:calc(var(--menu-w) + 12px);padding-bottom:max(12px,env(safe-area-inset-bottom))}
     .foot{flex-direction:column;align-items:stretch;gap:10px}
     .panel{padding:10px 12px}
-    .telemetry{min-width:0}
-    .telemetry dt{font-size:8.5px}
-    .telemetry dd{font-size:13px}
+    .telemetry dt{font-size:.70em}
+    .telemetry dd{font-size:1.1em}
     #fpsGraph{height:52px}
     .console{width:min(var(--menu-w),92vw);gap:8px}
     .grp,.grpb{gap:9px}
@@ -349,16 +363,17 @@
           <div>
             <p class="lbl" id="shSrcLbl">How</p>
             <div class="seg" role="group" aria-labelledby="shSrcLbl">
-              <button type="button" data-shsrc="0" aria-pressed="true" title="March a second ray from the surface to the sun. The only one that can throw a shadow from one thing onto another, and the only one that costs a ray.">Ray march</button>
+              <button type="button" data-shsrc="0" aria-pressed="true" title="Sphere trace a second ray from the surface to the sun, with a soft edge from how close it passed. Throws a shadow from one thing onto another.">March</button>
+              <button type="button" data-shsrc="3" aria-pressed="false" title="Walk the line to the sun in even steps and ask at each one whether it is inside anything. No penumbra and no grey — occluded or not. The cost is exactly the steps asked for, whatever the scene is doing.">Trace</button>
               <button type="button" data-shsrc="1" aria-pressed="false" title="Read the shadow off a sphere you painted. Whatever you put on it lands on the object, and it costs one texture fetch.">Sphere</button>
-              <button type="button" data-shsrc="2" aria-pressed="false" title="No ray and no texture: how square-on the surface is to the sun. It cannot throw a shadow onto anything else, but it turns with the sun and it is nearly free.">Sun angle</button>
+              <button type="button" data-shsrc="2" aria-pressed="false" title="No ray and no texture: how square-on the surface is to the sun. It cannot throw a shadow onto anything else, but it turns with the sun and it is nearly free.">Sun</button>
             </div>
           </div>
-          <div class="slider" data-shs="012">
+          <div class="slider" data-shs="0123">
             <label class="lbl" for="sunAz">Sun across</label><output id="sunAzOut">52&#176;</output>
             <input id="sunAz" type="range" min="0" max="360" step="1" value="52">
           </div>
-          <div class="slider" data-shs="012">
+          <div class="slider" data-shs="0123">
             <label class="lbl" for="sunEl">Sun up</label><output id="sunElOut">34&#176;</output>
             <input id="sunEl" type="range" min="-89" max="89" step="1" value="34">
           </div>
@@ -366,9 +381,13 @@
             <label class="lbl" for="shSoft">Softness</label><output id="shSoftOut">0.25</output>
             <input id="shSoft" type="range" min="0" max="100" step="1" value="25">
           </div>
-          <div class="slider" data-shs="0">
+          <div class="slider" data-shs="03">
             <label class="lbl" for="shReach">Reach</label><output id="shReachOut">3.00</output>
             <input id="shReach" type="range" min="50" max="600" step="10" value="300">
+          </div>
+          <div class="slider" data-shs="03">
+            <label class="lbl" for="shSteps" title="How many samples a shadow ray gets. More is slower and finds thinner things.">Shadow steps</label><output id="shStepsOut">96</output>
+            <input id="shSteps" type="range" min="8" max="128" step="4" value="96">
           </div>
           <div data-shs="1" hidden>
             <p class="lbl" id="shMcLbl">Shadow sphere</p>
@@ -405,7 +424,7 @@
             <div class="transport wrap" id="mcSeg" role="group" aria-labelledby="mcLbl"></div>
           </div>
           <div class="transport">
-            <button type="button" id="mcAdd" title="Load a matcap sphere from this computer. It joins the list above and is used straight away.">Add&hellip;</button>
+            <button type="button" id="mcAdd" title="Load a matcap sphere from this computer. It joins the list above and is used straight away.">Add</button>
             <button type="button" id="mcSave" title="Keep the chosen sphere: on this device, and in the cloud so it follows the page to any computer.">Keep</button>
             <button type="button" id="mcDel" title="Remove the chosen sphere, here and in the cloud. The two built-in ones stay.">Delete</button>
           </div>
@@ -535,6 +554,8 @@ uniform float uShadowSrc;   // 0 marched, 1 a painted sphere, 2 the sun's own an
 uniform float uShLevel;     // where the edge between light and shadow sits
 uniform float uShContrast;  // how abruptly it crosses it: 1 is a hard line
 uniform sampler2D uShMatcap;
+uniform float uShSteps;     // how many the shadow ray is allowed, either method
+uniform float uShGrow;      // the sphere-traced one's floor, sized to that budget
 uniform float uShadowOnly;  // draw the shadow term itself, lit against unlit
 uniform float uNoise;       // how much film grain the finished frame gets
 uniform float uOrtho;       // 1 = parallel rays, for standing where the sun does
@@ -953,7 +974,7 @@ vec3 calcNormal(vec3 p){
 }
 
 #ifndef SHADOW_MAX
-#define SHADOW_MAX 96
+#define SHADOW_MAX 128
 #endif
 
 // A second march, from the surface toward the sun. Nothing is in the way and the
@@ -977,7 +998,7 @@ vec3 calcNormal(vec3 p){
 float softShadow(vec3 ro, vec3 rd, float tmax, float k, float t0){
   float res = 1.0, t = t0, dmy, lip;
   for(int i = 0; i < SHADOW_MAX; i++){
-    if(t > tmax) break;
+    if(float(i) >= uShSteps || t > tmax) break;
     float safe = map(ro + rd*t, dmy, lip);   // guaranteed clear: step by this
     float near = safe * lip * sceneLip();    // probably the surface: judge by this
     // Inside something, so black whatever k says — and inside is the sign, not
@@ -993,9 +1014,9 @@ float softShadow(vec3 ro, vec3 rd, float tmax, float k, float t0){
     // never gets anywhere: it spends its whole budget in the first tenth of a
     // unit and gives up, and giving up reads as LIT — which is the light leaking
     // through the middle of a shadow. Both ways of failing leak light, so the
-    // step also grows with how far it has come: 8% per step is what it takes for
-    // ninety-six of them to cross the whole reach whatever the warp is doing.
-    t += clamp(max(safe, 0.08*t), 0.0015, 0.25);
+    // step also grows with how far it has come, by however much it takes for the
+    // budget it has been given to cross the whole reach whatever the warp does.
+    t += clamp(max(safe, uShGrow*t), 0.0015, 0.25);
   }
   return clamp(res, 0.0, 1.0);
 }
@@ -1065,13 +1086,34 @@ float shadowAt(vec3 p, vec3 n, vec2 mn, vec3 key, float trueD){
     // that is where a brightness is an average of anything.
     vec3 t2 = pow(max(texture2D(uShMatcap, mn * 0.5 + 0.5).rgb, 0.0), vec3(2.2));
     sh = dot(t2, vec3(0.2126, 0.7152, 0.0722));
-  } else {
+  } else if(uShadowSrc < 2.5){
     // No ray and no texture: how square-on the surface is to the sun, opened out
     // across the whole range so the shaping has room to work. It cannot throw a
     // shadow from one thing onto another and never will — but it turns with the
     // sun, it costs a dot product, and with the contrast up it draws a hard
     // terminator wherever you aim it.
     sh = dot(n, key) * 0.5 + 0.5;
+  } else {
+    // Ray traced in the plainest sense there is: walk the line to the sun in
+    // even steps and ask at each one whether it is inside anything. Nothing is
+    // sphere traced, so the warp's Lipschitz bound cannot slow it to a crawl and
+    // there is no budget to run out of — the cost is exactly the steps asked
+    // for, whatever the scene is doing. No near-miss either, so no penumbra and
+    // no grey: it is occluded or it is not. That is the point of it.
+    float nl = dot(n, key);
+    sh = 0.0;
+    if(nl > 0.0){
+      sh = 1.0;
+      float off = mix(0.045, 0.012, nl) + max(trueD, 0.0);
+      vec3 o = p + n*off;
+      float dt = max(uShadowReach - off, 0.0) / max(uShSteps, 1.0);
+      for(int i = 0; i < SHADOW_MAX; i++){
+        if(float(i) >= uShSteps) break;
+        float dmy2, lip2;
+        // the compressed distance keeps the sign, so no un-compressing needed
+        if(map(o + key*(off + (float(i) + 0.5)*dt), dmy2, lip2) < 0.0){ sh = 0.0; break; }
+      }
+    }
   }
   return shapeShadow(sh);
 }
@@ -1395,7 +1437,7 @@ void main(){
     "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps","uOmega","uBound","uBoundPad","uWarpMode",
     "uShadowOn","uSunAz","uSunEl","uShadowSoft","uShadowDark","uShadowReach","uSunMark","uLcCube",
     "uMatcapOn","uMatcap","uShadowSrc","uShLevel","uShContrast","uShMatcap",
-    "uShadowOnly","uNoise","uOrtho","uOrthoSpan"];
+    "uShadowOnly","uNoise","uOrtho","uOrthoSpan","uShSteps","uShGrow"];
   var DEFS = ["#define SCENE_BRAIN\n", "#define SCENE_NEURON\n", "#define SCENE_CHROME\n"];
 
   // One program per object, built the first time that object is shown. Each
@@ -1556,6 +1598,7 @@ void main(){
     // how the shadow is arrived at, and the shaping every source shares.
     // shadowDark is what the console calls Amount; the key is older than the name.
     shadowSrc: 0, shadowLevel: 0.50, shadowContrast: 0.00, shadowMc: 0,
+    shadowSteps: 96,                // the budget for either of the two that march
     shadowOnly: 0,                  // draw the shadow term itself instead of the object
     noise: 0.00,                    // film grain over the finished frame
     lcRelief: 0.26, lcFreq: 4.00, lcThick: 0.022, lcTwirl: 1.90,
@@ -2013,6 +2056,12 @@ void main(){
     gl.uniform1f(U.uShadowSrc, state.shadowSrc === 1 && !shSlot.ready ? 0 : state.shadowSrc);
     gl.uniform1f(U.uShLevel, state.shadowLevel);
     gl.uniform1f(U.uShContrast, state.shadowContrast);
+    gl.uniform1f(U.uShSteps, state.shadowSteps);
+    // How fast the sphere-traced step has to grow for the budget it has been
+    // given to cross the whole reach. Worked out here rather than per pixel:
+    // it depends on the two sliders and on nothing else in the frame.
+    gl.uniform1f(U.uShGrow, Math.max(0.01, Math.min(0.5,
+      Math.pow(Math.max(state.shadowReach, 0.05) / 0.01, 1 / Math.max(state.shadowSteps, 4)) - 1)));
     gl.uniform1f(U.uShadowOnly, state.shadowOnly && state.shadowOn ? 1 : 0);
     gl.uniform1f(U.uNoise, state.noise);
     gl.uniform1f(U.uOrtho, sunView ? 1 : 0);
@@ -2176,7 +2225,8 @@ void main(){
     clearTimeout(hintT);
     hintBusy = 1;
     hintEl.textContent = msg;
-    hintT = setTimeout(function(){ hintBusy = 0; showHint(); }, 1300);
+    hintEl.style.display = "block";
+    hintT = setTimeout(function(){ hintBusy = 0; hintEl.style.display = ""; showHint(); }, 1600);
   }
   function setFly(on){
     // hand the camera over exactly where the auto path left it
@@ -2461,6 +2511,8 @@ void main(){
   numSlider("shLevel",    "shadowLevel",    0.01, f2);
   numSlider("shContrast", "shadowContrast", 0.01, f2);
   numSlider("pNoise",     "noise",          0.01, f2);
+  numSlider("shSteps",    "shadowSteps",    1,    function(v){ return String(Math.round(v)); },
+            function(v){ return Math.max(4, Math.round(v)); });
 
   // Which way the shadow is worked out, and which controls that leaves standing.
   var shSrcBtns = document.querySelectorAll("[data-shsrc]");
@@ -3274,7 +3326,7 @@ void main(){
     // only one of the three costs a ray, so which one was used is the first
     // thing anyone comparing two runs needs to know
     if(!state.matcapOn && state.shadowOn){
-      var SH_SRC = ["ray march", "sphere", "sun angle"];
+      var SH_SRC = ["ray march", "sphere", "sun angle", "ray trace"];
       var line = "Shadows    " + SH_SRC[state.shadowSrc] +
                  " \u00b7 level " + state.shadowLevel.toFixed(2) +
                  " \u00b7 contrast " + state.shadowContrast.toFixed(2) +
@@ -3284,8 +3336,11 @@ void main(){
                 Math.round(state.sunEl / (Math.PI/180)) + "\u00b0";
       }
       if(state.shadowSrc === 0){
-        line += " \u00b7 soft " + state.shadowSoft.toFixed(2) +
-                " \u00b7 reach " + state.shadowReach.toFixed(2);
+        line += " \u00b7 soft " + state.shadowSoft.toFixed(2);
+      }
+      if(state.shadowSrc === 0 || state.shadowSrc === 3){
+        line += " \u00b7 reach " + state.shadowReach.toFixed(2) +
+                " \u00b7 " + state.shadowSteps + " steps";
       }
       if(state.shadowSrc === 1) line += "\n           sphere " + MATCAPS[state.shadowMc].name;
       L.push(line);
@@ -3346,7 +3401,7 @@ void main(){
     "flyPos","flyYaw","flyPitch","favs","groups",
     "shadowOn","sunAz","sunEl","shadowSoft","shadowDark","shadowReach",
     "matcapOn","matcap",
-    "shadowSrc","shadowLevel","shadowContrast","shadowMc","shadowOnly","noise",
+    "shadowSrc","shadowLevel","shadowContrast","shadowMc","shadowOnly","noise","shadowSteps",
     "uiFont","uiAlpha","uiBg","uiAccent","uiWidth","uncap"];
 
   // this browser
@@ -3467,6 +3522,7 @@ void main(){
     slide(document.getElementById("shReach"), state.shadowReach * 100);
     slide(document.getElementById("shLevel"),    state.shadowLevel * 100);
     slide(document.getElementById("shContrast"), state.shadowContrast * 100);
+    slide(document.getElementById("shSteps"), state.shadowSteps);
     applyShadowSrc();
     setShadowOnly(!!state.shadowOnly);
     setUncap(!!state.uncap);
