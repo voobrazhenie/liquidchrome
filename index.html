@@ -993,7 +993,7 @@ float softShadow(vec3 ro, vec3 rd, float tmax, float k, float t0){
     // never gets anywhere: it spends its whole budget in the first tenth of a
     // unit and gives up, and giving up reads as LIT — which is the light leaking
     // through the middle of a shadow. Both ways of failing leak light, so the
-    // step also grows with how far it has come: 7% per step is what it takes for
+    // step also grows with how far it has come: 8% per step is what it takes for
     // ninety-six of them to cross the whole reach whatever the warp is doing.
     t += clamp(max(safe, 0.08*t), 0.0015, 0.25);
   }
