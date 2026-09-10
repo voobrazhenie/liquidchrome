@@ -2540,7 +2540,8 @@ void main(){
   function sunDrag(dx, dy){
     state.sunAz = (state.sunAz - dx * 0.005) % (Math.PI * 2);
     if(state.sunAz < 0) state.sunAz += Math.PI * 2;
-    state.sunEl = Math.max(-1.552, Math.min(1.552, state.sunEl + dy * 0.005));
+    // screen y counts downward, so dragging down has to take the sun down with it
+    state.sunEl = Math.max(-1.552, Math.min(1.552, state.sunEl - dy * 0.005));
     slide(document.getElementById("sunAz"), state.sunAz / DEG);
     slide(document.getElementById("sunEl"), state.sunEl / DEG);
   }
