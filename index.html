@@ -19,7 +19,12 @@
     --chrome:#C6D3DC;
     --dim:#6A7A88;
     --line:rgba(47,217,192,.22);
-    --panel:rgba(6,10,16,.62);
+    /* everything the UI group drives, in one place */
+    --ui-bg:4,7,12;
+    --ui-alpha:.94;
+    --ui-font:12px;
+    --menu-w:150px;
+    --panel:rgba(var(--ui-bg),var(--ui-alpha));
     --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
     --cond:"IBM Plex Sans Condensed","Helvetica Neue",Arial,sans-serif;
   }
@@ -33,7 +38,7 @@
   }
   #stage{position:fixed;inset:0;width:100%;height:100%;display:block;background:var(--ink);touch-action:none}
 
-  .hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:flex-end;padding:clamp(14px,3vw,28px)}
+  .hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:flex-end;padding:clamp(14px,3vw,28px);padding-right:calc(var(--menu-w) + clamp(14px,3vw,28px))}
   .hud.hidden{opacity:0;visibility:hidden;transition:opacity .25s ease}
   .hud > *{pointer-events:none}
   .hud button,.hud input,.hud a{pointer-events:auto}
@@ -52,7 +57,19 @@
   .telemetry dd i{font-style:normal;color:var(--dim);font-size:9.5px;margin-left:2px}
   #fpsGraph{display:block;width:100%;height:66px;margin-top:9px;border-top:1px solid var(--line)}
 
-  .console{display:flex;flex-direction:column;gap:11px;min-width:min(292px,88vw);max-height:calc(100vh - 128px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;pointer-events:auto}
+  /* Fixed to the corner rather than floated in the layout: flush with the top,
+     the right and the bottom, so it reads as part of the window and not as a
+     card sitting on it. Its width is a variable because the left edge is a
+     handle. */
+  .console{position:fixed;top:0;right:0;bottom:0;width:min(var(--menu-w),94vw);
+           display:flex;flex-direction:column;gap:9px;
+           font-size:var(--ui-font);
+           overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;pointer-events:auto;
+           border:0;border-left:1px solid var(--line);padding:10px 9px 14px}
+  .console::before,.console::after{display:none}
+  .grip{position:absolute;left:0;top:0;bottom:0;width:10px;cursor:ew-resize;z-index:3;pointer-events:auto}
+  .grip::before{content:"";position:absolute;left:4px;top:0;bottom:0;width:2px;background:transparent;transition:background .12s}
+  .grip:hover::before,.grip.on::before{background:var(--fiber)}
   /* The console is the one panel that scrolls, so it gets a bar that belongs to
      it rather than the platform's; height:0 also drops the horizontal one.
      Blink ignores these pseudo-elements as soon as scrollbar-width or
@@ -65,25 +82,26 @@
   @supports not selector(::-webkit-scrollbar){
     .console{scrollbar-width:thin;scrollbar-color:rgba(47,217,192,.40) rgba(47,217,192,.07)}
   }
-  .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+  .lbl{font-family:var(--mono);font-size:.80em;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
 
   /* Folding groups. The header is the control; the body is a plain flex column
      so the rows keep the console's own rhythm whichever group they sit in. */
   .grp{display:flex;flex-direction:column;gap:11px}
-  .grph{display:flex;align-items:center;gap:8px;width:100%;appearance:none;background:transparent;border:0;border-bottom:1px solid var(--line);padding:3px 0 6px;cursor:pointer;text-align:left;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--fiber)}
+  .grph{display:flex;align-items:center;gap:7px;width:100%;appearance:none;background:var(--fiber);border:0;padding:6px 8px;cursor:pointer;text-align:left;font-family:var(--mono);font-weight:500;font-size:.86em;letter-spacing:.12em;text-transform:uppercase;color:#031018}
   .grph::before{content:"";flex:none;width:0;height:0;border-left:4px solid currentColor;border-top:3.5px solid transparent;border-bottom:3.5px solid transparent;transition:transform .16s ease}
   .grph[aria-expanded="true"]::before{transform:rotate(90deg)}
-  .grph:hover{color:var(--chrome)}
-  .grpb{display:flex;flex-direction:column;gap:11px}
+  .grph:hover{filter:brightness(1.15)}
+  /* what a group holds sits in from the header that names it */
+  .grpb{display:flex;flex-direction:column;gap:10px;padding:2px 0 4px 10px}
   .grpb[hidden]{display:none}
-  .seg{display:flex;border:1px solid var(--line)}
-  .seg button{flex:1;appearance:none;background:transparent;border:0;border-right:1px solid var(--line);color:var(--dim);font-family:var(--cond);font-weight:600;font-size:12px;letter-spacing:.06em;padding:9px 4px;cursor:pointer;transition:color .15s,background .15s}
+  .seg{display:flex;flex-wrap:wrap;border:1px solid var(--line)}
+  .seg button{flex:1 1 40%;min-width:0;appearance:none;background:transparent;border:0;border-right:1px solid var(--line);color:var(--dim);font-family:var(--cond);font-weight:600;font-size:1em;letter-spacing:.04em;padding:8px 3px;cursor:pointer;transition:color .15s,background .15s}
   .seg button:last-child{border-right:0}
   .seg button[aria-pressed="true"]{background:rgba(47,217,192,.13);color:var(--fiber)}
   .seg button:hover{color:var(--chrome)}
 
   .slider{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 10px}
-  .slider output{font-family:var(--mono);font-size:10.5px;white-space:nowrap;color:var(--fiber);font-variant-numeric:tabular-nums}
+  .slider output{font-family:var(--mono);font-size:.86em;white-space:nowrap;color:var(--fiber);font-variant-numeric:tabular-nums}
   .slider input{grid-column:1/-1}
   .slider[hidden]{display:none}
   input[type=range]{appearance:none;-webkit-appearance:none;width:100%;height:22px;background:transparent;cursor:pointer;margin:0}
@@ -94,14 +112,16 @@
   input[type=range]::-moz-range-thumb{width:10px;height:16px;background:var(--fiber);border:0;border-radius:1px}
 
   .transport{display:flex;gap:8px}
-  .transport button{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;appearance:none;background:transparent;border:1px solid var(--line);color:var(--dim);font-family:var(--cond);font-weight:600;font-size:12px;letter-spacing:.06em;padding:10px 6px;cursor:pointer;transition:background .15s,color .15s}
+  .transport{flex-wrap:wrap}
+  .transport button{flex:1 1 40%;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;appearance:none;background:transparent;border:1px solid var(--line);color:var(--dim);font-family:var(--cond);font-weight:600;font-size:1em;letter-spacing:.04em;padding:9px 5px;cursor:pointer;transition:background .15s,color .15s}
   .transport button::before{content:"";width:6px;height:6px;flex:none;background:var(--dim);opacity:.5;transition:background .15s,opacity .15s,box-shadow .15s}
   .transport button[aria-pressed="true"]{background:rgba(47,217,192,.13);color:var(--fiber)}
   .transport button[aria-pressed="true"]::before{background:var(--fiber);opacity:1;box-shadow:0 0 7px var(--fiber)}
   .transport.wrap{flex-wrap:wrap}
-  .transport.wrap button{flex:1 1 44%;padding:9px 4px;font-size:11px}
+  .transport.wrap button{flex:1 1 44%;padding:8px 4px;font-size:.92em}
   .transport button:hover{color:var(--chrome)}
-  .preview{display:flex;align-items:center;gap:10px}
+  .preview{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+  .preview p{flex:1 1 96px;min-width:0}
   .preview canvas{width:76px;height:76px;flex:none;border:1px solid var(--line);background:rgba(0,0,0,.35);image-rendering:auto}
   .preview p{margin:0}
   .preview[hidden]{display:none}
@@ -114,7 +134,7 @@
   input[type=color]::-webkit-color-swatch{border:0}
   input[type=color]::-moz-color-swatch{border:0}
   .transport button[aria-pressed="true"]:hover{color:var(--fiber);background:rgba(47,217,192,.19)}
-  .hint{font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:.05em;margin:0}
+  .hint{font-family:var(--mono);font-size:.80em;line-height:1.5;color:var(--dim);letter-spacing:.03em;margin:0}
 
   :focus-visible{outline:1px solid var(--fiber);outline-offset:2px}
 
@@ -130,14 +150,14 @@
   .fault p{font-family:var(--mono);font-size:12px;color:var(--dim);line-height:1.7;max-width:38ch}
 
   @media (max-width:760px){
-    .hud{padding:12px;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+    .hud{padding:12px;padding-right:calc(var(--menu-w) + 12px);padding-bottom:max(12px,env(safe-area-inset-bottom))}
     .foot{flex-direction:column;align-items:stretch;gap:10px}
     .panel{padding:10px 12px}
     .telemetry{min-width:0}
     .telemetry dt{font-size:8.5px}
     .telemetry dd{font-size:13px}
     #fpsGraph{height:52px}
-    .console{min-width:0;gap:9px;max-height:calc(100vh - 214px)}
+    .console{width:min(var(--menu-w),92vw);gap:8px}
     .grp,.grpb{gap:9px}
     .seg button{padding:11px 4px}
     .transport button{padding:11px 6px}
@@ -161,6 +181,7 @@
     </section>
 
     <section class="console panel" aria-label="Flight console">
+      <div class="grip" id="menuGrip" title="Drag to set how wide the menu is"></div>
       <div class="grp">
         <button type="button" class="grph" data-grp="0" aria-expanded="true" aria-controls="grpb0">Construction</button>
         <div class="grpb" id="grpb0" data-grpb="0">
@@ -312,6 +333,9 @@
               <button type="button" data-aa="2" aria-pressed="false">SSAA ×4</button>
             </div>
           </div>
+          <div class="transport">
+            <button type="button" id="fpsUncap" aria-pressed="false" title="Draw as fast as the machine will, instead of waiting for the display. The picture tears; the number stops being the refresh rate and starts being the render's own speed.">Uncapped</button>
+          </div>
         </div>
       </div>
 
@@ -397,6 +421,26 @@
             <label class="lbl" for="pNoise" title="Film grain laid over the finished frame. Off unless you ask for it.">Noise</label><output id="pNoiseOut">0.00</output>
             <input id="pNoise" type="range" min="0" max="200" step="1" value="0">
           </div>
+        </div>
+      </div>
+
+      <div class="grp">
+        <button type="button" class="grph" data-grp="6" aria-expanded="true" aria-controls="grpb6">UI</button>
+        <div class="grpb" id="grpb6" data-grpb="6">
+          <div class="slider">
+            <label class="lbl" for="uiFont">Font size</label><output id="uiFontOut">12</output>
+            <input id="uiFont" type="range" min="8" max="26" step="1" value="12">
+          </div>
+          <div class="slider">
+            <label class="lbl" for="uiAlpha">Opacity</label><output id="uiAlphaOut">0.94</output>
+            <input id="uiAlpha" type="range" min="0" max="100" step="1" value="94">
+          </div>
+          <div class="swatches">
+            <label class="lbl" for="uiBg">Background</label><label class="lbl" for="uiAccent">Colour</label>
+            <input type="color" id="uiBg" value="#04070c" aria-label="Menu background">
+            <input type="color" id="uiAccent" value="#2fd9c0" aria-label="Menu colour">
+          </div>
+          <p class="hint">The menu's left edge is a handle — drag it to set the width.</p>
         </div>
       </div>
 
@@ -1540,7 +1584,10 @@ void main(){
     // the matcap: off, and which sphere it would use
     matcapOn: 0, matcap: 0,
     // which console groups are open
-    groups: [1, 1, 1, 1, 1, 1]
+    groups: [1, 1, 1, 1, 1, 1, 1],
+    // the console's own look, and how wide it is
+    uiFont: 12, uiAlpha: 0.94, uiBg: "#04070c", uiAccent: "#2fd9c0", uiWidth: 150,
+    uncap: 0                        // draw as fast as the machine will, not as fast as the display
   };
 
   var rgbCache = {};
@@ -1586,14 +1633,6 @@ void main(){
     var cw = canvas.clientWidth || window.innerWidth;
     var ch = canvas.clientHeight || window.innerHeight;
     state.fit = ch > cw * 1.25 ? 0.92 : 1.0;
-    var con = document.querySelector(".console");
-    if(cw >= 761){
-      var cs = getComputedStyle(document.getElementById("hud"));
-      var padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
-      con.style.maxHeight = Math.max(150, ch - padY) + "px";
-    } else {
-      con.style.maxHeight = "";
-    }
   }
 
   // The opening frames are capped hard. Nothing has been measured yet, and on a
@@ -1931,7 +1970,7 @@ void main(){
     if(!bench.on) camera(state.clock);
 
     var prog = sceneProg(state.scene);
-    if(!prog){ requestAnimationFrame(frame); return; }
+    if(!prog){ schedule(); return; }
     var U = progU[state.scene];
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
@@ -2036,7 +2075,20 @@ void main(){
       if(tele > 0.2){ telemetry(); tele = 0; }
     }
 
-    requestAnimationFrame(frame);
+    schedule();
+  }
+  // Uncapped hands the loop to a timer instead of the display's own beat, so the
+  // number stops being the refresh rate and starts being how fast this actually
+  // draws. The picture tears; that is the whole of the trade.
+  //
+  // The token is what stops two loops running at once: switching clocks bumps
+  // it, and whatever was already in flight on the old one finds itself stale
+  // and quietly stops rather than spawning a second chain of its own.
+  var loopId = 0;
+  function schedule(){
+    var id = loopId;
+    if(state.uncap) setTimeout(function(){ if(id === loopId) frame(performance.now()); }, 0);
+    else requestAnimationFrame(function(now){ if(id === loopId) frame(now); });
   }
 
   // ---- input ----------------------------------------------------------
@@ -2812,6 +2864,84 @@ void main(){
     btn.addEventListener("click", function(){ setAA(parseInt(btn.dataset.aa, 10)); btn.blur(); });
   });
 
+  // ---- the console's own look ------------------------------------------
+  // Everything here is a CSS variable the stylesheet already reads, so changing
+  // one is a single property write and no layout code has to know about it.
+  function hexTriple(hex){
+    var c = rgb(hex);
+    return Math.round(c[0]*255) + "," + Math.round(c[1]*255) + "," + Math.round(c[2]*255);
+  }
+  function applyUI(){
+    var r = document.documentElement.style;
+    r.setProperty("--ui-font", state.uiFont + "px");
+    r.setProperty("--ui-alpha", String(state.uiAlpha));
+    r.setProperty("--ui-bg", hexTriple(state.uiBg));
+    r.setProperty("--fiber", state.uiAccent);
+    r.setProperty("--line", "rgba(" + hexTriple(state.uiAccent) + ",.24)");
+    r.setProperty("--menu-w", Math.round(state.uiWidth) + "px");
+    reframe();
+  }
+
+  var uiFontIn = document.getElementById("uiFont"), uiFontOut = document.getElementById("uiFontOut");
+  var uiFontTxt = function(){ return String(Math.round(state.uiFont)); };
+  uiFontIn.addEventListener("input", function(){
+    state.uiFont = parseFloat(uiFontIn.value);
+    uiFontOut.textContent = uiFontTxt();
+    paint(uiFontIn); applyUI();
+  });
+  paint(uiFontIn);
+  editable(uiFontOut, function(){ uiFontOut.textContent = uiFontTxt(); },
+           function(v){ state.uiFont = v; uiFontIn.value = v; paint(uiFontIn); applyUI(); });
+
+  var uiAlphaIn = document.getElementById("uiAlpha"), uiAlphaOut = document.getElementById("uiAlphaOut");
+  uiAlphaIn.addEventListener("input", function(){
+    state.uiAlpha = parseFloat(uiAlphaIn.value) / 100;
+    uiAlphaOut.textContent = state.uiAlpha.toFixed(2);
+    paint(uiAlphaIn); applyUI();
+  });
+  paint(uiAlphaIn);
+  editable(uiAlphaOut, function(){ uiAlphaOut.textContent = state.uiAlpha.toFixed(2); },
+           function(v){ state.uiAlpha = v; uiAlphaIn.value = v * 100; paint(uiAlphaIn); applyUI(); });
+
+  var uiBgIn = document.getElementById("uiBg"), uiAccentIn = document.getElementById("uiAccent");
+  uiBgIn.addEventListener("input", function(){ state.uiBg = uiBgIn.value; applyUI(); });
+  uiAccentIn.addEventListener("input", function(){ state.uiAccent = uiAccentIn.value; applyUI(); });
+
+  // the left edge is the handle
+  var grip = document.getElementById("menuGrip");
+  function setMenuWidth(w){
+    state.uiWidth = Math.max(120, Math.min(680, Math.round(w)));
+    applyUI();
+  }
+  if(grip){
+    grip.addEventListener("pointerdown", function(e){
+      e.preventDefault(); e.stopPropagation();
+      grip.setPointerCapture(e.pointerId);
+      grip.classList.add("on");
+    });
+    grip.addEventListener("pointermove", function(e){
+      if(!grip.classList.contains("on")) return;
+      setMenuWidth(window.innerWidth - e.clientX);
+    });
+    var gripDone = function(){ grip.classList.remove("on"); };
+    grip.addEventListener("pointerup", gripDone);
+    grip.addEventListener("pointercancel", gripDone);
+  }
+
+  var uncapBtn = document.getElementById("fpsUncap");
+  function setUncap(on){
+    state.uncap = on ? 1 : 0;
+    uncapBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    telemetry();
+  }
+  uncapBtn.addEventListener("click", function(){
+    setUncap(!state.uncap);
+    loopId++; schedule();              // the old clock's pending callback stands down
+    uncapBtn.blur();
+  });
+
+  applyUI();
+
   // ---- folding groups --------------------------------------------------
   function setGroup(i, open){
     state.groups[i] = open ? 1 : 0;
@@ -3108,7 +3238,7 @@ void main(){
     // Steady frames sitting on a common refresh rate is what that looks like.
     var caps = [30, 50, 60, 75, 90, 100, 120, 144, 165, 240];
     var vsync = false;
-    for(var c = 0; c < caps.length; c++){
+    if(!state.uncap) for(var c = 0; c < caps.length; c++){
       if(Math.abs(med - caps[c]) / caps[c] < 0.03 && low > avg * 0.85){ vsync = true; break; }
     }
 
@@ -3120,7 +3250,8 @@ void main(){
     L.push("");
     L.push("Object     " + OBJ_NAME[state.scene]);
     L.push("Render     " + RES_NAME[state.resPin] + " \u00b7 " + RW + "\u00d7" + RH +
-           " \u00b7 AA " + AA_NAME[state.aa]);
+           " \u00b7 AA " + AA_NAME[state.aa] +
+           (state.uncap ? " \u00b7 uncapped" : ""));
     L.push("March      " + bench.steps + " steps \u00b7 precision " + state.eps.toFixed(1) +
            " \u00b7 relax " + state.omega.toFixed(2));
     L.push("Bounds     " + BND_NAME[state.bound] + " + " + state.boundPad.toFixed(2));
@@ -3215,7 +3346,8 @@ void main(){
     "flyPos","flyYaw","flyPitch","favs","groups",
     "shadowOn","sunAz","sunEl","shadowSoft","shadowDark","shadowReach",
     "matcapOn","matcap",
-    "shadowSrc","shadowLevel","shadowContrast","shadowMc","shadowOnly","noise"];
+    "shadowSrc","shadowLevel","shadowContrast","shadowMc","shadowOnly","noise",
+    "uiFont","uiAlpha","uiBg","uiAccent","uiWidth","uncap"];
 
   // this browser
   function readStore(){
@@ -3337,6 +3469,11 @@ void main(){
     slide(document.getElementById("shContrast"), state.shadowContrast * 100);
     applyShadowSrc();
     setShadowOnly(!!state.shadowOnly);
+    setUncap(!!state.uncap);
+    slide(uiFontIn, state.uiFont);
+    slide(uiAlphaIn, state.uiAlpha * 100);
+    uiBgIn.value = state.uiBg; uiAccentIn.value = state.uiAccent;
+    applyUI();
     slide(document.getElementById("pNoise"), state.noise * 100);
     setMatcapOn(!!state.matcapOn); drawSpheresBoth();
     syncGroups();
@@ -3407,7 +3544,7 @@ void main(){
   reframe();
   if(document.fonts && document.fonts.ready) document.fonts.ready.then(reframe);
   telemetry();
-  requestAnimationFrame(frame);
+  schedule();
 
   // A way in for the headless checks, which have to pose the camera and freeze
   // the clocks before they can compare two frames. Reading and writing state is
