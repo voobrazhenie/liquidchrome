@@ -75,6 +75,15 @@
            overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;pointer-events:auto;
            border:0;border-left:1px solid var(--line);padding:10px 15px 16px 8px}
   .console::before,.console::after{display:none}
+  /* The gizmo is drawn over the picture rather than in it: one SVG the size of
+     the window, rebuilt every frame from where the card now stands. Only the
+     handles take the pointer, so a drag anywhere else still steers the camera. */
+  .giz{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;display:none}
+  .giz.on{display:block}
+  .giz .gh{pointer-events:auto;cursor:grab}
+  .giz .gh:hover{opacity:1}
+  .giz .card{fill:var(--fiber);fill-opacity:.07;stroke:var(--fiber);stroke-opacity:.75;stroke-width:1.2}
+  .giz .beam{fill:none;stroke:var(--fiber);stroke-opacity:.3;stroke-width:1;stroke-dasharray:4 4}
   .grip{position:absolute;left:0;top:0;bottom:0;width:10px;cursor:ew-resize;z-index:3;pointer-events:auto}
   .grip::before{content:"";position:absolute;left:4px;top:0;bottom:0;width:2px;background:transparent;transition:background .12s}
   .grip:hover::before,.grip.on::before{background:var(--fiber)}
@@ -249,6 +258,7 @@
 <canvas id="stage" aria-label="Ray-marched field of neuron cell bodies and neurites in a brain-shaped volume, with the camera in flight"></canvas>
 
 <div class="hud" id="hud">
+  <svg class="giz" id="giz" aria-hidden="true"></svg>
   <div class="foot">
     <section class="telemetry panel" aria-label="Render statistics">
       <dl>
@@ -704,6 +714,66 @@
           </div>
         </div>
       </div>
+      <div class="grp" data-gid="9">
+        <div class="grph">
+          <button type="button" class="grpt" data-grp="9" data-ico="decal" aria-expanded="true" aria-controls="grpb9"><span class="grpn">Depth map</span></button>
+          <button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button>
+        </div>
+        <div class="grpb" id="grpb9" data-grpb="9">
+          <div class="mod" data-mod="depth">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt">Depth map</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport">
+                <button type="button" id="dmOn" aria-pressed="false" title="Throw an image at the object from a card standing in space, and push the surface out where the image is bright. It is real geometry &#8212; the silhouette moves and the sun, the shadows and the matcap all see it.">Depth map</button>
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="dmmap">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt" id="dmLbl">Map</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport wrap" id="dmSeg" role="group" aria-labelledby="dmLbl"></div>
+              <div class="transport">
+                <button type="button" id="dmAdd" title="Load a depth map from this computer. It joins the list above and is used straight away.">Add</button>
+                <button type="button" id="dmSave" title="Keep the chosen map: on this device, and in the cloud so it follows the page to any computer.">Keep</button>
+                <button type="button" id="dmDel" title="Remove the chosen map, here and in the cloud. The two built-in ones stay.">Delete</button>
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="dmtarget">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt" id="dmTgtLbl" title="Which part of this object the decal is allowed to touch. The rest of it is left exactly as it was.">Target</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport wrap" id="dmTgt" role="group" aria-labelledby="dmTgtLbl"></div>
+            </div>
+          </div>
+          <div class="mod" data-mod="dmamt">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="dmAmt" title="How deep the picture bites. Below zero it carves in instead of pushing out, and at nothing the object is untouched to the byte.">Intensity</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="dmAmt" hidden></button><output id="dmAmtOut">0</output></div>
+                <input id="dmAmt" type="range" min="-100" max="100" step="1" value="12">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="dmdist">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="dmDist" title="How far down the beam the picture reaches, from the card forwards. It fades out over the last of it, which is what stops a beam longer than the body embossing the back of it too.">Distance</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="dmDist" hidden></button><output id="dmDistOut">0</output></div>
+                <input id="dmDist" type="range" min="5" max="400" step="1" value="120">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="dmedit">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt">Placement</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport">
+                <button type="button" id="dmEdit" aria-pressed="false" title="Aim the card with a gizmo in the view: the arrows move it, the rings turn it, the boxes size it. Esc puts the gizmo away.">Edit</button>
+                <button type="button" id="dmPlace" title="Stand the card in front of the view, facing the object, at a size that fits it.">Place</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="grp" data-gid="5">
         <div class="grph">
           <button type="button" class="grpt" data-grp="5" data-ico="glass" aria-expanded="true" aria-controls="grpb5"><span class="grpn">Transparency</span></button>
@@ -992,6 +1062,22 @@ uniform vec3  uGlassTint;    // the colour the body takes on
 uniform float uGlassDensity; // how fast it takes it on, per unit crossed
 uniform float uGlassDepth;   // how many surfaces the eye may see through
 
+// ---- the depth decal ----
+// An image thrown at the object from a card standing in space, the way a decal
+// projector throws one. Inside the card's beam the picture's brightness is how
+// far the surface is pushed out along its own normal; outside it nothing is
+// touched at all, which is what makes this a decal and not another warp. Off is
+// an exact no-op: the field is the one it always was, to the byte.
+uniform float uDepthOn;
+uniform sampler2D uDepthMap;
+uniform vec3  uDepthPos;    // where the card stands
+uniform mat3  uDepthRot;    // its axes: right, up, and back up the beam
+uniform vec2  uDepthSize;   // half the card's width and height
+uniform float uDepthDist;   // how far down the beam the picture reaches
+uniform float uDepthAmt;    // how deep it bites; below zero it carves in
+uniform float uDepthLip;    // the slope it adds, to divide the march down by
+uniform float uDepthPart;   // which part of the object it is allowed to touch
+
 const vec3 SPIKE = vec3(0.608, 0.482, 1.000);
 const vec3 RIM   = vec3(0.620, 0.898, 1.000);
 
@@ -1016,6 +1102,40 @@ float sdEll(vec3 p, vec3 r){
   float k0 = length(p/r);
   float k1 = length(p/(r*r));
   return k0*(k0-1.0)/max(k1, 1e-5);
+}
+
+// ---- the depth decal ---------------------------------------------------
+// Read once per sample in world coordinates, then handed to whichever part of
+// the object it was aimed at. Every object's field subtracts the same number,
+// which is why a decal can be aimed at the axon and leave the dendrites alone
+// without any of them knowing what a decal is.
+float gDecH = 0.0;   // how far out this point is pushed, in the field's own units
+float gDecR = 0.0;   // the furthest anything could be pushed, for bounding tests
+float gDecP = 0.0;   // which part it is aimed at; 0 is the object entire
+
+// Where the beam reaches: the card's rectangle swept along its own back axis.
+// Grown by the bite, because a ray standing at the edge of the untouched box
+// can already be standing on relief that box does not contain.
+float decalBox(vec3 q, float grow){
+  vec3 b = vec3(uDepthSize, uDepthDist * 0.5) + grow;
+  vec3 d = abs(q - vec3(0.0, 0.0, -uDepthDist * 0.5)) - b;
+  return length(max(d, 0.0)) + min(max(d.x, max(d.y, d.z)), 0.0);
+}
+
+// The picture at this point, faded out at the rim of the card and over the far
+// half of the beam's reach. Both fades are what keeps the field continuous: a
+// height that switched on at an edge would be a wall with no distance to it,
+// and the march would step straight through the side of its own relief. The
+// far fade is also what stops a beam longer than the body embossing the back
+// of it, which an SDF cannot tell from the front.
+float decalH(vec3 q){
+  vec2 uv = q.xy / uDepthSize;
+  float s = -q.z / uDepthDist;
+  vec2 e = 1.0 - smoothstep(vec2(0.72), vec2(1.0), abs(uv));
+  float w = e.x * e.y * smoothstep(0.0, 0.06, s) * (1.0 - smoothstep(0.45, 1.0, s));
+  if(w <= 0.0) return 0.0;
+  vec3 t = texture2D(uDepthMap, uv * 0.5 + 0.5).rgb;
+  return uDepthAmt * w * dot(t, vec3(0.299, 0.587, 0.114));
 }
 
 #ifdef SCENE_BRAIN
@@ -1103,6 +1223,9 @@ float neuron(vec3 p, out float sd){
   float m = uMorph * 0.5;
   float r = uThick;
   float d = sd - (0.165 + r*0.8);
+  if(gDecP == 1.0) d -= gDecH;                  // the decal, aimed at the soma
+  float den = gDecP == 2.0 ? gDecH : 0.0;       // or at every dendrite at once
+  float grow = gDecP == 2.0 ? gDecR : 0.0;
 
   for(int i=0;i<5;i++){
     float fi = float(i);
@@ -1114,7 +1237,8 @@ float neuron(vec3 p, out float sd){
     float len = 0.62 + 0.30*hh.z;
 
     // whole branch, children included, sits inside this sphere — skip it early
-    if(length(p - dir*len*0.9) - (len*1.05 + 0.22) > d) continue;
+    // relief pushes a branch out of its own sphere, so the skip allows for it
+    if(length(p - dir*len*0.9) - (len*1.05 + 0.22) - grow > d) continue;
 
     vec3 sv = normalize(cross(dir, vec3(0.31, 0.79, 0.53)) + 1e-4);
     vec3 up = normalize(cross(dir, sv));
@@ -1125,7 +1249,7 @@ float neuron(vec3 p, out float sd){
     vec3 C = dir * len + sv * (0.06 + 0.18*w2) * len + up * 0.06 * w1;
     float rb = r * (1.60 + 0.55*hh.x);   // trunk, thick where it leaves the soma
     float rm = r * (0.78 + 0.30*hh.y);   // waist at the first bifurcation
-    d = smin(d, tube(p, A, B, C, rb, rm), 0.09);
+    d = smin(d, tube(p, A, B, C, rb, rm) - den, 0.09);
 
     vec3 fwd = normalize(C - B + 1e-5);
     for(int j=0;j<2;j++){
@@ -1133,15 +1257,17 @@ float neuron(vec3 p, out float sd){
       vec3 off = normalize(sv*sgn*0.85 + up*(0.30*sgn + 0.22*w2) + fwd*0.25);
       vec3 B2 = C + fwd*0.16*len + off*0.16*len;
       vec3 C2 = C + fwd*0.30*len + off*0.46*len + up*0.06*w1;
-      d = smin(d, tube(p, C, B2, C2, rm*0.92, rm*(0.34 + 0.22*hh.x)), 0.035);
+      d = smin(d, tube(p, C, B2, C2, rm*0.92, rm*(0.34 + 0.22*hh.x)) - den, 0.035);
     }
   }
 
   // axon: thicker, straighter, out of the far side
-  d = smin(d, tube(p, vec3(0.0, -0.10, 0.0),
-                      vec3(0.26*sin(m*0.40), -0.70, 0.20),
-                      vec3(-0.32, -1.24, -0.18 + 0.22*sin(m*0.33)),
-                   r*1.5, r*1.05), 0.06);
+  float ax = tube(p, vec3(0.0, -0.10, 0.0),
+                     vec3(0.26*sin(m*0.40), -0.70, 0.20),
+                     vec3(-0.32, -1.24, -0.18 + 0.22*sin(m*0.33)),
+                  r*1.5, r*1.05);
+  if(gDecP == 3.0) ax -= gDecH;                 // or at the axon on its own
+  d = smin(d, ax, 0.06);
 
   // organic membrane: coarse lobes for the silhouette, fine grain for skin
   float w = 1.0 - clamp(d / 0.085, 0.0, 1.0);
@@ -1245,6 +1371,7 @@ float liquid(vec3 p, out float sd){
   } else {
     d = 1e5;
   }
+  if(gDecP == 1.0) d -= gDecH;             // the decal, aimed at the slab
 
   // tint by altitude: the crests take the accent colour
   sd = (0.5 - 0.5 * clamp(h / max(uLcRelief, 1e-3), -1.0, 1.0)) * 0.42;
@@ -1255,6 +1382,7 @@ float liquid(vec3 p, out float sd){
   // nearest thing.
   if(uLcCube > 0.5){
     float dc = sdBox(p - vec3(0.0, cubeY(), 0.0), vec3(CUBE_R)) / lip;
+    if(gDecP == 2.0) dc -= gDecH;          // and the decal, aimed at the cube
     if(dc < d){ d = dc; sd = 0.42; }   // plain structure colour, no crest tint
   }
   return d;
@@ -1326,6 +1454,9 @@ float scene(vec3 p, out float sd){
 #else
   sd = 1e5;
   float sh = shell(p);
+  if(gDecP == 1.0) sh -= gDecH;            // the decal, aimed at the shell
+  // The cells are kept inside the shell by the smax below, displaced or not,
+  // so this shortcut is still a floor on the whole object either way.
   if(sh > 0.09) return sh - 0.02;
 
   float s = uScale;
@@ -1356,6 +1487,7 @@ float scene(vec3 p, out float sd){
   float w1 = abs(gy(q))  - (0.27 + bead);
   float w2 = abs(gy(q2)) - (0.32 + bead);
   float d = smax(w1, w2, 0.22) / (2.1 * s);
+  if(gDecP == 2.0) d -= gDecH;             // or at the cells and their neurites
   return smax(d, sh, 0.05);
 #endif
 }
@@ -1368,6 +1500,17 @@ float scene(vec3 p, out float sd){
 // keeps its full-length step, which the space warp can never do because the
 // whole domain is distorted everywhere at once.
 float map(vec3 p, out float sd, out float lip){
+  // The decal is read in world coordinates, ahead of every warp, so the card
+  // stays where it was put however the space around it is bent.
+  gDecH = 0.0; gDecP = 0.0; gDecR = 0.0;
+  float beam = -1.0;
+  if(uDepthOn > 0.5 && uDepthAmt != 0.0){
+    gDecP = uDepthPart;
+    gDecR = abs(uDepthAmt);
+    vec3 dq = (p - uDepthPos) * uDepthRot;
+    beam = decalBox(dq, gDecR);
+    if(beam <= 0.0) gDecH = decalH(dq) / sceneLip();
+  }
   vec3 q = domainWarp(p, lip);
   float d = scene(q, sd);
   if(uWarpMode > 0.5 && uWarpOn.x > 0.5 && uWarpAmt > 0.0){
@@ -1387,6 +1530,23 @@ float map(vec3 p, out float sd, out float lip){
     } else {
       d -= A * vn3(q*uWarpFreq + vec3(0.0, uMorph*0.045, 0.0)).x;
       lip *= 1.0 + A * uWarpFreq * 1.5;      // smoothstep noise peaks at 1.5/cell
+    }
+  }
+  if(uDepthOn > 0.5 && uDepthAmt != 0.0){
+    // Aimed at no part in particular, the decal bites the object entire; aimed
+    // at one, that part has already taken it and this must not take it twice.
+    if(gDecP < 0.5) d -= gDecH;
+    if(beam > 0.0){
+      // Clear of the beam, so nothing here is pushed anywhere — but a step is
+      // not allowed to outrun the relief waiting inside it either. The step is
+      // shortened through lip rather than through the distance, because the
+      // volumetric glow reads the true distance back out of what this returns:
+      // clamping the distance itself would hang a ghost of the beam box in the
+      // empty air around the card, which is a decal you can see from behind.
+      float step = d / lip;
+      if(step > beam) lip *= step / max(beam, 1e-4);
+    } else {
+      lip *= uDepthLip;                    // in it, and a picture has a slope
     }
   }
   return d / lip;
@@ -2042,7 +2202,8 @@ void main(){
     "uMatcapOn","uMatcap","uShadowSrc","uShLevel","uShContrast","uShMatcap",
     "uShadowOnly","uNoise","uOrtho","uOrthoSpan","uShSteps","uShGrow",
     "uNormalOn","uNormalMap","uNormalAmt","uNormalScale",
-    "uGlassOn","uGlassOpacity","uGlassEdge","uGlassIor","uGlassTint","uGlassDensity","uGlassDepth"];
+    "uGlassOn","uGlassOpacity","uGlassEdge","uGlassIor","uGlassTint","uGlassDensity","uGlassDepth",
+    "uDepthOn","uDepthMap","uDepthPos","uDepthRot","uDepthSize","uDepthDist","uDepthAmt","uDepthLip","uDepthPart"];
   var DEFS = ["#define SCENE_BRAIN\n", "#define SCENE_NEURON\n", "#define SCENE_CHROME\n"];
 
   // One program per object, built the first time that object is shown. Each
@@ -2148,6 +2309,7 @@ void main(){
   var mcSlot = sphereSlot(gl.TEXTURE1);   // the material
   var shSlot = sphereSlot(gl.TEXTURE2);   // the shadow
   var nmSlot = sphereSlot(gl.TEXTURE3);   // the normal map
+  var dmSlot = sphereSlot(gl.TEXTURE4);   // and the depth decal
 
   // A Chrome with hardware acceleration switched off falls back to a software
   // rasteriser, which is orders of magnitude slower than any real GPU. Worth
@@ -2235,11 +2397,19 @@ void main(){
     // the normal map: off, which image off the same list, how much of it, and
     // how many times over it is laid across the object
     normalOn: 0, normalMc: 0, normalAmt: 1.00, normalScale: 2.00,
+    // the depth decal: off, which image, how deep it bites, how far the beam
+    // reaches, and where the card it is thrown from stands. The rotation is a
+    // quaternion because the gizmo turns the card about whichever axis is
+    // grabbed, and Euler angles gimbal-lock halfway through that. One target
+    // per object: a part of the brain means nothing while the neuron is on.
+    depthOn: 0, depthMc: 0, depthAmt: 0.12, depthDist: 1.20,
+    depthPos: [0, 0, 1.80], depthRot: [0, 0, 0, 1], depthSize: [0.80, 0.80],
+    depthPart: [0, 0, 0],
     // transparency: off, and what it would look like if it were not
     glassOn: 0, glassOpacity: 0.15, glassEdge: 0.60, glassIor: 1.45,
     glassTint: "#BFE9FF", glassDensity: 0.90, glassDepth: 2,
     // which console groups are open
-    groups: [1, 1, 1, 1, 1, 1, 1, 1, 1],
+    groups: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     // the console's own look, and how wide it is
     uiFont: 12, uiAlpha: 0.94, uiBg: "#04070c", uiAccent: "#2fd9c0",
     uiHeader: "#2fd9c0", uiWidth: 240, uiSplit: 36,
@@ -2276,6 +2446,9 @@ void main(){
       K *= state.warpMode === 0 ? 1 + kn * 2.2 : 1 + 0.34 * state.warpAmt;
     }
     if(state.scene === 2 && state.lcOn[1]) K *= 1 + state.lcRelief * state.lcFreq * 3.0;
+    // the decal divides the step down inside its beam only, so the budget it
+    // asks for is a fraction of what the beam itself costs
+    if(state.depthOn && state.depthAmt !== 0) K *= Math.min(1.7, 1 + 0.45 * (decalLip() - 1));
     return Math.min(K, 3.2);
   }
   function marchSteps(){
@@ -2628,6 +2801,7 @@ void main(){
 
     resize();
     if(!bench.on) camera(state.clock);
+    if(dmEdit) gizDraw();
 
     var prog = sceneProg(state.scene);
     if(!prog){ schedule(); return; }
@@ -2662,16 +2836,20 @@ void main(){
     mcSlot.sync(state.matcap);
     shSlot.sync(state.shadowMc);
     nmSlot.sync(state.normalMc);
+    dmSlot.sync(state.depthMc);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, mcSlot.tex);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, shSlot.tex);
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, nmSlot.tex);
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, dmSlot.tex);
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(U.uMatcap, 1);
     gl.uniform1i(U.uShMatcap, 2);
     gl.uniform1i(U.uNormalMap, 3);
+    gl.uniform1i(U.uDepthMap, 4);
     gl.uniform1f(U.uMatcapOn, state.matcapOn && mcSlot.ready ? 1 : 0);
     // an image that has not decoded yet is one flat grey pixel, and a flat grey
     // normal map tips every surface the same way — so wait for it
@@ -2686,6 +2864,20 @@ void main(){
     gl.uniform3f(U.uGlassTint, gt[0], gt[1], gt[2]);
     gl.uniform1f(U.uGlassDensity, state.glassDensity);
     gl.uniform1f(U.uGlassDepth, state.glassDepth);
+    // A decal whose image has not decoded yet would emboss the object with one
+    // flat grey pixel, which is a slab, so it waits for the picture.
+    var dOn = state.depthOn && dmSlot.ready ? 1 : 0;
+    gl.uniform1f(U.uDepthOn, dOn);
+    if(dOn){
+      var dp = state.depthPos, ds = decalSize(), dd = decalDist();
+      gl.uniform3f(U.uDepthPos, dp[0], dp[1], dp[2]);
+      gl.uniformMatrix3fv(U.uDepthRot, false, decalBasis());
+      gl.uniform2f(U.uDepthSize, ds[0], ds[1]);
+      gl.uniform1f(U.uDepthDist, dd);
+      gl.uniform1f(U.uDepthAmt, state.depthAmt);
+      gl.uniform1f(U.uDepthLip, decalLip());
+      gl.uniform1f(U.uDepthPart, state.depthPart[state.scene] || 0);
+    }
     // asking for a painted sphere that has not decoded yet would black the frame
     gl.uniform1f(U.uShadowSrc, state.shadowSrc === 1 && !shSlot.ready ? 0 : state.shadowSrc);
     gl.uniform1f(U.uShLevel, state.shadowLevel);
@@ -2962,6 +3154,7 @@ void main(){
     });
     colA.value = state.colors[state.scene][0];
     colB.value = state.colors[state.scene][1];
+    drawTargets();                   // a different object has different parts
     reframe(); telemetry();
   }
 
@@ -2994,6 +3187,7 @@ void main(){
     ["gOpacity","glassOpacity",100], ["gEdge","glassEdge",100],
     ["gIor","glassIor",100], ["gDensity","glassDensity",100],
     ["gDepth","glassDepth",1], ["pNoise","noise",100],
+    ["dmAmt","depthAmt",100], ["dmDist","depthDist",100],
     ["uiFont","uiFont",1], ["uiAlpha","uiAlpha",100], ["uiSplit","uiSplit",1]
   ];
   var DFLT = {};          // slider id -> { key, mul, btn }
@@ -3362,6 +3556,7 @@ void main(){
   var mcSeg = document.getElementById("mcSeg");
   var shMcSeg = document.getElementById("shMcSeg");
   var nmSeg = document.getElementById("nmSeg");
+  var dmSeg = document.getElementById("dmSeg");
   var mcFile = document.getElementById("mcFile");
   var nmOnBtn = document.getElementById("nmOn");
   // where the next Add drops what it loads
@@ -3391,6 +3586,7 @@ void main(){
     drawSpheres(mcSeg, "matcap");
     drawSpheres(shMcSeg, "shadowMc");
     drawSpheres(nmSeg, "normalMc");
+    drawSpheres(dmSeg, "depthMc");
   }
   function setNormalOn(on){
     state.normalOn = on ? 1 : 0;
@@ -3447,7 +3643,9 @@ void main(){
         MATCAPS.push({ name: name, src: src, id: sphereId(), saved: false });
         state[loadInto] = MATCAPS.length - 1;
         drawSpheresAll();
-        if(loadInto === "normalMc") setNormalOn(true); else setMatcapOn(true);
+        if(loadInto === "normalMc") setNormalOn(true);
+        else if(loadInto === "depthMc") setDepthOn(true);
+        else setMatcapOn(true);
         toast(name + " loaded \u00b7 Keep to hold on to it");
       });
     };
@@ -3519,6 +3717,7 @@ void main(){
     if(state.matcap >= i) state.matcap = Math.max(0, state.matcap - 1);
     if(state.shadowMc >= i) state.shadowMc = Math.max(0, state.shadowMc - 1);
     if(state.normalMc >= i) state.normalMc = Math.max(0, state.normalMc - 1);
+    if(state.depthMc >= i) state.depthMc = Math.max(0, state.depthMc - 1);
     writeLocalSpheres();
     drawSpheresAll();
     toast(m.name + " removed");
@@ -3528,6 +3727,375 @@ void main(){
   document.getElementById("mcDel").addEventListener("click", function(){ this.blur(); dropSphere("matcap"); });
   document.getElementById("nmSave").addEventListener("click", function(){ this.blur(); keepSphere("normalMc"); });
   document.getElementById("nmDel").addEventListener("click", function(){ this.blur(); dropSphere("normalMc"); });
+
+  // ---- the depth decal -------------------------------------------------
+  // A card standing in the world with a picture on it and a beam coming out of
+  // its back. Inside the beam the picture's brightness is taken off the chosen
+  // part's distance, which pushes that surface out along its own normal; the
+  // rest of the object never hears about it. The card is aimed with a gizmo
+  // drawn over the picture rather than in it — the field has no polygons to
+  // pick against, so a handle is an SVG shape at a projected point, and a drag
+  // on it is arithmetic in the camera's own basis.
+  var dmOnBtn = document.getElementById("dmOn");
+  var dmTgt = document.getElementById("dmTgt");
+  var DPARTS = [["Everything", "Shell", "Cells"],
+                ["Everything", "Soma", "Dendrites", "Axon"],
+                ["Everything", "Slab", "Cube"]];
+  function setDepthOn(on){
+    state.depthOn = on ? 1 : 0;
+    dmOnBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    if(!on) setDecalEdit(false);
+    telemetry();
+  }
+  dmOnBtn.addEventListener("click", function(){ setDepthOn(!state.depthOn); dmOnBtn.blur(); });
+  document.getElementById("dmAdd").addEventListener("click", function(){
+    loadInto = "depthMc"; mcFile.click(); this.blur();
+  });
+  document.getElementById("dmSave").addEventListener("click", function(){ this.blur(); keepSphere("depthMc"); });
+  document.getElementById("dmDel").addEventListener("click", function(){ this.blur(); dropSphere("depthMc"); });
+
+  // Which part of THIS object the beam may touch. The list is per object, and
+  // so is the choice: a part of the brain means nothing while the neuron is on.
+  function drawTargets(){
+    if(!dmTgt) return;
+    var names = DPARTS[state.scene] || DPARTS[0];
+    var at = state.depthPart[state.scene] | 0;
+    dmTgt.innerHTML = "";
+    names.forEach(function(nm, i){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = nm;
+      b.setAttribute("data-dmp", String(i));
+      b.setAttribute("aria-pressed", i === at ? "true" : "false");
+      b.addEventListener("click", function(){
+        state.depthPart[state.scene] = i;
+        drawTargets(); telemetry(); b.blur();
+      });
+      dmTgt.appendChild(b);
+    });
+  }
+  numSlider("dmAmt",  "depthAmt",  0.01, function(v){ return v.toFixed(2); });
+  numSlider("dmDist", "depthDist", 0.01, function(v){ return v.toFixed(2); });
+
+  // ---- where the card stands -------------------------------------------
+  function decalSize(){
+    return [Math.max(0.03, state.depthSize[0]), Math.max(0.03, state.depthSize[1])];
+  }
+  function decalDist(){ return Math.max(0.05, state.depthDist); }
+  // The card's three axes in the world, as the columns of a matrix: right, up,
+  // and back up the beam. The shader multiplies from the right, which is the
+  // transpose, which takes a world point into the card's own coordinates.
+  function decalBasis(){
+    var q = state.depthRot;
+    var n = Math.sqrt(q[0]*q[0] + q[1]*q[1] + q[2]*q[2] + q[3]*q[3]) || 1;
+    var x = q[0]/n, y = q[1]/n, z = q[2]/n, w = q[3]/n;
+    return new Float32Array([
+      1 - 2*(y*y + z*z), 2*(x*y + z*w),     2*(x*z - y*w),
+      2*(x*y - z*w),     1 - 2*(x*x + z*z), 2*(y*z + x*w),
+      2*(x*z + y*w),     2*(y*z - x*w),     1 - 2*(x*x + y*y)]);
+  }
+  function decalAxes(){
+    var m = decalBasis();
+    return [[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]];
+  }
+  // How steeply a picture can tilt the field, and so how far the march has to
+  // be divided down inside the beam. A deeper bite over a smaller card is a
+  // steeper slope; outside the beam none of it is paid.
+  // Both fades are smoothsteps, whose steepest slope is 1.5 over the band they
+  // cross: 0.28 of the card across the rim and 0.55 of the reach down the beam.
+  // A picture's own grain is on top of that and cannot be bounded, so the two
+  // constants are a little over what the fades alone need.
+  function decalLip(){
+    var d = decalSize();
+    return Math.min(6, 1 + Math.abs(state.depthAmt) *
+                       (3.6 / Math.min(d[0], d[1]) + 1.8 / decalDist()));
+  }
+  function qMul(a, b){
+    return [a[3]*b[0] + a[0]*b[3] + a[1]*b[2] - a[2]*b[1],
+            a[3]*b[1] - a[0]*b[2] + a[1]*b[3] + a[2]*b[0],
+            a[3]*b[2] + a[0]*b[1] - a[1]*b[0] + a[2]*b[3],
+            a[3]*b[3] - a[0]*b[0] - a[1]*b[1] - a[2]*b[2]];
+  }
+  function qAxis(a, ang){
+    var h = ang * 0.5, s = Math.sin(h);
+    return [a[0]*s, a[1]*s, a[2]*s, Math.cos(h)];
+  }
+
+  // ---- the camera, in JavaScript ---------------------------------------
+  // The same basis the shader builds, and the same projection run backwards, so
+  // a point in the world lands on the pixel the shader would have drawn it at.
+  function camBasis(){
+    var w = [tgt[0] - eye[0], tgt[1] - eye[1], tgt[2] - eye[2]];
+    var l = Math.sqrt(w[0]*w[0] + w[1]*w[1] + w[2]*w[2]) || 1;
+    w = [w[0]/l, w[1]/l, w[2]/l];
+    var u = [-w[2], 0, w[0]];
+    var ul = Math.sqrt(u[0]*u[0] + u[2]*u[2]) || 1;
+    u = [u[0]/ul, 0, u[2]/ul];
+    var v = [u[1]*w[2] - u[2]*w[1], u[2]*w[0] - u[0]*w[2], u[0]*w[1] - u[1]*w[0]];
+    return { u: u, v: v, w: w };
+  }
+  function dot3(a, b){ return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
+  function project(P, b){
+    b = b || camBasis();
+    var W = canvas.clientWidth || 1, H = canvas.clientHeight || 1;
+    var mn = Math.min(W, H);
+    var d = [P[0] - eye[0], P[1] - eye[1], P[2] - eye[2]];
+    var z = dot3(d, b.w);
+    if(z < 0.02) return null;
+    var ux = state.fov * dot3(d, b.u) / z, uy = state.fov * dot3(d, b.v) / z;
+    var cr = Math.cos(roll), sr = Math.sin(roll);
+    return [(cr*ux - sr*uy) * mn + W/2, H/2 - (sr*ux + cr*uy + state.shift) * mn];
+  }
+  // world units per pixel at the card, which is what makes the gizmo the same
+  // size on screen however far away the thing it is aiming has drifted
+  function gizUnit(b){
+    var W = canvas.clientWidth || 1, H = canvas.clientHeight || 1;
+    var d = [state.depthPos[0] - eye[0], state.depthPos[1] - eye[1], state.depthPos[2] - eye[2]];
+    var z = Math.max(0.05, dot3(d, b.w));
+    return z / (state.fov * Math.min(W, H));
+  }
+
+  // ---- the gizmo -------------------------------------------------------
+  // Blender's: an arrow per axis to move along it, a ring per axis to turn
+  // about it, and a square where a size can be taken hold of. It is drawn at
+  // the centre of the picture on the card, which is the pivot everything here
+  // turns and scales around. Screen-sized rather than world-sized, so it stays
+  // usable whether the card is across the room or in your face.
+  var gizEl = document.getElementById("giz");
+  var dmEditBtn = document.getElementById("dmEdit");
+  var AXC = ["#ff5f6d", "#8ce05a", "#4ea8ff"];
+  var dmEdit = false, gizSig = "", gizDrag = null;
+
+  function setDecalEdit(on){
+    dmEdit = !!on;
+    if(dmEdit && !state.depthOn) setDepthOn(true);
+    dmEditBtn.setAttribute("aria-pressed", dmEdit ? "true" : "false");
+    gizEl.classList.toggle("on", dmEdit);
+    gizSig = "";
+    if(!dmEdit){ gizEl.innerHTML = ""; gizDrag = null; }
+    telemetry();
+  }
+  dmEditBtn.addEventListener("click", function(){ setDecalEdit(!dmEdit); this.blur(); });
+
+  // The four corners of the card, and of the far end of the beam.
+  function decalQuad(k){
+    var a = decalAxes(), d = decalSize(), P = state.depthPos;
+    var z = -decalDist() * k;
+    var out = [];
+    [[-1,-1], [1,-1], [1,1], [-1,1]].forEach(function(c){
+      out.push([P[0] + a[0][0]*c[0]*d[0] + a[1][0]*c[1]*d[1] + a[2][0]*z,
+                P[1] + a[0][1]*c[0]*d[0] + a[1][1]*c[1]*d[1] + a[2][1]*z,
+                P[2] + a[0][2]*c[0]*d[0] + a[1][2]*c[1]*d[1] + a[2][2]*z]);
+    });
+    return out;
+  }
+  function poly(pts, b){
+    var out = [];
+    for(var i = 0; i < pts.length; i++){
+      var p = project(pts[i], b);
+      if(!p) return null;                 // one corner behind the eye, so no shape
+      out.push(p[0].toFixed(1) + "," + p[1].toFixed(1));
+    }
+    return out.join(" ");
+  }
+  function svgEsc(n){ return String(Math.round(n * 10) / 10); }
+
+  function gizDraw(){
+    if(!dmEdit) return;
+    if(sunView){ gizEl.innerHTML = ""; gizSig = "sun"; return; }
+    var sig = [eye, tgt, roll, state.depthPos, state.depthRot, state.depthSize,
+               state.depthDist, state.fov, state.shift,
+               canvas.clientWidth, canvas.clientHeight].join("|");
+    if(sig === gizSig) return;            // nothing has moved, so nothing to redraw
+    gizSig = sig;
+
+    var b = camBasis(), unit = gizUnit(b), P = state.depthPos, a = decalAxes();
+    var c = project(P, b);
+    if(!c){ gizEl.innerHTML = ""; return; }
+    var out = [];
+
+    // the card itself, and the beam it throws
+    var near = poly(decalQuad(0), b), far = poly(decalQuad(1), b);
+    if(near) out.push('<polygon class="card" points="' + near + '"/>');
+    if(far){
+      out.push('<polygon class="beam" points="' + far + '"/>');
+      var n4 = decalQuad(0), f4 = decalQuad(1);
+      for(var e = 0; e < 4; e++){
+        var ln = poly([n4[e], f4[e]], b);
+        if(ln) out.push('<polyline class="beam" points="' + ln + '"/>');
+      }
+    }
+
+    function world(ax, len){
+      return [P[0] + ax[0]*len, P[1] + ax[1]*len, P[2] + ax[2]*len];
+    }
+    // a ring per axis, in the plane of the other two
+    for(var i = 0; i < 3; i++){
+      var u = a[(i + 1) % 3], v = a[(i + 2) % 3], R = 58 * unit, pts = [];
+      for(var k = 0; k <= 48; k++){
+        var t = k / 48 * Math.PI * 2, cs = Math.cos(t), sn = Math.sin(t);
+        pts.push([P[0] + (u[0]*cs + v[0]*sn)*R,
+                  P[1] + (u[1]*cs + v[1]*sn)*R,
+                  P[2] + (u[2]*cs + v[2]*sn)*R]);
+      }
+      var ring = poly(pts, b);
+      if(!ring) continue;
+      out.push('<polyline points="' + ring + '" fill="none" stroke="' + AXC[i] +
+               '" stroke-opacity=".85" stroke-width="1.6"/>');
+      out.push('<polyline class="gh" data-h="r' + i + '" points="' + ring +
+               '" fill="none" stroke="transparent" stroke-width="12" pointer-events="stroke"/>');
+    }
+    // An arrow per axis — except one pointing at the camera, which draws as a
+    // dot on top of the pivot and would take the pointer off everything else.
+    // Blender hides those too; turn the view a little and they come back.
+    function apart(p){ return p && Math.hypot(p[0] - c[0], p[1] - c[1]) > 13; }
+    for(var j = 0; j < 3; j++){
+      var tip = project(world(a[j], 80 * unit), b);
+      var mid = project(world(a[j], 66 * unit), b);
+      if(!apart(tip) || !mid) continue;
+      var dx = tip[0] - mid[0], dy = tip[1] - mid[1];
+      var hl = Math.sqrt(dx*dx + dy*dy) || 1;
+      var px = -dy / hl * 4.2, py = dx / hl * 4.2;
+      out.push('<line x1="' + svgEsc(c[0]) + '" y1="' + svgEsc(c[1]) + '" x2="' + svgEsc(mid[0]) +
+               '" y2="' + svgEsc(mid[1]) + '" stroke="' + AXC[j] + '" stroke-width="1.8"/>');
+      out.push('<polygon points="' + svgEsc(tip[0]) + ',' + svgEsc(tip[1]) + ' ' +
+               svgEsc(mid[0] + px) + ',' + svgEsc(mid[1] + py) + ' ' +
+               svgEsc(mid[0] - px) + ',' + svgEsc(mid[1] - py) + '" fill="' + AXC[j] + '"/>');
+      out.push('<line class="gh" data-h="m' + j + '" x1="' + svgEsc(c[0]) + '" y1="' + svgEsc(c[1]) +
+               '" x2="' + svgEsc(tip[0]) + '" y2="' + svgEsc(tip[1]) +
+               '" stroke="transparent" stroke-width="16" pointer-events="stroke"/>');
+    }
+    // And a square where a size is taken hold of: the card's own right and top
+    // edges, and the far end of the beam — but never further out than the rest
+    // of the gizmo, because a card two rooms wide has its edges off the screen
+    // and a handle you cannot reach is not a handle.
+    var d2 = decalSize(), reach = 96 * unit;
+    var grabs = [["s0", world(a[0], Math.min(d2[0], reach)), AXC[0]],
+                 ["s1", world(a[1], Math.min(d2[1], reach)), AXC[1]],
+                 ["s2", world(a[2], -Math.min(decalDist(), reach)), AXC[2]]];
+    grabs.forEach(function(g){
+      var p = project(g[1], b);
+      if(!apart(p)) return;
+      out.push('<rect class="gh" data-h="' + g[0] + '" x="' + svgEsc(p[0] - 5) + '" y="' + svgEsc(p[1] - 5) +
+               '" width="10" height="10" fill="' + g[2] + '" fill-opacity=".9" stroke="#05121a" stroke-width="1"/>');
+    });
+    out.push('<circle class="gh" data-h="c" cx="' + svgEsc(c[0]) + '" cy="' + svgEsc(c[1]) +
+             '" r="6" fill="#ffffff" fill-opacity=".9" stroke="#05121a" stroke-width="1"/>');
+
+    gizEl.innerHTML = out.join("");
+  }
+
+  // ---- and taking hold of it -------------------------------------------
+  // Every drag is worked out from where it started rather than frame by frame,
+  // so a slow hand and a fast one land in the same place and nothing drifts.
+  function screenDir(P, ax, b){
+    var e = 0.01;
+    var p0 = project(P, b);
+    var p1 = project([P[0] + ax[0]*e, P[1] + ax[1]*e, P[2] + ax[2]*e], b);
+    if(!p0 || !p1) return null;
+    return [(p1[0] - p0[0]) / e, (p1[1] - p0[1]) / e];
+  }
+  gizEl.addEventListener("pointerdown", function(e){
+    var h = e.target && e.target.getAttribute && e.target.getAttribute("data-h");
+    if(!h) return;
+    e.preventDefault(); e.stopPropagation();
+    var b = camBasis(), a = decalAxes();
+    var i = h.charAt(0) === "c" ? 0 : parseInt(h.charAt(1), 10);
+    gizDrag = {
+      h: h, i: i, x: e.clientX, y: e.clientY, b: b, axes: a,
+      pos: state.depthPos.slice(), rot: state.depthRot.slice(),
+      size: state.depthSize.slice(), dist: state.depthDist,
+      unit: gizUnit(b), pivot: project(state.depthPos, b),
+      dir: h.charAt(0) === "c" ? null
+           : screenDir(state.depthPos, h === "s2" ? [-a[2][0], -a[2][1], -a[2][2]] : a[i], b)
+    };
+  });
+  window.addEventListener("pointermove", function(e){
+    var g = gizDrag;
+    if(!g) return;
+    e.preventDefault();
+    var dx = e.clientX - g.x, dy = e.clientY - g.y;
+    var kind = g.h.charAt(0);
+    if(kind === "c"){
+      // free move, in the plane through the card that faces the camera
+      var k = g.unit;
+      state.depthPos = [g.pos[0] + (g.b.u[0]*dx - g.b.v[0]*dy) * k,
+                        g.pos[1] + (g.b.u[1]*dx - g.b.v[1]*dy) * k,
+                        g.pos[2] + (g.b.u[2]*dx - g.b.v[2]*dy) * k];
+    } else if(kind === "r"){
+      if(!g.pivot) return;
+      var a0 = Math.atan2(g.y - g.pivot[1], g.x - g.pivot[0]);
+      var a1 = Math.atan2(e.clientY - g.pivot[1], e.clientX - g.pivot[0]);
+      var ax = g.axes[g.i];
+      // screen y runs down, so a right-handed turn about an axis pointing at
+      // the eye reads as counter-clockwise: the sign follows which way it faces
+      var face = dot3(ax, [eye[0] - g.pos[0], eye[1] - g.pos[1], eye[2] - g.pos[2]]);
+      var ang = -(a1 - a0) * (face >= 0 ? 1 : -1);
+      state.depthRot = qMul(qAxis(ax, ang), g.rot);
+    } else {
+      if(!g.dir) return;
+      var dd = g.dir[0]*g.dir[0] + g.dir[1]*g.dir[1];
+      if(dd < 1e-4) return;                      // edge-on, so there is no drag to read
+      var t = (dx*g.dir[0] + dy*g.dir[1]) / dd;
+      if(kind === "m"){
+        var ax2 = g.axes[g.i];
+        state.depthPos = [g.pos[0] + ax2[0]*t, g.pos[1] + ax2[1]*t, g.pos[2] + ax2[2]*t];
+      } else if(g.h === "s2"){
+        state.depthDist = Math.max(0.05, Math.min(4, g.dist + t));
+        slide(document.getElementById("dmDist"), state.depthDist * 100);
+      } else {
+        var sz = g.size.slice();
+        sz[g.i] = Math.max(0.03, Math.min(8, g.size[g.i] + t));
+        state.depthSize = sz;
+      }
+    }
+    gizSig = "";
+  });
+  function gizDrop(){ gizDrag = null; }
+  window.addEventListener("pointerup", gizDrop);
+  window.addEventListener("pointercancel", gizDrop);
+
+  // Stand the card in front of the view, square to it, at a size that suits
+  // whichever object is on screen. The one reliable way back from a card that
+  // has been dragged off into the dark.
+  function quatFromCols(cx, cy, cz){
+    var t = cx[0] + cy[1] + cz[2], S;
+    if(t > 0){
+      S = Math.sqrt(t + 1) * 2;
+      return [(cy[2] - cz[1])/S, (cz[0] - cx[2])/S, (cx[1] - cy[0])/S, 0.25*S];
+    }
+    if(cx[0] > cy[1] && cx[0] > cz[2]){
+      S = Math.sqrt(1 + cx[0] - cy[1] - cz[2]) * 2;
+      return [0.25*S, (cy[0] + cx[1])/S, (cz[0] + cx[2])/S, (cy[2] - cz[1])/S];
+    }
+    if(cy[1] > cz[2]){
+      S = Math.sqrt(1 + cy[1] - cx[0] - cz[2]) * 2;
+      return [(cy[0] + cx[1])/S, 0.25*S, (cz[1] + cy[2])/S, (cz[0] - cx[2])/S];
+    }
+    S = Math.sqrt(1 + cz[2] - cx[0] - cy[1]) * 2;
+    return [(cz[0] + cx[2])/S, (cz[1] + cy[2])/S, 0.25*S, (cx[1] - cy[0])/S];
+  }
+  function decalPlace(){
+    var b = camBasis(), R = SCENE_R[state.scene];
+    var d = [tgt[0] - eye[0], tgt[1] - eye[1], tgt[2] - eye[2]];
+    var len = Math.sqrt(dot3(d, d)) || 1;
+    // The view frames the object tightly, so the eye can be nearer to it than
+    // the object is wide: an offset measured only in object radii would stand
+    // the card behind the camera, where there is nothing to see and nothing to
+    // grab. Never past a little over half the way in.
+    var back = Math.min(R * 1.30, len * 0.55);
+    state.depthPos = [tgt[0] - b.w[0]*back, tgt[1] - b.w[1]*back, tgt[2] - b.w[2]*back];
+    state.depthRot = quatFromCols(b.u, b.v, [-b.w[0], -b.w[1], -b.w[2]]);
+    state.depthSize = [R*0.70, R*0.70];
+    state.depthDist = Math.min(4, back + R*1.10);
+    slide(document.getElementById("dmDist"), state.depthDist * 100);
+    gizSig = "";
+    telemetry();
+  }
+  document.getElementById("dmPlace").addEventListener("click", function(){
+    this.blur(); decalPlace(); setDecalEdit(true);
+  });
+
 
   // Merge by id, so a sphere kept on another machine arrives without doubling
   // up the one already here.
@@ -3544,6 +4112,7 @@ void main(){
   }
 
   drawSpheresAll();
+  drawTargets();
   addSpheres(localSpheres());
   cloudSpheres().then(function(list){
     if(addSpheres(list)) writeLocalSpheres();   // keep this browser's copy current
@@ -3770,7 +4339,8 @@ void main(){
     glass: "M8 1.6 3.9 8a4.9 4.9 0 1 0 8.2 0z M6.1 9.6a2.5 2.5 0 0 0 2 2.4",
     aperture:"M8 1.7a6.3 6.3 0 1 0 .01 12.6A6.3 6.3 0 0 0 8 1.7 M8 1.7 5.3 13.8 M14 6 2.6 10.6 M12.8 12 4.3 3.4",
     window:"M2.2 3.2h11.6v9.6H2.2z M2.2 6.3h11.6 M4.3 4.7h.01 M6.3 4.7h.01",
-    layers:"M8 1.9 14.2 5 8 8.1 1.8 5z M1.8 8.4 8 11.5l6.2-3.1 M1.8 11.3 8 14.4l6.2-3.1"
+    layers:"M8 1.9 14.2 5 8 8.1 1.8 5z M1.8 8.4 8 11.5l6.2-3.1 M1.8 11.3 8 14.4l6.2-3.1",
+    decal: "M2.2 1.9h8v5.2h-8z M6.2 7.9v2.6 M4.6 9.2 6.2 10.8 7.8 9.2 M1.5 13.3c1.7-2.4 3 2.4 4.7 0s3 2.4 4.7 0"
   };
   Array.prototype.forEach.call(document.querySelectorAll(".grpt"), function(head){
     var d = GICON[head.dataset.ico];
@@ -3800,6 +4370,7 @@ void main(){
       head.blur();
     });
   });
+  var GROUPN = document.querySelectorAll(".grpt").length;
   function syncGroups(){
     for(var i = 0; i < state.groups.length; i++) setGroup(i, !!state.groups[i]);
   }
@@ -3910,6 +4481,7 @@ void main(){
     if(e.key === "i" || e.key === "I"){ setSpikes(!state.spikeOn); }
     if(e.key === "r" || e.key === "R"){ randomView(); }
     if(e.key === "l" || e.key === "L"){ setSunMode(!sunMode); }
+    if(e.key === "g" || e.key === "G"){ setDecalEdit(!dmEdit); }
     if(e.key === "*" || e.code === "NumpadMultiply"){ e.preventDefault(); setSunView(!sunView); }
     if(RES_KEY[e.code] !== undefined){ setRes(RES_KEY[e.code]); }
     if(e.key === "a" || e.key === "A"){ setAA((state.aa + 1) % 3); }
@@ -3918,6 +4490,7 @@ void main(){
       setHud(hud.classList.contains("hidden"));
     }
     if(e.code === "Escape" && sunView){ e.preventDefault(); setSunView(false); return; }
+    if(e.code === "Escape" && dmEdit){ e.preventDefault(); setDecalEdit(false); return; }
     if(e.code === "Escape" && sunMode){ e.preventDefault(); setSunMode(false); return; }
     if(e.code === "Escape" && !repEl.hidden){
       e.preventDefault();
@@ -4167,6 +4740,13 @@ void main(){
       if(state.shadowSrc === 1) line += "\n           sphere " + MATCAPS[state.shadowMc].name;
       L.push(line);
     }
+    if(state.depthOn){
+      L.push("Depth map  " + MATCAPS[state.depthMc].name +
+             " \u00b7 " + (DPARTS[state.scene] || DPARTS[0])[state.depthPart[state.scene] | 0] +
+             " \u00b7 intensity " + state.depthAmt.toFixed(2) +
+             " \u00b7 reach " + state.depthDist.toFixed(2) +
+             " \u00b7 step \u00f7 " + decalLip().toFixed(2));
+    }
     L.push("");
     L.push("avg        " + avg.toFixed(1) + " fps   (" + (sum / ms.length).toFixed(2) + " ms)");
     L.push("median     " + med.toFixed(1) + " fps");
@@ -4224,6 +4804,7 @@ void main(){
     "shadowOn","sunAz","sunEl","shadowSoft","shadowDark","shadowReach",
     "matcapOn","matcap","normalOn","normalMc","normalAmt","normalScale",
     "glassOn","glassOpacity","glassEdge","glassIor","glassTint","glassDensity","glassDepth",
+    "depthOn","depthMc","depthAmt","depthDist","depthPos","depthRot","depthSize","depthPart",
     "shadowSrc","shadowLevel","shadowContrast","shadowMc","shadowOnly","noise","shadowSteps",
     "uiFont","uiAlpha","uiBg","uiAccent","uiHeader","uiWidth","uiSplit","uncap",
     "uiOrder","uiMods","uiNames"];
@@ -4334,6 +4915,9 @@ void main(){
     setMatcapOn(!!state.matcapOn);
     setNormalOn(!!state.normalOn);
     setGlassOn(!!state.glassOn);
+    setDepthOn(!!state.depthOn);
+    // a layout saved before a group existed leaves it open, not missing
+    while(state.groups.length < GROUPN) state.groups.push(1);
     gTintIn.value = state.glassTint;
     applyLayout();
     drawSpheresAll();
