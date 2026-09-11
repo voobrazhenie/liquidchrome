@@ -23,7 +23,15 @@
     --ui-bg:4,7,12;
     --ui-alpha:.94;
     --ui-font:12px;
-    --menu-w:150px;
+    --menu-w:240px;
+    /* one row height for everything that is a row: a group header is exactly
+       as tall as a button, so a column of them reads as a column */
+    --rowh:calc(var(--ui-font) * 2.55);
+    --modw:36%;
+    --bline:rgba(47,217,192,.55);
+    --grph:#2fd9c0;
+    --grph-ink:#031018;
+    --gbox:rgba(47,217,192,.42);
     --panel:rgba(var(--ui-bg),var(--ui-alpha));
     --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
     --cond:"IBM Plex Sans Condensed","Helvetica Neue",Arial,sans-serif;
@@ -62,7 +70,7 @@
      card sitting on it. Its width is a variable because the left edge is a
      handle. */
   .console{position:fixed;top:0;right:0;bottom:0;width:min(var(--menu-w),94vw);
-           display:flex;flex-direction:column;gap:9px;
+           display:flex;flex-direction:column;gap:8px;
            font-size:var(--ui-font);
            overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;pointer-events:auto;
            border:0;border-left:1px solid var(--line);padding:10px 15px 16px 8px}
@@ -84,16 +92,63 @@
   }
   .lbl{font-family:var(--mono);font-size:.80em;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
 
-  /* Folding groups. The header is the control; the body is a plain flex column
-     so the rows keep the console's own rhythm whichever group they sit in. */
-  .grp{display:flex;flex-direction:column;gap:11px}
-  .grph{display:flex;align-items:center;gap:7px;width:100%;appearance:none;background:var(--fiber);border:0;padding:6px 8px;cursor:pointer;text-align:left;font-family:var(--mono);font-weight:500;font-size:.86em;letter-spacing:.12em;text-transform:uppercase;color:#031018}
-  .grph::before{content:"";flex:none;width:0;height:0;border-left:4px solid currentColor;border-top:3.5px solid transparent;border-bottom:3.5px solid transparent;transition:transform .16s ease}
-  .grph[aria-expanded="true"]::before{transform:rotate(90deg)}
-  .grph:hover{filter:brightness(1.15)}
-  /* what a group holds sits in from the header that names it */
-  .grpb{display:flex;flex-direction:column;gap:10px;padding:2px 0 4px 10px}
+  /* Folding groups. The header is a filled bar exactly one row high; the body
+     is a box of the same width hanging off it, so a group reads as one object
+     rather than as a heading with loose rows under it. The gap before the next
+     header is what says where one group ends and the next begins. */
+  .grp{display:flex;flex-direction:column;margin-bottom:13px}
+  .grph{display:flex;align-items:stretch;min-height:var(--rowh);background:var(--grph);color:var(--grph-ink)}
+  .grph:hover{filter:brightness(1.12)}
+  .grpt{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:7px;appearance:none;background:transparent;border:0;padding:0 8px;cursor:pointer;text-align:left;font-family:var(--mono);font-weight:600;font-size:.86em;letter-spacing:.10em;text-transform:uppercase;color:inherit}
+  .grpt::before{content:"";flex:none;width:0;height:0;border-left:4px solid currentColor;border-top:3.5px solid transparent;border-bottom:3.5px solid transparent;transition:transform .16s ease}
+  .grpt[aria-expanded="true"]::before{transform:rotate(90deg)}
+  .gico{flex:none;width:1.2em;height:1.2em;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .grpn{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .grpb{display:flex;flex-direction:column;gap:9px;
+        border:1px solid var(--gbox);border-top:0;padding:9px 9px 11px}
   .grpb[hidden]{display:none}
+
+  /* Two columns, the way a property sheet is laid out: the module's name on
+     the left, everything it controls on the right. The name is in the accent
+     colour because it is what the eye scans down. */
+  .mod{display:grid;grid-template-columns:minmax(0,var(--modw)) minmax(0,1fr);gap:3px 8px;align-items:start}
+  .mod[hidden]{display:none}
+  .modn{display:flex;align-items:baseline;gap:4px;min-width:0;padding-top:3px;
+        font-family:var(--mono);font-size:.80em;line-height:1.35;letter-spacing:.06em;
+        text-transform:uppercase;color:var(--fiber);overflow-wrap:break-word}
+  /* the grip and the pencil want room of their own, rather than taking it
+     from the name and breaking it across lines */
+  .rg .mod{grid-template-columns:minmax(0,calc(var(--modw) + 30px)) minmax(0,1fr)}
+  .modt{min-width:0}
+  .modc{display:flex;flex-direction:column;gap:7px;min-width:0}
+
+  /* The grip and the pencil are only there while the console is being
+     rearranged; the rest of the time they take no space at all. */
+  .mgrip,.pen{display:none}
+  .rg .mgrip{display:block;flex:none;width:8px;height:12px;cursor:grab;opacity:.8;
+             background-image:radial-gradient(currentColor 38%,transparent 42%);background-size:4px 4px}
+  .rg .pen{display:flex;align-items:center;justify-content:center;flex:none;
+           width:var(--rowh);appearance:none;background:transparent;border:0;padding:0;
+           cursor:pointer;color:inherit;opacity:.8}
+  .rg .modn .pen{width:1.5em;height:1.5em}
+  .pen:hover{opacity:1}
+  .peni{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round}
+  .rg .grph{cursor:grab;touch-action:none}
+  .rg .mgrip{touch-action:none}
+  .rg .mod{outline:1px dashed rgba(198,211,220,.16);outline-offset:3px}
+  .naming{outline:none;background:rgba(47,217,192,.14);color:var(--chrome);
+          padding:0 3px;cursor:text;text-transform:none}
+  .lifting{opacity:.35}
+  .dropat{box-shadow:0 -2px 0 0 var(--fiber)}
+  .dropaft{box-shadow:0 2px 0 0 var(--fiber)}
+
+  /* Unsaved layout. Sticky at the top of the console so it cannot be scrolled
+     away from, and gone the moment the layout is written down. */
+  .dirty{position:sticky;top:-10px;z-index:4;margin:-10px -15px 2px -8px;padding:8px 10px;
+         background:rgba(255,201,138,.13);border-bottom:1px solid var(--soma);
+         color:var(--soma);font-family:var(--mono);font-size:.78em;line-height:1.45;letter-spacing:.02em}
+  .dirty[hidden]{display:none}
+  .dirty b{color:var(--chrome);font-weight:600}
   /* Squeeze before wrapping. A row of buttons shares the width equally and each
      one may break its own label over two lines; wrapping the row is a last
      resort, and only .transport.wrap asks for it. Every button keeps a border
@@ -107,15 +162,23 @@
   /* One line, always. A label that will not fit is trimmed rather than broken
      mid-word or stacked a letter at a time — and the menu can be widened, at
      which point the whole word comes back. */
-  .seg button{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;appearance:none;background:transparent;border:1px solid var(--line);color:var(--dim);font-family:var(--cond);font-weight:600;font-size:.94em;letter-spacing:.01em;padding:8px 6px;cursor:pointer;transition:color .15s,background .15s}
+  .seg button{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;appearance:none;background:transparent;border:1px solid var(--bline);color:var(--dim);font-family:var(--cond);font-weight:600;font-size:.94em;letter-spacing:.01em;height:var(--rowh);line-height:calc(var(--rowh) - 2px);padding:0 6px;cursor:pointer;transition:color .15s,background .15s}
 
   .seg button[aria-pressed="true"]{background:rgba(47,217,192,.13);color:var(--fiber)}
   .seg button:hover{color:var(--chrome)}
 
-  .slider{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 10px}
+  .slider{display:flex;flex-direction:column;gap:0}
+  .sval{display:flex;align-items:baseline;justify-content:flex-end;gap:7px;min-width:0}
   .slider output{font-family:var(--mono);font-size:.86em;white-space:nowrap;color:var(--fiber);font-variant-numeric:tabular-nums}
-  .slider input{grid-column:1/-1}
   .slider[hidden]{display:none}
+  /* What this was before it was touched, and a way back to it. It is only
+     there while the two differ, so it doubles as the mark that says changed. */
+  .dflt{appearance:none;background:transparent;border:0;padding:0;cursor:pointer;
+        font-family:var(--mono);font-size:.78em;white-space:nowrap;color:var(--dim);
+        font-variant-numeric:tabular-nums;opacity:.85}
+  .dflt::before{content:"\21ba";margin-right:3px}
+  .dflt:hover{color:var(--fiber);opacity:1}
+  .dflt[hidden]{display:none}
   input[type=range]{appearance:none;-webkit-appearance:none;width:100%;height:22px;background:transparent;cursor:pointer;margin:0}
   input[type=range]::-webkit-slider-runnable-track{height:2px;background:linear-gradient(90deg,var(--fiber) var(--pct,50%),rgba(198,211,220,.18) var(--pct,50%))}
   input[type=range]::-moz-range-track{height:2px;background:rgba(198,211,220,.18)}
@@ -126,24 +189,26 @@
   .transport{display:flex;gap:8px}
   .transport{flex-wrap:wrap;gap:5px}
   /* block rather than flex, so the trim has something to trim */
-  .transport button{flex:1 1 auto;min-width:0;display:block;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;appearance:none;background:transparent;border:1px solid var(--line);color:var(--dim);font-family:var(--cond);font-weight:600;font-size:.94em;letter-spacing:.01em;padding:9px 6px;cursor:pointer;transition:background .15s,color .15s}
+  .transport button{flex:1 1 auto;min-width:0;display:block;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;appearance:none;background:transparent;border:1px solid var(--bline);color:var(--dim);font-family:var(--cond);font-weight:600;font-size:.94em;letter-spacing:.01em;height:var(--rowh);line-height:calc(var(--rowh) - 2px);padding:0 6px;cursor:pointer;transition:background .15s,color .15s}
   .transport button::before{content:"";display:inline-block;vertical-align:middle;width:4px;height:4px;margin:-2px 4px 0 0;background:var(--dim);opacity:.5;transition:background .15s,opacity .15s,box-shadow .15s}
   .transport button[aria-pressed="true"]{background:rgba(47,217,192,.13);color:var(--fiber)}
   .transport button[aria-pressed="true"]::before{background:var(--fiber);opacity:1;box-shadow:0 0 7px var(--fiber)}
   .transport.wrap{flex-wrap:wrap;gap:6px}
-  .transport.wrap button{flex:1 1 40%;padding:8px 4px;font-size:.92em}
+  .transport.wrap button{flex:1 1 40%;padding:0 4px;font-size:.92em}
   .transport button:hover{color:var(--chrome)}
   .preview{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
   .preview p{flex:1 1 96px;min-width:0}
-  .preview canvas{width:76px;height:76px;flex:none;border:1px solid var(--line);background:rgba(0,0,0,.35);image-rendering:auto}
+  .preview canvas{width:64px;height:64px;flex:none;border:1px solid var(--bline);background:rgba(0,0,0,.35);image-rendering:auto}
+  .preview p{flex:1 1 70px}
   .preview p{margin:0}
   .preview[hidden]{display:none}
   .slider output[contenteditable]{outline:none;cursor:text;border-bottom:1px dashed rgba(47,217,192,.35)}
   .slider output[contenteditable]:focus{border-bottom-color:var(--fiber);color:var(--chrome)}
-  .swatches{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;align-items:center}
+  .swatches{display:flex;flex-wrap:wrap;gap:6px 8px}
   .swatches[hidden]{display:none}
-  .swatches.one{grid-template-columns:1fr}
-  input[type=color]{appearance:none;-webkit-appearance:none;width:100%;height:26px;padding:0;border:1px solid var(--line);background:transparent;cursor:pointer}
+  .sw{flex:1 1 62px;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .sw .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  input[type=color]{appearance:none;-webkit-appearance:none;width:100%;height:var(--rowh);padding:0;border:1px solid var(--bline);background:transparent;cursor:pointer}
   input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
   input[type=color]::-webkit-color-swatch{border:0}
   input[type=color]::-moz-color-swatch{border:0}
@@ -172,10 +237,9 @@
     .telemetry dt{font-size:.70em}
     .telemetry dd{font-size:1.1em}
     #fpsGraph{height:52px}
-    .console{width:min(var(--menu-w),92vw);gap:8px}
-    .grp,.grpb{gap:9px}
-    .seg button{padding:11px 4px}
-    .transport button{padding:11px 6px}
+    .console{width:min(var(--menu-w),92vw);gap:7px}
+    .grpb{gap:8px}
+    .seg button{padding:0 4px}
   }
   @media (prefers-reduced-motion:reduce){ .hud.hidden{transition:none} }
 </style>
@@ -197,332 +261,622 @@
 
     <section class="console panel" aria-label="Flight console">
       <div class="grip" id="menuGrip" title="Drag to set how wide the menu is"></div>
-      <div class="grp">
-        <button type="button" class="grph" data-grp="0" aria-expanded="true" aria-controls="grpb0">Construction</button>
+      <p class="dirty" id="dirty" hidden>The layout has changed. <b>Save as default</b> or <b>Save as</b> a template to keep it.</p>
+      <div class="grp" data-gid="0">
+        <div class="grph">
+          <button type="button" class="grpt" data-grp="0" data-ico="cube" aria-expanded="true" aria-controls="grpb0"><span class="grpn">Construction</span></button>
+          <button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button>
+        </div>
         <div class="grpb" id="grpb0" data-grpb="0">
-          <div>
-            <p class="lbl" id="sceneLbl">Object</p>
-            <div class="seg" role="group" aria-labelledby="sceneLbl">
-              <button type="button" data-scene="0" aria-pressed="true">Brain</button>
-              <button type="button" data-scene="1" aria-pressed="false">Neuron</button>
-              <button type="button" data-scene="2" aria-pressed="false" title="LiquidChrome">Chrome</button>
+          <div class="mod" data-mod="object">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt" id="sceneLbl">Object</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="seg" role="group" aria-labelledby="sceneLbl">
+                <button type="button" data-scene="0" aria-pressed="true">Brain</button>
+                <button type="button" data-scene="1" aria-pressed="false">Neuron</button>
+                <button type="button" data-scene="2" aria-pressed="false" title="LiquidChrome">Chrome</button>
+              </div>
             </div>
           </div>
-          <div>
-            <p class="lbl" id="navLbl">Navigation</p>
-            <div class="seg" role="group" aria-labelledby="navLbl">
-              <button type="button" data-nav="0" aria-pressed="true" title="The camera flies its own path">Auto cam</button>
-              <button type="button" data-nav="1" aria-pressed="false" title="WASD to move, Q/E down and up, shift to sprint, right-drag to look, wheel for speed (shift+`)">Fly</button>
+          <div class="mod" data-mod="nav">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt" id="navLbl">Navigation</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="seg" role="group" aria-labelledby="navLbl">
+                <button type="button" data-nav="0" aria-pressed="true" title="The camera flies its own path">Auto cam</button>
+                <button type="button" data-nav="1" aria-pressed="false" title="WASD to move, Q/E down and up, shift to sprint, right-drag to look, wheel for speed (shift+`)">Fly</button>
+              </div>
             </div>
           </div>
-          <div id="pathRow">
-            <p class="lbl" id="pathLbl">Flight path</p>
-            <div class="seg" role="group" aria-labelledby="pathLbl">
-              <button type="button" data-mode="0" aria-pressed="true">Orbit</button>
-              <button type="button" data-mode="1" aria-pressed="false">Fly-through</button>
-              <button type="button" data-mode="2" aria-pressed="false">Drift</button>
+          <div class="mod" data-mod="path" id="pathRow">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt" id="pathLbl">Flight path</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="seg" role="group" aria-labelledby="pathLbl">
+                <button type="button" data-mode="0" aria-pressed="true">Orbit</button>
+                <button type="button" data-mode="1" aria-pressed="false">Fly-through</button>
+                <button type="button" data-mode="2" aria-pressed="false">Drift</button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      <div class="grp">
-        <button type="button" class="grph" data-grp="1" aria-expanded="true" aria-controls="grpb1">Object modifications</button>
+      <div class="grp" data-gid="1">
+        <div class="grph">
+          <button type="button" class="grpt" data-grp="1" data-ico="waves" aria-expanded="true" aria-controls="grpb1"><span class="grpn">Object modifications</span></button>
+          <button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button>
+        </div>
         <div class="grpb" id="grpb1" data-grpb="1">
-          <div data-only="2" hidden>
-            <p class="lbl" id="lcLbl">Build steps</p>
-            <div class="transport wrap" role="group" aria-labelledby="lcLbl">
-              <button type="button" data-lc="0" aria-pressed="true" title="A 20 × 20 × 0.5 slab">1 Slab</button>
-              <button type="button" data-lc="1" aria-pressed="true" title="Perlin relief along the thin axis">2 Relief</button>
-              <button type="button" data-lc="2" aria-pressed="true" title="An undeformed copy in the same place">3 Copy</button>
-              <button type="button" data-lc="3" aria-pressed="true" title="Keep only where the two overlap">4 Intersect</button>
-              <button type="button" data-lc="4" aria-pressed="true" title="Twirl the result">5 Twirl</button>
-              <button type="button" data-lc="5" aria-pressed="false" title="A plain cube hanging over the slab. Its shadow is one you can check by eye — switch the relief off and the ground is flat enough to read it.">6 Test cube</button>
+          <div class="mod" data-mod="build" data-only="2" hidden>
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt" id="lcLbl">Build steps</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport wrap" role="group" aria-labelledby="lcLbl">
+                <button type="button" data-lc="0" aria-pressed="true" title="A 20 &#215; 20 &#215; 0.5 slab">1 Slab</button>
+                <button type="button" data-lc="1" aria-pressed="true" title="Perlin relief along the thin axis">2 Relief</button>
+                <button type="button" data-lc="2" aria-pressed="true" title="An undeformed copy in the same place">3 Copy</button>
+                <button type="button" data-lc="3" aria-pressed="true" title="Keep only where the two overlap">4 Intersect</button>
+                <button type="button" data-lc="4" aria-pressed="true" title="Twirl the result">5 Twirl</button>
+                <button type="button" data-lc="5" aria-pressed="false" title="A plain cube hanging over the slab. Its shadow is one you can check by eye &#8212; switch the relief off and the ground is flat enough to read it.">6 Test cube</button>
+              </div>
             </div>
           </div>
-          <div class="slider" data-only="2" hidden>
-            <label class="lbl" for="lcRelief">Relief</label><output id="lcReliefOut">0.26</output>
-            <input id="lcRelief" type="range" min="0" max="90" step="1" value="26">
-          </div>
-          <div class="slider" data-only="2" hidden>
-            <label class="lbl" for="lcFreq">Terrain scale</label><output id="lcFreqOut">4.00</output>
-            <input id="lcFreq" type="range" min="60" max="1100" step="10" value="400">
-          </div>
-          <div class="slider" data-only="2" hidden>
-            <label class="lbl" for="lcThick">Slab thickness</label><output id="lcThickOut">0.44</output>
-            <input id="lcThick" type="range" min="6" max="240" step="2" value="44">
-          </div>
-          <div class="slider" data-only="2" hidden>
-            <label class="lbl" for="lcTwirl">Twirl</label><output id="lcTwirlOut">1.90 rad</output>
-            <input id="lcTwirl" type="range" min="0" max="300" step="5" value="190">
-          </div>
-          <div class="slider">
-            <label class="lbl" for="rSteps">Ray steps</label><output id="rStepsOut">320</output>
-            <input id="rSteps" type="range" min="48" max="320" step="8" value="320">
-          </div>
-          <div class="slider">
-            <label class="lbl" for="rEps" title="How close a ray must get before it counts as a hit. Higher is tighter — it removes the banding on grazing surfaces, and costs march steps.">Surface precision</label><output id="rEpsOut">12.0</output>
-            <input id="rEps" type="range" min="10" max="120" step="2" value="120">
-          </div>
-          <div class="slider">
-            <label class="lbl" for="rOmega" title="How far past the safe distance each march step reaches. Above 1 it converges in fewer steps; too far and it spends them backing out of overshoots instead.">Step relaxation</label><output id="rOmegaOut">1.30×</output>
-            <input id="rOmega" type="range" min="100" max="190" step="2" value="130">
-          </div>
-          <div>
-            <p class="lbl" id="bndLbl">Bounds</p>
-            <div class="seg" role="group" aria-labelledby="bndLbl">
-              <button type="button" data-bnd="0" aria-pressed="false" title="One sphere around everything">Sphere</button>
-              <button type="button" data-bnd="1" aria-pressed="false" title="A box fitted to the object — far tighter on a thin slab">Box</button>
-              <button type="button" data-bnd="2" aria-pressed="true" title="Box for the chrome slab, sphere for the rest">Auto</button>
+          <div class="mod" data-mod="relief" data-only="2" hidden>
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="lcRelief">Relief</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="lcRelief" hidden></button><output id="lcReliefOut">0.26</output></div>
+                <input id="lcRelief" type="range" min="0" max="90" step="1" value="26">
+              </div>
             </div>
           </div>
-          <div class="slider">
-            <label class="lbl" for="rPad" title="Slack added to the bounding volume. Too little clips the object at its edges; too much marches empty space.">Bound padding</label><output id="rPadOut">0.05</output>
-            <input id="rPad" type="range" min="0" max="60" step="1" value="5">
-          </div>
-          <div class="slider" id="densRow" data-only="0">
-            <label class="lbl" for="density">Cell density</label><output id="densityOut">19 µm pitch</output>
-            <input id="density" type="range" min="9" max="22" step="0.5" value="15">
-          </div>
-          <div>
-            <p class="lbl" id="warpLbl">Domain warp</p>
-            <div class="transport" role="group" aria-labelledby="warpLbl">
-              <button type="button" data-warp="0" aria-pressed="true" title="Noise displacement">Noise</button>
-              <button type="button" data-warp="1" aria-pressed="false" title="Whirl the space about Y">Twist</button>
-              <button type="button" data-warp="2" aria-pressed="false" title="Bend the space about Z">Bend</button>
+          <div class="mod" data-mod="terrain" data-only="2" hidden>
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="lcFreq">Terrain scale</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="lcFreq" hidden></button><output id="lcFreqOut">4.00</output></div>
+                <input id="lcFreq" type="range" min="60" max="1100" step="10" value="400">
+              </div>
             </div>
           </div>
-          <div>
-            <p class="lbl" id="wmLbl">Noise warp</p>
-            <div class="seg" role="group" aria-labelledby="wmLbl">
-              <button type="button" data-wm="0" aria-pressed="true" title="Bends the space the object sits in, so the whole object shears with the noise. Every march step pays for it.">Space</button>
-              <button type="button" data-wm="1" aria-pressed="false" title="Leaves the space straight and pushes the object&#39;s own surface in and out along its normal. The silhouette still moves, and the cost is only paid near the surface.">Object</button>
+          <div class="mod" data-mod="slab" data-only="2" hidden>
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="lcThick">Slab thickness</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="lcThick" hidden></button><output id="lcThickOut">0.44</output></div>
+                <input id="lcThick" type="range" min="6" max="240" step="2" value="44">
+              </div>
             </div>
           </div>
-          <div class="slider">
-            <label class="lbl" for="warpAmt">Warp strength</label><output id="warpAmtOut">0.74</output>
-            <input id="warpAmt" type="range" min="0" max="100" step="1" value="74">
+          <div class="mod" data-mod="twirl" data-only="2" hidden>
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="lcTwirl">Twirl</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="lcTwirl" hidden></button><output id="lcTwirlOut">1.90 rad</output></div>
+                <input id="lcTwirl" type="range" min="0" max="300" step="5" value="190">
+              </div>
+            </div>
           </div>
-          <div class="slider">
-            <label class="lbl" for="warpFreq">Warp scale</label><output id="warpFreqOut">3.75 /unit</output>
-            <input id="warpFreq" type="range" min="30" max="400" step="5" value="375">
+          <div class="mod" data-mod="raysteps">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="rSteps">Ray steps</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="rSteps" hidden></button><output id="rStepsOut">320</output></div>
+                <input id="rSteps" type="range" min="48" max="320" step="8" value="320">
+              </div>
+            </div>
           </div>
-          <div class="slider" id="thickRow" data-only="1" hidden>
-            <label class="lbl" for="thick">Line width</label><output id="thickOut">11.2 µm</output>
-            <input id="thick" type="range" min="6" max="70" step="1" value="28">
+          <div class="mod" data-mod="precision">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="rEps" title="How close a ray must get before it counts as a hit. Higher is tighter &#8212; it removes the banding on grazing surfaces, and costs march steps.">Surface precision</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="rEps" hidden></button><output id="rEpsOut">12.0</output></div>
+                <input id="rEps" type="range" min="10" max="120" step="2" value="120">
+              </div>
+            </div>
           </div>
-          <div class="slider" data-only="01">
-            <label class="lbl" for="spike">Spike rate</label><output id="spikeOut">6.0 Hz</output>
-            <input id="spike" type="range" min="0" max="100" step="1" value="55">
+          <div class="mod" data-mod="relax">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="rOmega" title="How far past the safe distance each march step reaches. Above 1 it converges in fewer steps; too far and it spends them backing out of overshoots instead.">Step relaxation</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="rOmega" hidden></button><output id="rOmegaOut">1.30&#215;</output></div>
+                <input id="rOmega" type="range" min="100" max="190" step="2" value="130">
+              </div>
+            </div>
           </div>
-          <div class="swatches">
-            <label class="lbl" for="colA">Structure</label><label class="lbl" for="colB">Accent</label>
-            <input type="color" id="colA" value="#2FD9C0" aria-label="Structure colour">
-            <input type="color" id="colB" value="#FFC98A" aria-label="Accent colour">
+          <div class="mod" data-mod="bounds">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt" id="bndLbl">Bounds</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="seg" role="group" aria-labelledby="bndLbl">
+                <button type="button" data-bnd="0" aria-pressed="false" title="One sphere around everything">Sphere</button>
+                <button type="button" data-bnd="1" aria-pressed="false" title="A box fitted to the object &#8212; far tighter on a thin slab">Box</button>
+                <button type="button" data-bnd="2" aria-pressed="true" title="Box for the chrome slab, sphere for the rest">Auto</button>
+              </div>
+            </div>
           </div>
-          <div class="transport">
-            <button type="button" id="playBtn" aria-pressed="true" title="Camera flight and field (space)">Flight</button>
-            <button type="button" id="morphBtn" aria-pressed="true" title="Animate the field (M)">Morph</button>
-            <button type="button" id="spikeBtn" aria-pressed="true" title="Travelling impulse lights (I)">Impulses</button>
+          <div class="mod" data-mod="boundpad">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="rPad" title="Slack added to the bounding volume. Too little clips the object at its edges; too much marches empty space.">Bound padding</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="rPad" hidden></button><output id="rPadOut">0.05</output></div>
+                <input id="rPad" type="range" min="0" max="60" step="1" value="5">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="density" id="densRow" data-only="0">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="density">Cell density</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="density" hidden></button><output id="densityOut">19 &#181;m pitch</output></div>
+                <input id="density" type="range" min="9" max="22" step="0.5" value="15">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="warp">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt" id="warpLbl">Domain warp</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport" role="group" aria-labelledby="warpLbl">
+                <button type="button" data-warp="0" aria-pressed="true" title="Noise displacement">Noise</button>
+                <button type="button" data-warp="1" aria-pressed="false" title="Whirl the space about Y">Twist</button>
+                <button type="button" data-warp="2" aria-pressed="false" title="Bend the space about Z">Bend</button>
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="warpmode">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt" id="wmLbl">Noise warp</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="seg" role="group" aria-labelledby="wmLbl">
+                <button type="button" data-wm="0" aria-pressed="true" title="Bends the space the object sits in, so the whole object shears with the noise. Every march step pays for it.">Space</button>
+                <button type="button" data-wm="1" aria-pressed="false" title="Leaves the space straight and pushes the object&#39;s own surface in and out along its normal. The silhouette still moves, and the cost is only paid near the surface.">Object</button>
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="warpamt">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="warpAmt">Warp strength</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="warpAmt" hidden></button><output id="warpAmtOut">0.74</output></div>
+                <input id="warpAmt" type="range" min="0" max="100" step="1" value="74">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="warpfreq">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="warpFreq">Warp scale</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="warpFreq" hidden></button><output id="warpFreqOut">3.75 /unit</output></div>
+                <input id="warpFreq" type="range" min="30" max="400" step="5" value="375">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="linewidth" id="thickRow" data-only="1" hidden>
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="thick">Line width</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="thick" hidden></button><output id="thickOut">11.2 &#181;m</output></div>
+                <input id="thick" type="range" min="6" max="70" step="1" value="28">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="spikerate" data-only="01">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="spike">Spike rate</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="spike" hidden></button><output id="spikeOut">6.0 Hz</output></div>
+                <input id="spike" type="range" min="0" max="100" step="1" value="55">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="colours">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt">Colours</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="swatches">
+                <div class="sw"><label class="lbl" for="colA">Structure</label>
+                  <input type="color" id="colA" value="#2FD9C0" aria-label="Structure colour"></div>
+                <div class="sw"><label class="lbl" for="colB">Accent</label>
+                  <input type="color" id="colB" value="#FFC98A" aria-label="Accent colour"></div>
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="animation">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt">Animation</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport">
+                <button type="button" id="playBtn" aria-pressed="true" title="Camera flight and field (space)">Flight</button>
+                <button type="button" id="morphBtn" aria-pressed="true" title="Animate the field (shift+M)">Morph</button>
+                <button type="button" id="spikeBtn" aria-pressed="true" title="Travelling impulse lights (I)">Impulses</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      <div class="grp">
-        <button type="button" class="grph" data-grp="2" aria-expanded="true" aria-controls="grpb2">Rendering</button>
+      <div class="grp" data-gid="2">
+        <div class="grph">
+          <button type="button" class="grpt" data-grp="2" data-ico="grid" aria-expanded="true" aria-controls="grpb2"><span class="grpn">Rendering</span></button>
+          <button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button>
+        </div>
         <div class="grpb" id="grpb2" data-grpb="2">
-          <div>
-            <p class="lbl" id="resLbl">Resolution</p>
-            <div class="seg" role="group" aria-labelledby="resLbl">
-              <button type="button" data-res="0" aria-pressed="false">Auto</button>
-              <button type="button" data-res="1" aria-pressed="true">Half</button>
-              <button type="button" data-res="2" aria-pressed="false">Native</button>
-              <button type="button" data-res="3" aria-pressed="false" title="Render exactly 1920 × 1080, whatever size the window is (4)">FHD</button>
+          <div class="mod" data-mod="resolution">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt" id="resLbl">Resolution</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="seg" role="group" aria-labelledby="resLbl">
+                <button type="button" data-res="0" aria-pressed="false">Auto</button>
+                <button type="button" data-res="1" aria-pressed="true">Half</button>
+                <button type="button" data-res="2" aria-pressed="false">Native</button>
+                <button type="button" data-res="3" aria-pressed="false" title="Render exactly 1920 &#215; 1080, whatever size the window is (4)">FHD</button>
+              </div>
             </div>
           </div>
-          <div>
-            <p class="lbl" id="aaLbl">Antialiasing</p>
-            <div class="seg" role="group" aria-labelledby="aaLbl">
-              <button type="button" data-aa="0" aria-pressed="false">Off</button>
-              <button type="button" data-aa="1" aria-pressed="true">FXAA</button>
-              <button type="button" data-aa="2" aria-pressed="false">SSAA ×4</button>
+          <div class="mod" data-mod="aa">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt" id="aaLbl">Antialias</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="seg" role="group" aria-labelledby="aaLbl">
+                <button type="button" data-aa="0" aria-pressed="false">Off</button>
+                <button type="button" data-aa="1" aria-pressed="true">FXAA</button>
+                <button type="button" data-aa="2" aria-pressed="false">SSAA &#215;4</button>
+              </div>
             </div>
           </div>
-          <div class="transport">
-            <button type="button" id="fpsUncap" aria-pressed="false" title="Draw as fast as the machine will, instead of waiting for the display. The picture tears; the number stops being the refresh rate and starts being the render's own speed.">Uncapped</button>
+          <div class="mod" data-mod="framerate">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt">Frame rate</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport">
+                <button type="button" id="fpsUncap" aria-pressed="false" title="Draw as fast as the machine will, instead of waiting for the display. The picture tears; the number stops being the refresh rate and starts being the render&#39;s own speed.">Uncapped</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      <div class="grp">
-        <button type="button" class="grph" data-grp="3" aria-expanded="true" aria-controls="grpb3">Shadows</button>
+      <div class="grp" data-gid="3">
+        <div class="grph">
+          <button type="button" class="grpt" data-grp="3" data-ico="sun" aria-expanded="true" aria-controls="grpb3"><span class="grpn">Shadows</span></button>
+          <button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button>
+        </div>
         <div class="grpb" id="grpb3" data-grpb="3">
-          <div class="transport">
-            <button type="button" id="shOnly" aria-pressed="false" title="Draw the shadow itself and nothing else: white where the sun reaches, black where it does not.">Lit / unlit</button>
-            <button type="button" id="shOn" aria-pressed="true" title="Cast shadows from a sun that stays put, instead of the light that follows the camera">Shadows</button>
-          </div>
-          <div>
-            <p class="lbl" id="shSrcLbl">How</p>
-            <div class="seg" role="group" aria-labelledby="shSrcLbl">
-              <button type="button" data-shsrc="0" aria-pressed="true" title="Sphere trace a second ray from the surface to the sun, with a soft edge from how close it passed. Throws a shadow from one thing onto another.">March</button>
-              <button type="button" data-shsrc="3" aria-pressed="false" title="Walk the line to the sun in even steps and ask at each one whether it is inside anything. No penumbra and no grey — occluded or not. The cost is exactly the steps asked for, whatever the scene is doing.">Trace</button>
-              <button type="button" data-shsrc="1" aria-pressed="false" title="Read the shadow off a sphere you painted. Whatever you put on it lands on the object, and it costs one texture fetch.">Sphere</button>
-              <button type="button" data-shsrc="2" aria-pressed="false" title="No ray and no texture: how square-on the surface is to the sun. It cannot throw a shadow onto anything else, but it turns with the sun and it is nearly free.">Sun</button>
+          <div class="mod" data-mod="sun">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt">Sun</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport">
+                <button type="button" id="shOnly" aria-pressed="false" title="Draw the shadow itself and nothing else: white where the sun reaches, black where it does not.">Lit / unlit</button>
+                <button type="button" id="shOn" aria-pressed="true" title="Cast shadows from a sun that stays put, instead of the light that follows the camera">Shadows</button>
+              </div>
             </div>
           </div>
-          <div class="slider" data-shs="0123">
-            <label class="lbl" for="sunAz">Sun across</label><output id="sunAzOut">52&#176;</output>
-            <input id="sunAz" type="range" min="0" max="360" step="1" value="52">
+          <div class="mod" data-mod="shadowhow">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt" id="shSrcLbl">How</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="seg" role="group" aria-labelledby="shSrcLbl">
+                <button type="button" data-shsrc="0" aria-pressed="true" title="Sphere trace a second ray from the surface to the sun, with a soft edge from how close it passed. Throws a shadow from one thing onto another.">March</button>
+                <button type="button" data-shsrc="3" aria-pressed="false" title="Walk the line to the sun in even steps and ask at each one whether it is inside anything. No penumbra and no grey &#8212; occluded or not. The cost is exactly the steps asked for, whatever the scene is doing.">Trace</button>
+                <button type="button" data-shsrc="1" aria-pressed="false" title="Read the shadow off a sphere you painted. Whatever you put on it lands on the object, and it costs one texture fetch.">Sphere</button>
+                <button type="button" data-shsrc="2" aria-pressed="false" title="No ray and no texture: how square-on the surface is to the sun. It cannot throw a shadow onto anything else, but it turns with the sun and it is nearly free.">Sun</button>
+              </div>
+            </div>
           </div>
-          <div class="slider" data-shs="0123">
-            <label class="lbl" for="sunEl">Sun up</label><output id="sunElOut">34&#176;</output>
-            <input id="sunEl" type="range" min="-89" max="89" step="1" value="34">
+          <div class="mod" data-mod="sunaz" data-shs="0123">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="sunAz">Sun across</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="sunAz" hidden></button><output id="sunAzOut">52&#176;</output></div>
+                <input id="sunAz" type="range" min="0" max="360" step="1" value="52">
+              </div>
+            </div>
           </div>
-          <div class="slider" data-shs="0">
-            <label class="lbl" for="shSoft">Softness</label><output id="shSoftOut">0.25</output>
-            <input id="shSoft" type="range" min="0" max="100" step="1" value="25">
+          <div class="mod" data-mod="sunel" data-shs="0123">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="sunEl">Sun up</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="sunEl" hidden></button><output id="sunElOut">34&#176;</output></div>
+                <input id="sunEl" type="range" min="-89" max="89" step="1" value="34">
+              </div>
+            </div>
           </div>
-          <div class="slider" data-shs="03">
-            <label class="lbl" for="shReach">Reach</label><output id="shReachOut">3.00</output>
-            <input id="shReach" type="range" min="50" max="600" step="10" value="300">
+          <div class="mod" data-mod="softness" data-shs="0">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="shSoft">Softness</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="shSoft" hidden></button><output id="shSoftOut">0.25</output></div>
+                <input id="shSoft" type="range" min="0" max="100" step="1" value="25">
+              </div>
+            </div>
           </div>
-          <div class="slider" data-shs="03">
-            <label class="lbl" for="shSteps" title="How many samples a shadow ray gets. More is slower and finds thinner things.">Shadow steps</label><output id="shStepsOut">96</output>
-            <input id="shSteps" type="range" min="8" max="128" step="4" value="96">
+          <div class="mod" data-mod="reach" data-shs="03">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="shReach">Reach</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="shReach" hidden></button><output id="shReachOut">3.00</output></div>
+                <input id="shReach" type="range" min="50" max="600" step="10" value="300">
+              </div>
+            </div>
           </div>
-          <div data-shs="1" hidden>
-            <p class="lbl" id="shMcLbl">Shadow sphere</p>
-            <div class="transport wrap" id="shMcSeg" role="group" aria-labelledby="shMcLbl"></div>
+          <div class="mod" data-mod="shsteps" data-shs="03">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="shSteps" title="How many samples a shadow ray gets. More is slower and finds thinner things.">Shadow steps</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="shSteps" hidden></button><output id="shStepsOut">96</output></div>
+                <input id="shSteps" type="range" min="8" max="128" step="4" value="96">
+              </div>
+            </div>
           </div>
-          <div class="preview" data-shs="12" hidden>
-            <canvas id="shPrev" width="88" height="88" aria-hidden="true"></canvas>
-            <p class="lbl" id="shPrevLbl">The shadow as it will be applied &mdash; after Level, Contrast and Amount</p>
+          <div class="mod" data-mod="shsphere" data-shs="1" hidden>
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt" id="shMcLbl">Shadow sphere</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport wrap" id="shMcSeg" role="group" aria-labelledby="shMcLbl"></div>
+            </div>
           </div>
-          <div class="slider">
-            <label class="lbl" for="shLevel" title="Where the edge between light and shadow sits. Only bites once Contrast is up.">Level</label><output id="shLevelOut">0.50</output>
-            <input id="shLevel" type="range" min="0" max="100" step="1" value="50">
+          <div class="mod" data-mod="shprev" data-shs="12" hidden>
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt">Preview</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="preview">
+                <canvas id="shPrev" width="88" height="88" aria-hidden="true"></canvas>
+                <p class="lbl" id="shPrevLbl">As it will be applied &mdash; after Level, Contrast and Amount</p>
+              </div>
+            </div>
           </div>
-          <div class="slider">
-            <label class="lbl" for="shContrast" title="How abruptly it crosses that edge. At 1 it is a hard line and the shadow has a boundary you can see.">Contrast</label><output id="shContrastOut">0.00</output>
-            <input id="shContrast" type="range" min="0" max="100" step="1" value="0">
+          <div class="mod" data-mod="shlevel">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="shLevel" title="Where the edge between light and shadow sits. Only bites once Contrast is up.">Level</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="shLevel" hidden></button><output id="shLevelOut">0.50</output></div>
+                <input id="shLevel" type="range" min="0" max="100" step="1" value="50">
+              </div>
+            </div>
           </div>
-          <div class="slider">
-            <label class="lbl" for="shDark" title="How much of the shadow is applied. At 1 a shadowed pixel is black.">Amount</label><output id="shDarkOut">0.85</output>
-            <input id="shDark" type="range" min="0" max="100" step="1" value="85">
+          <div class="mod" data-mod="shcontrast">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="shContrast" title="How abruptly it crosses that edge. At 1 it is a hard line and the shadow has a boundary you can see.">Contrast</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="shContrast" hidden></button><output id="shContrastOut">0.00</output></div>
+                <input id="shContrast" type="range" min="0" max="100" step="1" value="0">
+              </div>
+            </div>
           </div>
-          <p class="hint"><b>Left-drag</b> swings the sun, <b>right-drag</b> still turns the camera; <b>L</b> hands the left button back. For a hard black edge put <b>Contrast</b> and <b>Amount</b> to 1 and move <b>Level</b>.</p>
+          <div class="mod" data-mod="shamount">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="shDark" title="How much of the shadow is applied. At 1 a shadowed pixel is black.">Amount</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="shDark" hidden></button><output id="shDarkOut">0.85</output></div>
+                <input id="shDark" type="range" min="0" max="100" step="1" value="85">
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-      <div class="grp">
-        <button type="button" class="grph" data-grp="4" aria-expanded="true" aria-controls="grpb4">Material</button>
+      <div class="grp" data-gid="4">
+        <div class="grph">
+          <button type="button" class="grpt" data-grp="4" data-ico="sphere" aria-expanded="true" aria-controls="grpb4"><span class="grpn">Material</span></button>
+          <button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button>
+        </div>
         <div class="grpb" id="grpb4" data-grpb="4">
-          <div class="transport">
-            <button type="button" id="mcOn" aria-pressed="false" title="Shade from a photographed sphere instead of from lights. It replaces the material outright — the sun, the shadows and the rim all stop applying.">MatCap</button>
+          <div class="mod" data-mod="matcap">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt">MatCap</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport">
+                <button type="button" id="mcOn" aria-pressed="false" title="Shade from a photographed sphere instead of from lights. It replaces the material outright &#8212; the sun, the shadows and the rim all stop applying.">MatCap</button>
+              </div>
+            </div>
           </div>
-          <div>
-            <p class="lbl" id="mcLbl">Sphere</p>
-            <div class="transport wrap" id="mcSeg" role="group" aria-labelledby="mcLbl"></div>
+          <div class="mod" data-mod="sphere">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt" id="mcLbl">Sphere</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport wrap" id="mcSeg" role="group" aria-labelledby="mcLbl"></div>
+              <div class="transport">
+                <button type="button" id="mcAdd" title="Load a matcap sphere from this computer. It joins the list above and is used straight away.">Add</button>
+                <button type="button" id="mcSave" title="Keep the chosen sphere: on this device, and in the cloud so it follows the page to any computer.">Keep</button>
+                <button type="button" id="mcDel" title="Remove the chosen sphere, here and in the cloud. The two built-in ones stay.">Delete</button>
+              </div>
+              <input type="file" id="mcFile" accept="image/*" hidden>
+            </div>
           </div>
-          <div class="transport">
-            <button type="button" id="mcAdd" title="Load a matcap sphere from this computer. It joins the list above and is used straight away.">Add</button>
-            <button type="button" id="mcSave" title="Keep the chosen sphere: on this device, and in the cloud so it follows the page to any computer.">Keep</button>
-            <button type="button" id="mcDel" title="Remove the chosen sphere, here and in the cloud. The two built-in ones stay.">Delete</button>
+          <div class="mod" data-mod="normal">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt">Normal map</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport">
+                <button type="button" id="nmOn" aria-pressed="false" title="Lay an image over the surface as a normal map. It moves the normal itself, so the matcap, the sun, the shadow and the rim all pick the detail up together.">Normal map</button>
+              </div>
+            </div>
           </div>
-          <input type="file" id="mcFile" accept="image/*" hidden>
-          <div class="transport">
-            <button type="button" id="nmOn" aria-pressed="false" title="Lay an image over the surface as a normal map. It moves the normal itself, so the matcap, the sun, the shadow and the rim all pick the detail up together.">Normal map</button>
+          <div class="mod" data-mod="map">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt" id="nmLbl">Map</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport wrap" id="nmSeg" role="group" aria-labelledby="nmLbl"></div>
+              <div class="transport">
+                <button type="button" id="nmAdd" title="Load a normal map from this computer. It joins the list above and is used as the map straight away.">Add</button>
+                <button type="button" id="nmSave" title="Keep the chosen map: on this device, and in the cloud so it follows the page to any computer.">Keep</button>
+                <button type="button" id="nmDel" title="Remove the chosen map, here and in the cloud. The two built-in ones stay.">Delete</button>
+              </div>
+            </div>
           </div>
-          <div>
-            <p class="lbl" id="nmLbl">Map</p>
-            <div class="transport wrap" id="nmSeg" role="group" aria-labelledby="nmLbl"></div>
+          <div class="mod" data-mod="nmamt">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="nmAmt" title="How far the map is allowed to move the surface normal. 0 leaves it alone, 1 is the map in full.">Amount</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="nmAmt" hidden></button><output id="nmAmtOut">1.00</output></div>
+                <input id="nmAmt" type="range" min="0" max="100" step="1" value="100">
+              </div>
+            </div>
           </div>
-          <div class="transport">
-            <button type="button" id="nmAdd" title="Load a normal map from this computer. It joins the list above and is used as the map straight away.">Add</button>
-            <button type="button" id="nmSave" title="Keep the chosen map: on this device, and in the cloud so it follows the page to any computer.">Keep</button>
-            <button type="button" id="nmDel" title="Remove the chosen map, here and in the cloud. The two built-in ones stay.">Delete</button>
+          <div class="mod" data-mod="nmscale">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="nmScale" title="How many times over the map is laid across the object. Tiling is mirrored, so any image repeats without a seam.">Scale</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="nmScale" hidden></button><output id="nmScaleOut">2.00</output></div>
+                <input id="nmScale" type="range" min="10" max="1600" step="5" value="200">
+              </div>
+            </div>
           </div>
-          <div class="slider">
-            <label class="lbl" for="nmAmt" title="How far the map is allowed to move the surface normal. 0 leaves it alone, 1 is the map in full.">Amount</label><output id="nmAmtOut">1.00</output>
-            <input id="nmAmt" type="range" min="0" max="100" step="1" value="100">
-          </div>
-          <div class="slider">
-            <label class="lbl" for="nmScale" title="How many times over the map is laid across the object. Tiling is mirrored, so any image repeats without a seam.">Scale</label><output id="nmScaleOut">2.00</output>
-            <input id="nmScale" type="range" min="10" max="1600" step="5" value="200">
-          </div>
-          <p class="hint">A matcap is a photograph of a sphere: the surface is coloured by which way it points on screen, so whatever lit that sphere lights this. It overrides the sun.</p>
         </div>
       </div>
-
-      <div class="grp">
-        <button type="button" class="grph" data-grp="5" aria-expanded="true" aria-controls="grpb5">Transparency</button>
+      <div class="grp" data-gid="5">
+        <div class="grph">
+          <button type="button" class="grpt" data-grp="5" data-ico="glass" aria-expanded="true" aria-controls="grpb5"><span class="grpn">Transparency</span></button>
+          <button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button>
+        </div>
         <div class="grpb" id="grpb5" data-grpb="5">
-          <div class="transport">
-            <button type="button" id="glOn" aria-pressed="false" title="Let the eye through the surface instead of stopping it there. Off costs nothing at all; on, every pixel of the object marches again for each surface it is allowed through.">Transparent</button>
+          <div class="mod" data-mod="glass">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt">Transparent</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport">
+                <button type="button" id="glOn" aria-pressed="false" title="Let the eye through the surface instead of stopping it there. Off costs nothing at all; on, every pixel of the object marches again for each surface it is allowed through.">Transparent</button>
+              </div>
+            </div>
           </div>
-          <div class="slider">
-            <label class="lbl" for="gOpacity" title="How much of the surface itself still shows, square on. 0 is invisible but for its edges, 1 is solid.">Opacity</label><output id="gOpacityOut">0.15</output>
-            <input id="gOpacity" type="range" min="0" max="100" step="1" value="15">
+          <div class="mod" data-mod="gopacity">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="gOpacity" title="How much of the surface itself still shows, square on. 0 is invisible but for its edges, 1 is solid.">Opacity</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="gOpacity" hidden></button><output id="gOpacityOut">0.15</output></div>
+                <input id="gOpacity" type="range" min="0" max="100" step="1" value="15">
+              </div>
+            </div>
           </div>
-          <div class="slider">
-            <label class="lbl" for="gEdge" title="How solid a grazing angle stays. This is the part that reads as glass rather than as a faded object.">Edge</label><output id="gEdgeOut">0.60</output>
-            <input id="gEdge" type="range" min="0" max="100" step="1" value="60">
+          <div class="mod" data-mod="gedge">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="gEdge" title="How solid a grazing angle stays. This is the part that reads as glass rather than as a faded object.">Edge</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="gEdge" hidden></button><output id="gEdgeOut">0.60</output></div>
+                <input id="gEdge" type="range" min="0" max="100" step="1" value="60">
+              </div>
+            </div>
           </div>
-          <div class="slider">
-            <label class="lbl" for="gIor" title="How much the view bends on the way in. 1.00 is straight through, 1.33 water, 1.52 glass, 2.42 diamond.">Refraction</label><output id="gIorOut">1.45</output>
-            <input id="gIor" type="range" min="100" max="250" step="1" value="145">
+          <div class="mod" data-mod="gior">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="gIor" title="How much the view bends on the way in. 1.00 is straight through, 1.33 water, 1.52 glass, 2.42 diamond.">Refraction</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="gIor" hidden></button><output id="gIorOut">1.45</output></div>
+                <input id="gIor" type="range" min="100" max="250" step="1" value="145">
+              </div>
+            </div>
           </div>
-          <div class="swatches one">
-            <label class="lbl" for="gTint" title="The colour a ray still has after one unit of the body. White is water.">Tint</label>
-            <input type="color" id="gTint" value="#BFE9FF" aria-label="Glass tint">
+          <div class="mod" data-mod="gtint">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="gTint" title="The colour a ray still has after one unit of the body. White is water.">Tint</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <input type="color" id="gTint" value="#BFE9FF" aria-label="Glass tint">
+            </div>
           </div>
-          <div class="slider">
-            <label class="lbl" for="gDensity" title="How fast the tint builds with the distance a ray crosses. At 0 the body is perfectly clear whatever the tint is.">Density</label><output id="gDensityOut">0.90</output>
-            <input id="gDensity" type="range" min="0" max="400" step="1" value="90">
+          <div class="mod" data-mod="gdensity">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="gDensity" title="How fast the tint builds with the distance a ray crosses. At 0 the body is perfectly clear whatever the tint is.">Density</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="gDensity" hidden></button><output id="gDensityOut">0.90</output></div>
+                <input id="gDensity" type="range" min="0" max="400" step="1" value="90">
+              </div>
+            </div>
           </div>
-          <div class="slider">
-            <label class="lbl" for="gDepth" title="How many surfaces the eye may see through. 1 the front face and the sky behind it, 2 the far wall as well, more for what stands beyond the object. Each one costs another march.">Depth</label><output id="gDepthOut">2</output>
-            <input id="gDepth" type="range" min="1" max="4" step="1" value="2">
+          <div class="mod" data-mod="gdepth">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="gDepth" title="How many surfaces the eye may see through. 1 the front face and the sky behind it, 2 the far wall as well, more for what stands beyond the object. Each one costs another march.">Depth</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="gDepth" hidden></button><output id="gDepthOut">2</output></div>
+                <input id="gDepth" type="range" min="1" max="4" step="1" value="2">
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      <div class="grp">
-        <button type="button" class="grph" data-grp="6" aria-expanded="true" aria-controls="grpb6">Post</button>
+      <div class="grp" data-gid="6">
+        <div class="grph">
+          <button type="button" class="grpt" data-grp="6" data-ico="aperture" aria-expanded="true" aria-controls="grpb6"><span class="grpn">Post</span></button>
+          <button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button>
+        </div>
         <div class="grpb" id="grpb6" data-grpb="6">
-          <div class="slider">
-            <label class="lbl" for="pNoise" title="Film grain laid over the finished frame. Off unless you ask for it.">Noise</label><output id="pNoiseOut">0.00</output>
-            <input id="pNoise" type="range" min="0" max="200" step="1" value="0">
+          <div class="mod" data-mod="grain">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="pNoise" title="Film grain laid over the finished frame. Off unless you ask for it.">Noise</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="pNoise" hidden></button><output id="pNoiseOut">0.00</output></div>
+                <input id="pNoise" type="range" min="0" max="200" step="1" value="0">
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      <div class="grp">
-        <button type="button" class="grph" data-grp="7" aria-expanded="true" aria-controls="grpb7">UI</button>
+      <div class="grp" data-gid="7">
+        <div class="grph">
+          <button type="button" class="grpt" data-grp="7" data-ico="window" aria-expanded="true" aria-controls="grpb7"><span class="grpn">UI</span></button>
+          <button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button>
+        </div>
         <div class="grpb" id="grpb7" data-grpb="7">
-          <div class="slider">
-            <label class="lbl" for="uiFont">Font size</label><output id="uiFontOut">12</output>
-            <input id="uiFont" type="range" min="8" max="26" step="1" value="12">
+          <div class="mod" data-mod="uifont">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="uiFont">Font size</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="uiFont" hidden></button><output id="uiFontOut">12</output></div>
+                <input id="uiFont" type="range" min="8" max="26" step="1" value="12">
+              </div>
+            </div>
           </div>
-          <div class="slider">
-            <label class="lbl" for="uiAlpha">Opacity</label><output id="uiAlphaOut">0.94</output>
-            <input id="uiAlpha" type="range" min="0" max="100" step="1" value="94">
+          <div class="mod" data-mod="uisplit">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="uiSplit" title="How much of the width the left column of names takes. The controls get the rest.">Name column</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="uiSplit" hidden></button><output id="uiSplitOut">36%</output></div>
+                <input id="uiSplit" type="range" min="18" max="62" step="1" value="36">
+              </div>
+            </div>
           </div>
-          <div class="swatches">
-            <label class="lbl" for="uiBg">Background</label><label class="lbl" for="uiAccent">Colour</label>
-            <input type="color" id="uiBg" value="#04070c" aria-label="Menu background">
-            <input type="color" id="uiAccent" value="#2fd9c0" aria-label="Menu colour">
+          <div class="mod" data-mod="uialpha">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="uiAlpha">Opacity</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="uiAlpha" hidden></button><output id="uiAlphaOut">0.94</output></div>
+                <input id="uiAlpha" type="range" min="0" max="100" step="1" value="94">
+              </div>
+            </div>
           </div>
-          <p class="hint">The menu's left edge is a handle — drag it to set the width.</p>
+          <div class="mod" data-mod="uicolours">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt">Colours</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="swatches">
+                <div class="sw"><label class="lbl" for="uiBg">Back</label>
+                  <input type="color" id="uiBg" value="#04070c" aria-label="Menu background"></div>
+                <div class="sw"><label class="lbl" for="uiAccent">Accent</label>
+                  <input type="color" id="uiAccent" value="#2fd9c0" aria-label="Menu colour"></div>
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="uiheader">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="uiHeader" title="The colour the group headers are filled with, and the box each group is drawn in.">Headers</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <input type="color" id="uiHeader" value="#2fd9c0" aria-label="Group header colour">
+            </div>
+          </div>
+          <div class="mod" data-mod="arrange">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt">Arrange</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport">
+                <button type="button" id="rgOn" aria-pressed="false" title="Take hold of the console: drag a module by its grip to move it inside a group or into another one, drag a group header to reorder the groups, and rename either with the pencil.">Reorganise</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-      <div class="transport">
-        <button type="button" id="benchBtn" title="A fixed camera run over the object with the clock stepped by frame, not by time — the same work on every machine, so the numbers compare">Benchmark</button>
+      <div class="grp" data-gid="8">
+        <div class="grph">
+          <button type="button" class="grpt" data-grp="8" data-ico="layers" aria-expanded="true" aria-controls="grpb8"><span class="grpn">Templates</span></button>
+          <button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button>
+        </div>
+        <div class="grpb" id="grpb8" data-grpb="8">
+          <div class="mod" data-mod="tpllist">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt" id="tplLbl">Stored</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport wrap" id="tplSeg" role="group" aria-labelledby="tplLbl"></div>
+            </div>
+          </div>
+          <div class="mod" data-mod="tplkeep">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt">Keep</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport">
+                <button type="button" id="tplAdd" title="Store everything as it is now under a name of your choosing. Alt and its number recalls it.">Save as</button>
+                <button type="button" id="tplDel" title="Remove the template that is showing as chosen.">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="transport">
-        <button type="button" id="saveBtn" title="Open the page with everything set the way it is now — including the fly camera and the saved views">Save as default</button>
-        <button type="button" id="resetBtn" title="Forget the saved settings and go back to the built-in ones">Reset</button>
+        <button type="button" id="benchBtn" title="A fixed camera run over the object with the clock stepped by frame, not by time &#8212; the same work on every machine, so the numbers compare">Benchmark</button>
+      </div>
+      <div class="transport">
+        <button type="button" id="saveBtn" title="Open the page with everything set the way it is now &#8212; including the layout, the fly camera and the saved views">Save as default</button>
+        <button type="button" id="resetBtn" title="Go back to the settings that were last saved as the default. Templates are left alone.">Reset</button>
       </div>
       <p class="hint" id="cloudNote">Checking for saved settings…</p>
       <p class="hint" id="hint">Drag to steer · scroll to range in · R new view · 1-4 resolution · 5-0 saved views, shift+5-0 to store · shift+` fly</p>
@@ -1885,9 +2239,14 @@ void main(){
     glassOn: 0, glassOpacity: 0.15, glassEdge: 0.60, glassIor: 1.45,
     glassTint: "#BFE9FF", glassDensity: 0.90, glassDepth: 2,
     // which console groups are open
-    groups: [1, 1, 1, 1, 1, 1, 1, 1],
+    groups: [1, 1, 1, 1, 1, 1, 1, 1, 1],
     // the console's own look, and how wide it is
-    uiFont: 12, uiAlpha: 0.94, uiBg: "#04070c", uiAccent: "#2fd9c0", uiWidth: 150,
+    uiFont: 12, uiAlpha: 0.94, uiBg: "#04070c", uiAccent: "#2fd9c0",
+    uiHeader: "#2fd9c0", uiWidth: 240, uiSplit: 36,
+    // How it is arranged: the order of the groups, which modules each one
+    // holds, and what any of them have been renamed to. Null is the console as
+    // it was built, which is what a page that has never been rearranged uses.
+    uiOrder: null, uiMods: null, uiNames: null,
     uncap: 0                        // draw as fast as the machine will, not as fast as the display
   };
 
@@ -2609,31 +2968,82 @@ void main(){
   function paint(input){
     var pct = (input.value - input.min) / (input.max - input.min) * 100;
     input.style.setProperty("--pct", pct + "%");
+    if(DEFAULTS) chipFor(input.id);
+  }
+  // How each slider's reading is written, given the value the state holds.
+  // One table rather than a formatter buried in each handler: the handler, the
+  // readback after a value is typed, and the default shown beside the reading
+  // all want exactly the same words.
+  var FMT = {};
+  // Every slider as the pair that ties it to the state: the key it writes, and
+  // what its own value has to be multiplied by to get there. One table, so
+  // restoring the console from a saved setting and offering a way back to the
+  // default are the same piece of knowledge and cannot drift apart.
+  var SLIDE = [
+    ["density","density",1], ["spike","spike",100], ["thick","thick",1000],
+    ["warpAmt","warpAmt",100], ["warpFreq","warpFreq",100],
+    ["lcRelief","lcRelief",100], ["lcFreq","lcFreq",100],
+    ["lcThick","lcThick",2000], ["lcTwirl","lcTwirl",100],
+    ["rSteps","steps",1], ["rEps","eps",10], ["rOmega","omega",100],
+    ["rPad","boundPad",100],
+    ["sunAz","sunAz",180/Math.PI], ["sunEl","sunEl",180/Math.PI],
+    ["shSoft","shadowSoft",100], ["shReach","shadowReach",100],
+    ["shSteps","shadowSteps",1], ["shLevel","shadowLevel",100],
+    ["shContrast","shadowContrast",100], ["shDark","shadowDark",100],
+    ["nmAmt","normalAmt",100], ["nmScale","normalScale",100],
+    ["gOpacity","glassOpacity",100], ["gEdge","glassEdge",100],
+    ["gIor","glassIor",100], ["gDensity","glassDensity",100],
+    ["gDepth","glassDepth",1], ["pNoise","noise",100],
+    ["uiFont","uiFont",1], ["uiAlpha","uiAlpha",100], ["uiSplit","uiSplit",1]
+  ];
+  var DFLT = {};          // slider id -> { key, mul, btn }
+  var DEFAULTS = null;    // what Reset, and every one of those readings, go back to
+  // Shown only while the value differs from it, so the same small reading is
+  // both the way back and the mark that says this one has been touched.
+  function chipFor(id){
+    var d = DFLT[id];
+    if(!d || !d.btn || !DEFAULTS) return;
+    var want = DEFAULTS[d.key], have = state[d.key];
+    var same = typeof want !== "number" || typeof have !== "number" ||
+               Math.abs(want - have) <= 1e-6 * Math.max(1, Math.abs(want));
+    d.btn.hidden = same;
+    if(!same) d.btn.textContent = FMT[id] ? FMT[id](want) : String(want);
+  }
+  function chipsAll(){ for(var id in DFLT) chipFor(id); }
+  function toDefault(id){
+    var d = DFLT[id];
+    if(!d || !DEFAULTS) return;
+    slide(document.getElementById(id), DEFAULTS[d.key] * d.mul);
+    if(id === "rSteps") state.stepsPin = !!DEFAULTS.stepsPin;
+    chipFor(id); telemetry();
   }
   var dens = document.getElementById("density"), densOut = document.getElementById("densityOut");
   var spk  = document.getElementById("spike"),   spkOut  = document.getElementById("spikeOut");
+  FMT.density = function(v){ return Math.round(1.45 / v * UM_PER_UNIT) + " \u00b5m pitch"; };
+  FMT.spike   = function(v){ return (v * 11).toFixed(1) + " Hz"; };
+  FMT.thick   = function(v){ return (v * 2 * UM_PER_UNIT).toFixed(1) + " \u00b5m"; };
   dens.addEventListener("input", function(){
     state.density = parseFloat(dens.value);
-    densOut.textContent = Math.round(1.45 / state.density * UM_PER_UNIT) + " µm pitch";
+    densOut.textContent = FMT.density(state.density);
     paint(dens); telemetry();
   });
   spk.addEventListener("input", function(){
     state.spike = parseFloat(spk.value) / 100;
-    spkOut.textContent = (state.spike * 11).toFixed(1) + " Hz";
+    spkOut.textContent = FMT.spike(state.spike);
     paint(spk); telemetry();
   });
   var thk = document.getElementById("thick"), thkOut = document.getElementById("thickOut");
   thk.addEventListener("input", function(){
     state.thick = parseFloat(thk.value) / 1000;
-    thkOut.textContent = (state.thick * 2 * UM_PER_UNIT).toFixed(1) + " µm";
+    thkOut.textContent = FMT.thick(state.thick);
     paint(thk); telemetry();
   });
   paint(dens); paint(spk); paint(thk);
-  editable(densOut, function(){ densOut.textContent = Math.round(1.45 / state.density * UM_PER_UNIT) + " \u00b5m pitch"; },
+  editable(densOut, function(){ densOut.textContent = FMT.density(state.density); },
            function(v){ state.density = 1.45 * UM_PER_UNIT / Math.max(v, 1e-3); dens.value = state.density; paint(dens); });
-  editable(spkOut, function(){ spkOut.textContent = (state.spike * 11).toFixed(1) + " Hz"; },
+  editable(spkOut, function(){ spkOut.textContent = FMT.spike(state.spike); },
            function(v){ state.spike = v / 11; spk.value = state.spike * 100; paint(spk); });
-  editable(thkOut, function(){ thkOut.textContent = (state.thick * 2 * UM_PER_UNIT).toFixed(1) + " \u00b5m"; },
+  editable(thkOut, function(){ thkOut.textContent = FMT.thick(state.thick); },
            function(v){ state.thick = v / (2 * UM_PER_UNIT); thk.value = state.thick * 1000; paint(thk); });
 
   if(software){
@@ -2657,7 +3067,7 @@ void main(){
   function setMorph(v){
     state.morph = v;
     morphBtn.setAttribute("aria-pressed", v ? "true" : "false");
-    morphBtn.title = (v ? "Freeze the field" : "Animate the field") + " (M)";
+    morphBtn.title = (v ? "Freeze the field" : "Animate the field") + " (shift+M)";
     telemetry();
   }
   morphBtn.addEventListener("click", function(){ setMorph(!state.morph); morphBtn.blur(); });
@@ -2694,21 +3104,23 @@ void main(){
   });
   var wAmt = document.getElementById("warpAmt"), wAmtOut = document.getElementById("warpAmtOut");
   var wFrq = document.getElementById("warpFreq"), wFrqOut = document.getElementById("warpFreqOut");
+  FMT.warpAmt  = function(v){ return v.toFixed(2); };
+  FMT.warpFreq = function(v){ return v.toFixed(2) + " /unit"; };
   wAmt.addEventListener("input", function(){
     state.warpAmt = parseFloat(wAmt.value) / 100;
-    wAmtOut.textContent = state.warpAmt.toFixed(2);
+    wAmtOut.textContent = FMT.warpAmt(state.warpAmt);
     paint(wAmt);
   });
   wFrq.addEventListener("input", function(){
     state.warpFreq = parseFloat(wFrq.value) / 100;
-    wFrqOut.textContent = state.warpFreq.toFixed(2) + " /unit";
+    wFrqOut.textContent = FMT.warpFreq(state.warpFreq);
     paint(wFrq);
   });
 
   paint(wAmt); paint(wFrq);
-  editable(wAmtOut, function(){ wAmtOut.textContent = state.warpAmt.toFixed(2); },
+  editable(wAmtOut, function(){ wAmtOut.textContent = FMT.warpAmt(state.warpAmt); },
            function(v){ state.warpAmt = v; wAmt.value = v * 100; paint(wAmt); });
-  editable(wFrqOut, function(){ wFrqOut.textContent = state.warpFreq.toFixed(2) + " /unit"; },
+  editable(wFrqOut, function(){ wFrqOut.textContent = FMT.warpFreq(state.warpFreq); },
            function(v){ state.warpFreq = v; wFrq.value = v * 100; paint(wFrq); });
 
   var lcBtns = document.querySelectorAll("[data-lc]");
@@ -2746,6 +3158,7 @@ void main(){
   // in different units from the value behind it.
   function numSlider(id, key, scale, fmt, toState){
     var inp = document.getElementById(id), out = document.getElementById(id + "Out");
+    FMT[id] = fmt;
     inp.addEventListener("input", function(){
       state[key] = parseFloat(inp.value) * scale;
       out.textContent = fmt(state[key]);
@@ -3146,23 +3559,27 @@ void main(){
   colA.addEventListener("input", function(){ state.colors[state.scene][0] = colA.value; });
   colB.addEventListener("input", function(){ state.colors[state.scene][1] = colB.value; });
 
+  FMT.rSteps = function(v){ return String(v); };
+  FMT.rEps   = function(v){ return v.toFixed(1); };
+  FMT.rOmega = function(v){ return v.toFixed(2) + "\u00d7"; };
+  FMT.rPad   = function(v){ return v.toFixed(2); };
   var rSteps = document.getElementById("rSteps"), rStepsOut = document.getElementById("rStepsOut");
   rSteps.addEventListener("input", function(){
     state.steps = parseFloat(rSteps.value);
     state.stepsPin = true;          // stop the frame-time controller trimming it
-    rStepsOut.textContent = String(state.steps);
+    rStepsOut.textContent = FMT.rSteps(state.steps);
     paint(rSteps); telemetry();
   });
   var rEps = document.getElementById("rEps"), rEpsOut = document.getElementById("rEpsOut");
   rEps.addEventListener("input", function(){
     state.eps = parseFloat(rEps.value) / 10;
-    rEpsOut.textContent = state.eps.toFixed(1);
+    rEpsOut.textContent = FMT.rEps(state.eps);
     paint(rEps); telemetry();
   });
   var rOmega = document.getElementById("rOmega"), rOmegaOut = document.getElementById("rOmegaOut");
   rOmega.addEventListener("input", function(){
     state.omega = parseFloat(rOmega.value) / 100;
-    rOmegaOut.textContent = state.omega.toFixed(2) + "\u00d7";
+    rOmegaOut.textContent = FMT.rOmega(state.omega);
     paint(rOmega); telemetry();
   });
   var bndBtns = document.querySelectorAll("[data-bnd]");
@@ -3178,17 +3595,17 @@ void main(){
   var rPad = document.getElementById("rPad"), rPadOut = document.getElementById("rPadOut");
   rPad.addEventListener("input", function(){
     state.boundPad = parseFloat(rPad.value) / 100;
-    rPadOut.textContent = state.boundPad.toFixed(2);
+    rPadOut.textContent = FMT.rPad(state.boundPad);
     paint(rPad); telemetry();
   });
   paint(rSteps); paint(rEps); paint(rOmega); paint(rPad);
-  editable(rStepsOut, function(){ rStepsOut.textContent = state.stepsPin ? String(state.steps) : "auto " + marchSteps(); },
+  editable(rStepsOut, function(){ rStepsOut.textContent = state.stepsPin ? FMT.rSteps(state.steps) : "auto " + marchSteps(); },
            function(v){ state.steps = Math.max(1, Math.round(v)); state.stepsPin = true; rSteps.value = state.steps; paint(rSteps); });
-  editable(rEpsOut, function(){ rEpsOut.textContent = state.eps.toFixed(1); },
+  editable(rEpsOut, function(){ rEpsOut.textContent = FMT.rEps(state.eps); },
            function(v){ state.eps = v; rEps.value = v * 10; paint(rEps); });
-  editable(rOmegaOut, function(){ rOmegaOut.textContent = state.omega.toFixed(2) + "\u00d7"; },
+  editable(rOmegaOut, function(){ rOmegaOut.textContent = FMT.rOmega(state.omega); },
            function(v){ state.omega = v; rOmega.value = v * 100; paint(rOmega); });
-  editable(rPadOut, function(){ rPadOut.textContent = state.boundPad.toFixed(2); },
+  editable(rPadOut, function(){ rPadOut.textContent = FMT.rPad(state.boundPad); },
            function(v){ state.boundPad = v; rPad.value = v * 100; paint(rPad); });
 
   var resBtns = document.querySelectorAll("[data-res]");
@@ -3251,12 +3668,25 @@ void main(){
     r.setProperty("--ui-bg", hexTriple(state.uiBg));
     r.setProperty("--fiber", state.uiAccent);
     r.setProperty("--line", "rgba(" + hexTriple(state.uiAccent) + ",.24)");
+    // Buttons carry a brighter edge than the panels do: they are the thing
+    // being pointed at, and at .24 two of them side by side went to mush.
+    r.setProperty("--bline", "rgba(" + hexTriple(state.uiAccent) + ",.55)");
+    r.setProperty("--grph", state.uiHeader);
+    r.setProperty("--gbox", "rgba(" + hexTriple(state.uiHeader) + ",.42)");
+    // Dark ink on a light header, light ink on a dark one, so the header is
+    // legible whatever colour it is set to.
+    var h = rgb(state.uiHeader);
+    var lum = 0.2126*h[0] + 0.7152*h[1] + 0.0722*h[2];
+    r.setProperty("--grph-ink", lum > 0.45 ? "#031018" : "#EAF6FF");
     r.setProperty("--menu-w", Math.round(state.uiWidth) + "px");
+    r.setProperty("--modw", Math.round(state.uiSplit) + "%");
     reframe();
   }
 
   var uiFontIn = document.getElementById("uiFont"), uiFontOut = document.getElementById("uiFontOut");
-  var uiFontTxt = function(){ return String(Math.round(state.uiFont)); };
+  FMT.uiFont  = function(v){ return String(Math.round(v)); };
+  FMT.uiAlpha = function(v){ return v.toFixed(2); };
+  var uiFontTxt = function(){ return FMT.uiFont(state.uiFont); };
   uiFontIn.addEventListener("input", function(){
     state.uiFont = parseFloat(uiFontIn.value);
     uiFontOut.textContent = uiFontTxt();
@@ -3269,16 +3699,29 @@ void main(){
   var uiAlphaIn = document.getElementById("uiAlpha"), uiAlphaOut = document.getElementById("uiAlphaOut");
   uiAlphaIn.addEventListener("input", function(){
     state.uiAlpha = parseFloat(uiAlphaIn.value) / 100;
-    uiAlphaOut.textContent = state.uiAlpha.toFixed(2);
+    uiAlphaOut.textContent = FMT.uiAlpha(state.uiAlpha);
     paint(uiAlphaIn); applyUI();
   });
   paint(uiAlphaIn);
-  editable(uiAlphaOut, function(){ uiAlphaOut.textContent = state.uiAlpha.toFixed(2); },
+  editable(uiAlphaOut, function(){ uiAlphaOut.textContent = FMT.uiAlpha(state.uiAlpha); },
            function(v){ state.uiAlpha = v; uiAlphaIn.value = v * 100; paint(uiAlphaIn); applyUI(); });
 
   var uiBgIn = document.getElementById("uiBg"), uiAccentIn = document.getElementById("uiAccent");
   uiBgIn.addEventListener("input", function(){ state.uiBg = uiBgIn.value; applyUI(); });
   uiAccentIn.addEventListener("input", function(){ state.uiAccent = uiAccentIn.value; applyUI(); });
+  FMT.uiSplit = function(v){ return Math.round(v) + "%"; };
+  var uiSplitIn = document.getElementById("uiSplit"), uiSplitOut = document.getElementById("uiSplitOut");
+  uiSplitIn.addEventListener("input", function(){
+    state.uiSplit = parseFloat(uiSplitIn.value);
+    uiSplitOut.textContent = FMT.uiSplit(state.uiSplit);
+    paint(uiSplitIn); applyUI();
+  });
+  paint(uiSplitIn);
+  editable(uiSplitOut, function(){ uiSplitOut.textContent = FMT.uiSplit(state.uiSplit); },
+           function(v){ state.uiSplit = v; uiSplitIn.value = v; paint(uiSplitIn); applyUI(); });
+
+  var uiHeaderIn = document.getElementById("uiHeader");
+  uiHeaderIn.addEventListener("input", function(){ state.uiHeader = uiHeaderIn.value; applyUI(); });
 
   // the left edge is the handle
   var grip = document.getElementById("menuGrip");
@@ -3316,15 +3759,41 @@ void main(){
   applyUI();
 
   // ---- folding groups --------------------------------------------------
+  // A small drawing for each group, so the column can be found by shape as
+  // well as by reading it. One path each, stroked in the header's own ink.
+  var GICON = {
+    cube:  "M8 1.7 14 5v6l-6 3.3L2 11V5z M2 5l6 3.3L14 5 M8 8.3v6",
+    waves: "M1.6 5.6c1.8-2.8 3.2 2.8 5 0s3.2 2.8 5 0 M1.6 10.4c1.8-2.8 3.2 2.8 5 0s3.2 2.8 5 0",
+    grid:  "M2.5 2.5h11v11h-11z M2.5 6.2h11 M2.5 9.9h11 M6.2 2.5v11 M9.9 2.5v11",
+    sun:   "M8 4.8a3.2 3.2 0 1 0 .01 6.4A3.2 3.2 0 0 0 8 4.8 M8 1v1.5 M8 13.5V15 M1 8h1.5 M13.5 8H15 M3.1 3.1l1.1 1.1 M11.8 11.8l1.1 1.1 M12.9 3.1l-1.1 1.1 M4.2 11.8l-1.1 1.1",
+    sphere:"M8 1.7a6.3 6.3 0 1 0 .01 12.6A6.3 6.3 0 0 0 8 1.7 M5.6 5.4a2.6 1.7 0 1 0 .01 0",
+    glass: "M8 1.6 3.9 8a4.9 4.9 0 1 0 8.2 0z M6.1 9.6a2.5 2.5 0 0 0 2 2.4",
+    aperture:"M8 1.7a6.3 6.3 0 1 0 .01 12.6A6.3 6.3 0 0 0 8 1.7 M8 1.7 5.3 13.8 M14 6 2.6 10.6 M12.8 12 4.3 3.4",
+    window:"M2.2 3.2h11.6v9.6H2.2z M2.2 6.3h11.6 M4.3 4.7h.01 M6.3 4.7h.01",
+    layers:"M8 1.9 14.2 5 8 8.1 1.8 5z M1.8 8.4 8 11.5l6.2-3.1 M1.8 11.3 8 14.4l6.2-3.1"
+  };
+  Array.prototype.forEach.call(document.querySelectorAll(".grpt"), function(head){
+    var d = GICON[head.dataset.ico];
+    if(!d) return;
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "gico");
+    svg.setAttribute("viewBox", "0 0 16 16");
+    svg.setAttribute("aria-hidden", "true");
+    var p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    p.setAttribute("d", d);
+    svg.appendChild(p);
+    head.insertBefore(svg, head.firstChild);
+  });
+
   function setGroup(i, open){
     state.groups[i] = open ? 1 : 0;
-    var head = document.querySelector(".grph[data-grp='" + i + "']");
+    var head = document.querySelector(".grpt[data-grp='" + i + "']");
     var body = document.querySelector(".grpb[data-grpb='" + i + "']");
     if(head) head.setAttribute("aria-expanded", open ? "true" : "false");
     if(body) body.hidden = !open;
     reframe();
   }
-  Array.prototype.forEach.call(document.querySelectorAll(".grph"), function(head){
+  Array.prototype.forEach.call(document.querySelectorAll(".grpt"), function(head){
     head.addEventListener("click", function(){
       var i = parseInt(head.dataset.grp, 10);
       setGroup(i, !state.groups[i]);
@@ -3333,6 +3802,12 @@ void main(){
   });
   function syncGroups(){
     for(var i = 0; i < state.groups.length; i++) setGroup(i, !!state.groups[i]);
+  }
+  // M puts the whole console away, and brings it back if it is already away.
+  function foldAll(){
+    var anyOpen = false, i;
+    for(i = 0; i < state.groups.length; i++) if(state.groups[i]) anyOpen = true;
+    for(i = 0; i < state.groups.length; i++) setGroup(i, !anyOpen);
   }
   syncGroups();
 
@@ -3414,13 +3889,24 @@ void main(){
   window.addEventListener("keydown", function(e){
     if(e.target.tagName === "INPUT") return;
     held.shift = e.shiftKey ? 1 : 0;
+    // Alt is its own alphabet. A digit with alt held recalls a template, and
+    // nothing else on this page reads a key while alt is down — so alt+1 is
+    // one thing and 1 is another, which is the whole point of it.
+    if(e.altKey){
+      var tk = TPL_KEY[e.code];
+      if(tk !== undefined){ e.preventDefault(); tplRecall(tk); }
+      return;
+    }
     var fk = keyName(e);
     if(state.fly && FLYKEYS[fk] && !e.ctrlKey && !e.metaKey && !e.altKey){
       held[fk] = 1; e.preventDefault(); return;
     }
     // space is the one "freeze everything" key: camera and field together
     if(e.code === "Space"){ e.preventDefault(); var go = !state.running; setRunning(go); setMorph(go); }
-    if(e.key === "m" || e.key === "M"){ setMorph(!state.morph); }
+    // M puts the console away; the field's own animation moves to shift+M
+    if(e.key === "m" || e.key === "M"){
+      if(e.shiftKey) setMorph(!state.morph); else foldAll();
+    }
     if(e.key === "i" || e.key === "I"){ setSpikes(!state.spikeOn); }
     if(e.key === "r" || e.key === "R"){ randomView(); }
     if(e.key === "l" || e.key === "L"){ setSunMode(!sunMode); }
@@ -3739,7 +4225,8 @@ void main(){
     "matcapOn","matcap","normalOn","normalMc","normalAmt","normalScale",
     "glassOn","glassOpacity","glassEdge","glassIor","glassTint","glassDensity","glassDepth",
     "shadowSrc","shadowLevel","shadowContrast","shadowMc","shadowOnly","noise","shadowSteps",
-    "uiFont","uiAlpha","uiBg","uiAccent","uiWidth","uncap"];
+    "uiFont","uiAlpha","uiBg","uiAccent","uiHeader","uiWidth","uiSplit","uncap",
+    "uiOrder","uiMods","uiNames"];
 
   // this browser
   function readStore(){
@@ -3749,7 +4236,6 @@ void main(){
   function writeStore(o){
     try{ localStorage.setItem(SAVE_KEY, JSON.stringify(o)); return true; }catch(e){ return false; }
   }
-  function clearStore(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
 
   // and the cloud. One shared document, so the same defaults follow the page
   // to any computer — a per-browser identity would defeat exactly that. The
@@ -3791,11 +4277,6 @@ void main(){
       }})
     }).then(function(r){ if(!r.ok) throw 0; return true; });
   }
-  function cloudClear(){
-    return fetch(FB_URL, {method:"DELETE"})
-      .then(function(r){ if(!r.ok) throw 0; return true; });
-  }
-
   function snapshot(){
     var o = {};
     for(var i = 0; i < SAVE_KEYS.length; i++){
@@ -3836,53 +4317,29 @@ void main(){
     for(var i = 0; i < 3; i++) markToggle("warp", i, state.warpOn, state.warpOn[i]);
     for(var j = 0; j < 6; j++) markToggle("lc", j, state.lcOn, state.lcOn[j]);
     setRunning(!!state.running); setMorph(!!state.morph); setSpikes(!!state.spikeOn);
-    slide(dens, state.density);
-    slide(spk, state.spike * 100);
-    slide(thk, state.thick * 1000);
-    slide(wAmt, state.warpAmt * 100);
-    slide(wFrq, state.warpFreq * 100);
-    slide(document.getElementById("lcRelief"), state.lcRelief * 100);
-    slide(document.getElementById("lcFreq"),   state.lcFreq * 100);
-    slide(document.getElementById("lcThick"),  state.lcThick / 0.0005);
-    slide(document.getElementById("lcTwirl"),  state.lcTwirl * 100);
-    slide(rEps,   state.eps * 10);
-    slide(rOmega, state.omega * 100);
-    slide(rPad,   state.boundPad * 100);
+    // every slider, out of the one table that says how each reaches the state
     var pin = state.stepsPin;
-    slide(rSteps, state.steps);      // its handler pins the budget as a side effect
-    state.stepsPin = pin;
+    for(var si = 0; si < SLIDE.length; si++){
+      slide(document.getElementById(SLIDE[si][0]), state[SLIDE[si][1]] * SLIDE[si][2]);
+    }
+    state.stepsPin = pin;            // rSteps pins the budget as a side effect
     setShadows(!!state.shadowOn);
-    slide(document.getElementById("sunAz"),   state.sunAz / (Math.PI / 180));
-    slide(document.getElementById("sunEl"),   state.sunEl / (Math.PI / 180));
-    slide(document.getElementById("shSoft"),  state.shadowSoft * 100);
-    slide(document.getElementById("shDark"),  state.shadowDark * 100);
-    slide(document.getElementById("shReach"), state.shadowReach * 100);
-    slide(document.getElementById("shLevel"),    state.shadowLevel * 100);
-    slide(document.getElementById("shContrast"), state.shadowContrast * 100);
-    slide(document.getElementById("shSteps"), state.shadowSteps);
     applyShadowSrc();
     setShadowOnly(!!state.shadowOnly);
     setUncap(!!state.uncap);
-    slide(uiFontIn, state.uiFont);
-    slide(uiAlphaIn, state.uiAlpha * 100);
-    uiBgIn.value = state.uiBg; uiAccentIn.value = state.uiAccent;
+    uiBgIn.value = state.uiBg;
+    uiAccentIn.value = state.uiAccent;
+    uiHeaderIn.value = state.uiHeader;
     applyUI();
-    slide(document.getElementById("pNoise"), state.noise * 100);
     setMatcapOn(!!state.matcapOn);
     setNormalOn(!!state.normalOn);
-    slide(document.getElementById("nmAmt"),    state.normalAmt * 100);
-    slide(document.getElementById("nmScale"),  state.normalScale * 100);
     setGlassOn(!!state.glassOn);
-    slide(document.getElementById("gOpacity"), state.glassOpacity * 100);
-    slide(document.getElementById("gEdge"),    state.glassEdge * 100);
-    slide(document.getElementById("gIor"),     state.glassIor * 100);
-    slide(document.getElementById("gDensity"), state.glassDensity * 100);
-    slide(document.getElementById("gDepth"),   state.glassDepth);
     gTintIn.value = state.glassTint;
+    applyLayout();
     drawSpheresAll();
     syncGroups();
     applyScene();                    // reloads this object's colours into the swatches
-    resize(); telemetry();
+    resize(); telemetry(); chipsAll();
     restoring = false;
   }
   function applySaved(o){
@@ -3901,7 +4358,352 @@ void main(){
     return true;
   }
 
+  // ---- how the console is arranged -------------------------------------
+  // A group and a module are both just an element with a stable id on it. The
+  // arrangement is three small things — the order of the groups, which modules
+  // each one holds, and anything that has been renamed — and none of it is
+  // about what the page draws, so it rides in the saved settings like any
+  // other preference and travels in a template like one too.
+  var consoleEl = document.querySelector(".console");
+  var footAnchor = document.getElementById("benchBtn").parentNode;
+  var dirtyEl = document.getElementById("dirty");
+  var MODEL = {}, GRPEL = {}, HOME = {};
+  Array.prototype.forEach.call(consoleEl.querySelectorAll(".grp"), function(g){
+    GRPEL[g.dataset.gid] = g;
+    Array.prototype.forEach.call(g.querySelectorAll(".mod"), function(m){
+      MODEL[m.dataset.mod] = m;
+      HOME[m.dataset.mod] = g.dataset.gid;
+    });
+  });
+
+  var layoutDirty = false;
+  function setDirty(on){
+    layoutDirty = !!on;
+    if(dirtyEl) dirtyEl.hidden = !layoutDirty;
+    reframe();
+  }
+
+  function applyLayout(){
+    var k, el;
+    if(state.uiNames){
+      for(k in state.uiNames){
+        var nm = state.uiNames[k];
+        if(typeof nm !== "string" || !nm) continue;
+        if(k.charAt(0) === "g"){
+          el = GRPEL[k.slice(2)];
+          if(el) el.querySelector(".grpn").textContent = nm;
+        } else {
+          el = MODEL[k.slice(2)];
+          if(el) el.querySelector(".modt").textContent = nm;
+        }
+      }
+    }
+    if(state.uiMods){
+      var placed = {};
+      for(k in state.uiMods){
+        var body = GRPEL[k] && GRPEL[k].querySelector(".grpb");
+        if(!body) continue;
+        (state.uiMods[k] || []).forEach(function(id){
+          if(MODEL[id] && !placed[id]){ body.appendChild(MODEL[id]); placed[id] = 1; }
+        });
+      }
+      // a module this layout was saved before goes back where it was built
+      for(k in MODEL){
+        if(placed[k] || !GRPEL[HOME[k]]) continue;
+        GRPEL[HOME[k]].querySelector(".grpb").appendChild(MODEL[k]);
+      }
+    }
+    if(state.uiOrder){
+      state.uiOrder.forEach(function(gid){
+        if(GRPEL[gid]) consoleEl.insertBefore(GRPEL[gid], footAnchor);
+      });
+      for(k in GRPEL){
+        if(state.uiOrder.indexOf(k) < 0) consoleEl.insertBefore(GRPEL[k], footAnchor);
+      }
+    }
+    reframe();
+  }
+
+  // and the other way: the console as it now stands, written back into state
+  function readLayout(){
+    var order = [], mods = {}, names = {};
+    Array.prototype.forEach.call(consoleEl.querySelectorAll(".grp"), function(g){
+      var gid = g.dataset.gid;
+      order.push(gid);
+      names["g:" + gid] = g.querySelector(".grpn").textContent;
+      var list = [];
+      Array.prototype.forEach.call(g.querySelectorAll(".mod"), function(m){
+        list.push(m.dataset.mod);
+        names["m:" + m.dataset.mod] = m.querySelector(".modt").textContent;
+      });
+      mods[gid] = list;
+    });
+    state.uiOrder = order; state.uiMods = mods; state.uiNames = names;
+    setDirty(true);
+  }
+
+  // ---- taking hold of it ----------------------------------------------
+  var rgBtn = document.getElementById("rgOn");
+  var reorg = false;
+  function setReorg(on){
+    reorg = !!on;
+    document.body.classList.toggle("rg", reorg);
+    rgBtn.setAttribute("aria-pressed", reorg ? "true" : "false");
+    reframe();
+  }
+  rgBtn.addEventListener("click", function(){ setReorg(!reorg); rgBtn.blur(); });
+
+  // Moving things is done with the pointer rather than with the browser's own
+  // drag and drop: a grip is a small target, the console scrolls, and a phone
+  // has no drag gesture at all. A grip carries its module; a header carries the
+  // whole group. Nothing ever nests — a group is always beside another group.
+  var lifted = null, mark = null, markAfter = false;
+  var moved = false, startX = 0, startY = 0, swallowClick = false;
+  function clearMark(){
+    if(mark) mark.classList.remove("dropat", "dropaft");
+    mark = null;
+  }
+  function setMark(el, after){
+    if(mark === el && markAfter === after) return;
+    clearMark();
+    mark = el; markAfter = after;
+    el.classList.add(after ? "dropaft" : "dropat");
+  }
+  function lift(e, el){
+    if(!el) return;
+    lifted = el;
+    moved = false; startX = e.clientX; startY = e.clientY;
+    lifted.classList.add("lifting");
+    lifted.style.pointerEvents = "none";      // so it cannot shadow what is under it
+    try{ consoleEl.setPointerCapture(e.pointerId); }catch(err){}
+    e.preventDefault();
+  }
+  consoleEl.addEventListener("pointerdown", function(e){
+    if(!reorg || e.button !== 0 || !e.target.closest) return;
+    if(e.target.closest(".pen")) return;       // the pencil is a button, not a handle
+    var grip = e.target.closest(".mgrip");
+    if(grip){ lift(e, grip.closest(".mod")); return; }
+    var head = e.target.closest(".grph");
+    if(head) lift(e, head.parentNode);
+  });
+  consoleEl.addEventListener("pointermove", function(e){
+    if(!lifted) return;
+    e.preventDefault();
+    if(!moved){
+      if(Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY) < 4) return;
+      moved = true;
+    }
+    // near either end of a scrolling console, walk it along
+    var cr = consoleEl.getBoundingClientRect();
+    if(e.clientY < cr.top + 40) consoleEl.scrollTop -= 12;
+    else if(e.clientY > cr.bottom - 40) consoleEl.scrollTop += 12;
+
+    var t = document.elementFromPoint(e.clientX, e.clientY);
+    if(!t || !t.closest){ clearMark(); return; }
+    var g = t.closest(".grp");
+    if(lifted.classList.contains("mod")){
+      var over = t.closest(".mod");
+      if(over && over !== lifted){
+        var r = over.getBoundingClientRect();
+        setMark(over, e.clientY > r.top + r.height / 2);
+      } else if(g){
+        // anywhere else in a group — its header included, so a folded group can
+        // still be dropped into — means the end of that group
+        var kids = g.querySelector(".grpb").children, k = kids.length - 1;
+        while(k >= 0 && kids[k] === lifted) k--;
+        if(k >= 0) setMark(kids[k], true); else setMark(g.querySelector(".grph"), true);
+      } else clearMark();
+    } else if(g && g !== lifted){
+      var r2 = g.getBoundingClientRect();
+      setMark(g, e.clientY > r2.top + r2.height / 2);
+    } else clearMark();
+  });
+  function drop(e){
+    if(!lifted) return;
+    if(mark && moved){
+      if(mark.classList.contains("grph")) mark.parentNode.querySelector(".grpb").appendChild(lifted);
+      else mark.parentNode.insertBefore(lifted, markAfter ? mark.nextSibling : mark);
+      readLayout();
+    }
+    lifted.classList.remove("lifting");
+    lifted.style.pointerEvents = "";
+    swallowClick = moved;                      // a header that was dragged must not fold
+    lifted = null; moved = false; clearMark();
+    try{ consoleEl.releasePointerCapture(e.pointerId); }catch(err){}
+  }
+  consoleEl.addEventListener("pointerup", drop);
+  consoleEl.addEventListener("pointercancel", drop);
+  consoleEl.addEventListener("click", function(e){
+    if(!swallowClick) return;
+    swallowClick = false;
+    e.preventDefault(); e.stopPropagation();
+  }, true);
+
+  // ---- and renaming it -------------------------------------------------
+  function rename(el){
+    if(!el || el.getAttribute("contenteditable") === "true") return;
+    el.setAttribute("contenteditable", "true");
+    el.classList.add("naming");
+    el.focus();
+    var sel = window.getSelection && window.getSelection();
+    if(sel && document.createRange){
+      var rg = document.createRange();
+      rg.selectNodeContents(el);
+      sel.removeAllRanges(); sel.addRange(rg);
+    }
+    function keys(e){
+      e.stopPropagation();                     // the page's own keys stand down
+      if(e.key === "Enter" || e.key === "Escape"){ e.preventDefault(); el.blur(); }
+    }
+    function done(){
+      el.removeEventListener("keydown", keys);
+      el.removeAttribute("contenteditable");
+      el.classList.remove("naming");
+      el.textContent = String(el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 30) || "—";
+      readLayout();
+    }
+    el.addEventListener("keydown", keys);
+    el.addEventListener("blur", done, { once: true });
+  }
+  Array.prototype.forEach.call(consoleEl.querySelectorAll(".pen"), function(b){
+    b.addEventListener("click", function(e){
+      e.preventDefault(); e.stopPropagation();
+      var head = b.closest(".grph"), m = b.closest(".mod");
+      if(head) rename(head.parentNode.querySelector(".grpn"));
+      else if(m) rename(m.querySelector(".modt"));
+    });
+  });
+
+  // ---- templates -------------------------------------------------------
+  // One whole snapshot under a name, recalled with alt and its number. Ten of
+  // them, held in this browser and in the cloud exactly as the spheres are —
+  // ten copies of the settings will not fit inside the settings.
+  var TPL_KEY = {Digit1:0, Digit2:1, Digit3:2, Digit4:3, Digit5:4,
+                 Digit6:5, Digit7:6, Digit8:7, Digit9:8, Digit0:9,
+                 Numpad1:0, Numpad2:1, Numpad3:2, Numpad4:3, Numpad5:4,
+                 Numpad6:5, Numpad7:6, Numpad8:7, Numpad9:8, Numpad0:9};
+  var TPL_MAX = 10;
+  var TPL_LOCAL = "cortical.templates.v1";
+  var TPL_URL = "https://firestore.googleapis.com/v1/projects/claudecode-3bb06" +
+                "/databases/(default)/documents/templates";
+  var TEMPLATES = [];
+  var tplAt = -1;
+  var tplSeg = document.getElementById("tplSeg");
+
+  function tplWriteLocal(){
+    try{ localStorage.setItem(TPL_LOCAL, JSON.stringify(TEMPLATES)); return true; }
+    catch(e){ return false; }
+  }
+  function tplCloudKeep(t){
+    return fetch(TPL_URL + "/" + t.id + MC_AUTH, {
+      method: "PATCH", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ fields: { name: {stringValue: t.name},
+                                       json: {stringValue: JSON.stringify(t.data)} } })
+    }).then(function(r){ if(!r.ok) throw 0; return true; });
+  }
+  function tplCloudDrop(id){
+    return fetch(TPL_URL + "/" + id + MC_AUTH, {method: "DELETE"})
+      .then(function(r){ if(!r.ok) throw 0; return true; });
+  }
+  function tplCloudRead(){
+    return fetch(TPL_URL + MC_AUTH + "&pageSize=20", {cache: "no-store"})
+      .then(function(r){ if(r.status === 404) return null; if(!r.ok) throw 0; return r.json(); })
+      .then(function(d){
+        return ((d && d.documents) || []).map(function(doc){
+          var f = doc.fields || {}, data = null;
+          try{ data = JSON.parse((f.json && f.json.stringValue) || ""); }catch(e){}
+          return { id: String(doc.name).split("/").pop(),
+                   name: (f.name && f.name.stringValue) || "Template", data: data };
+        }).filter(function(t){ return !!t.data; });
+      });
+  }
+  function drawTpl(){
+    if(!tplSeg) return;
+    tplSeg.innerHTML = "";
+    if(!TEMPLATES.length){
+      var p = document.createElement("p");
+      p.className = "lbl";
+      p.textContent = "None yet";
+      tplSeg.appendChild(p);
+      return;
+    }
+    TEMPLATES.forEach(function(t, i){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = ((i + 1) % 10) + " " + t.name;
+      b.title = "Recall " + t.name + " · alt+" + ((i + 1) % 10);
+      b.setAttribute("aria-pressed", i === tplAt ? "true" : "false");
+      b.addEventListener("click", function(){ tplRecall(i); b.blur(); });
+      tplSeg.appendChild(b);
+    });
+  }
+  function tplRecall(i){
+    var t = TEMPLATES[i];
+    if(!t || !t.data){ toast("Nothing on alt+" + ((i + 1) % 10)); return; }
+    applySaved(t.data);
+    tplAt = i; drawTpl(); setDirty(false);
+    toast(t.name);
+  }
+  document.getElementById("tplAdd").addEventListener("click", function(){
+    this.blur();
+    if(TEMPLATES.length >= TPL_MAX){ toast("Ten is the lot — delete one first"); return; }
+    var suggested = "Template " + (TEMPLATES.length + 1);
+    var name = window.prompt("A name for this template", suggested);
+    if(name === null) return;
+    name = String(name).replace(/\s+/g, " ").trim().slice(0, 18) || suggested;
+    var t = { id: sphereId(), name: name, data: snapshot() };
+    TEMPLATES.push(t);
+    tplAt = TEMPLATES.length - 1;
+    var here = tplWriteLocal();
+    drawTpl(); setDirty(false);
+    toast(here ? "Keeping " + name + "…" : "Cannot keep it on this device");
+    tplCloudKeep(t).then(function(){ toast(name + " kept everywhere"); })
+                   .catch(function(){ toast(here ? name + " kept on this device" : "Cannot keep " + name); });
+  });
+  document.getElementById("tplDel").addEventListener("click", function(){
+    this.blur();
+    var t = TEMPLATES[tplAt];
+    if(!t){ toast("Choose a template first"); return; }
+    TEMPLATES.splice(tplAt, 1);
+    tplAt = Math.min(tplAt, TEMPLATES.length - 1);
+    tplWriteLocal(); drawTpl();
+    toast(t.name + " removed");
+    tplCloudDrop(t.id).catch(function(){});
+  });
+  try{ TEMPLATES = JSON.parse(localStorage.getItem(TPL_LOCAL)) || []; }catch(e){ TEMPLATES = []; }
+  if(!(TEMPLATES instanceof Array)) TEMPLATES = [];
+  drawTpl();
+  tplCloudRead().then(function(list){
+    var added = 0;
+    (list || []).forEach(function(t){
+      for(var i = 0; i < TEMPLATES.length; i++) if(TEMPLATES[i].id === t.id) return;
+      if(TEMPLATES.length < TPL_MAX){ TEMPLATES.push(t); added++; }
+    });
+    if(added){ tplWriteLocal(); drawTpl(); }
+  }).catch(function(){});
+
+
   var BUILTIN = snapshot();          // captured before anything saved is applied
+  // What Reset goes back to, and what each slider offers a way back to: the
+  // settings as they were last saved, laid over the built-in ones so a setting
+  // that did not exist when they were saved still has a default.
+  function setDefaults(o){
+    DEFAULTS = JSON.parse(JSON.stringify(BUILTIN));
+    if(o) for(var k in o) if(o[k] !== undefined) DEFAULTS[k] = o[k];
+    chipsAll();
+  }
+  // one more pass now that every slider is wired, to find its reading
+  for(var sI = 0; sI < SLIDE.length; sI++){
+    (function(row){
+      var inp = document.getElementById(row[0]);
+      if(!inp) return;
+      var wrap = inp.parentNode.querySelector(".dflt");
+      DFLT[row[0]] = { key: row[1], mul: row[2], btn: wrap };
+      if(wrap) wrap.addEventListener("click", function(){ toDefault(row[0]); wrap.blur(); });
+      // and the slider itself, double-clicked, is the same way back
+      inp.addEventListener("dblclick", function(){ toDefault(row[0]); });
+    })(SLIDE[sI]);
+  }
   var saveBtn = document.getElementById("saveBtn");
   var resetBtn = document.getElementById("resetBtn");
   var flashT = 0;
@@ -3913,6 +4715,8 @@ void main(){
   saveBtn.addEventListener("click", function(){
     var snap = snapshot(), at = Date.now();
     var here = writeStore({ data: snap, at: at });
+    setDefaults(snap);               // this is what Reset means from now on
+    setDirty(false);
     saveBtn.blur();
     flash(saveBtn, "Saving\u2026", "Save as default");
     cloudWrite(snap, at).then(function(){
@@ -3922,16 +4726,19 @@ void main(){
       flash(saveBtn, here ? "Saved on this device" : "Can't save", "Save as default");
     });
   });
+  // Back to the settings last saved as the default — not to the built-in ones,
+  // and without touching a single template. Nothing is deleted by this.
   resetBtn.addEventListener("click", function(){
-    clearStore(); applySaved(BUILTIN);
+    applySaved(DEFAULTS || BUILTIN);
+    setDirty(false);
     resetBtn.blur(); flash(resetBtn, "Reset", "Reset");
-    cloudClear().catch(function(){});
   });
 
   // the local copy lands first so there is no flash of the wrong settings,
   // then the cloud overrides it only if it is actually newer
   var localSaved = readStore();
   if(localSaved && localSaved.data) applySaved(localSaved.data);
+  setDefaults(localSaved && localSaved.data);
   // the software clamp outranks a saved march budget, whoever saved it
   if(software){ state.steps = 56; state.stepsPin = false; }
   note(localSaved ? CLOUD_OFF : "Checking for saved settings\u2026");
@@ -3939,6 +4746,7 @@ void main(){
     note(CLOUD_ON);
     if(!c || (localSaved && localSaved.at >= c.at)) return;
     applySaved(c.data);
+    setDefaults(c.data);
     if(software){ state.steps = 56; state.stepsPin = false; }
     writeStore(c);                 // keep this browser's mirror current
   }).catch(function(){ note(CLOUD_OFF); });
