@@ -309,6 +309,50 @@
           </div>
         </div>
       </div>
+      <div class="grp" data-gid="10">
+        <div class="grph">
+          <button type="button" class="grpt" data-grp="10" data-ico="camera" aria-expanded="true" aria-controls="grpb10"><span class="grpn">Camera</span></button>
+          <button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button>
+        </div>
+        <div class="grpb" id="grpb10" data-grpb="10">
+          <div class="mod" data-mod="cammin">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="camMin" title="The slowest the wheel can wind flight down to. Type a number into the reading for anything below what the slider reaches &#8212; a crawl of a thousandth of a unit a second is a legal speed.">Slowest</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="camMin" hidden></button><output id="camMinOut">0.030</output></div>
+                <input id="camMin" type="range" min="1" max="1000" step="1" value="30">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="cammax">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="camMax" title="The fastest the wheel can wind flight up to. Shift still sprints past it.">Fastest</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="camMax" hidden></button><output id="camMaxOut">12.0</output></div>
+                <input id="camMax" type="range" min="5" max="600" step="1" value="120">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="camlook">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="camLook" title="How much the view lags the mouse when flying. At nothing it follows exactly, which is how it has always been.">Look smoothing</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="camLook" hidden></button><output id="camLookOut">0.00</output></div>
+                <input id="camLook" type="range" min="0" max="100" step="1" value="0">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="cammove">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="camMove" title="How much the camera eases into and out of movement when flying. At nothing it starts and stops dead.">Move smoothing</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="camMove" hidden></button><output id="camMoveOut">0.00</output></div>
+                <input id="camMove" type="range" min="0" max="100" step="1" value="0">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="grp" data-gid="1">
         <div class="grph">
           <button type="button" class="grpt" data-grp="1" data-ico="waves" aria-expanded="true" aria-controls="grpb1"><span class="grpn">Object modifications</span></button>
@@ -948,11 +992,21 @@
               <div class="transport wrap" id="tplSeg" role="group" aria-labelledby="tplLbl"></div>
             </div>
           </div>
+          <div class="mod" data-mod="tplfade">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="tplMix" title="Cross-fade from where you are now to the next template in the list. Let go anywhere in between and you stay there. Take it all the way and that template becomes the one you are on, ready to fade to the one after it. The object never changes underneath you.">Fade to next</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><output id="tplMixOut">None yet</output></div>
+                <input id="tplMix" type="range" min="0" max="100" step="1" value="0">
+              </div>
+            </div>
+          </div>
           <div class="mod" data-mod="tplkeep">
             <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt">Keep</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
             <div class="modc">
               <div class="transport">
                 <button type="button" id="tplAdd" title="Store everything as it is now under a name of your choosing. Alt and its number recalls it.">Save as</button>
+                <button type="button" id="tplUpd" title="Write everything as it is now into the template showing as chosen, keeping its name and its number.">Update</button>
                 <button type="button" id="tplDel" title="Remove the template that is showing as chosen.">Delete</button>
               </div>
             </div>
@@ -2501,6 +2555,10 @@ void main(){
     // free navigation: world position, look angles, metres per second
     fly: 0,
     flyPos: [0, 0, 3], flyYaw: 0, flyPitch: 0, flySpeed: 0.60,
+    // what the wheel may wind flight down and up to, and how much the view and
+    // the movement lag behind the hand. Smoothing at nothing is the flight this
+    // page has always had, exactly.
+    flyMin: 0.030, flyMax: 12.0, lookSmooth: 0.00, moveSmooth: 0.00,
     // six camera slots, recalled with 5-0 and stored with shift+5-0
     favs: [null, null, null, null, null, null],
     // the matcap: off, and which sphere it would use
@@ -2520,7 +2578,7 @@ void main(){
     glassOn: 0, glassOpacity: 0.15, glassEdge: 0.60, glassIor: 1.45,
     glassTint: "#BFE9FF", glassDensity: 0.90, glassDepth: 2,
     // which console groups are open
-    groups: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    groups: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     // the console's own look, and how wide it is
     uiFont: 12, uiAlpha: 0.94, uiBg: "#04070c", uiAccent: "#2fd9c0",
     uiHeader: "#2fd9c0", uiWidth: 240, uiSplit: 36,
@@ -2657,10 +2715,29 @@ void main(){
     return [-Math.cos(state.flyYaw), 0, Math.sin(state.flyYaw)];
   }
   function flyLook(dx, dy){
-    state.flyYaw  -= dx * 0.0040;
-    state.flyPitch = Math.max(-1.553, Math.min(1.553, state.flyPitch - dy * 0.0040));
+    tYaw  -= dx * 0.0040;
+    tPitch = Math.max(-1.553, Math.min(1.553, tPitch - dy * 0.0040));
+    if(state.lookSmooth <= 0){ state.flyYaw = tYaw; state.flyPitch = tPitch; }
   }
-  function setFlySpeed(v){ state.flySpeed = Math.max(0.03, Math.min(12, v)); }
+  function setFlySpeed(v){
+    state.flySpeed = Math.max(state.flyMin, Math.min(state.flyMax, v));
+  }
+
+  // ---- smoothing -------------------------------------------------------
+  // The hand sets a target and the camera walks toward it, by the same fraction
+  // of the remaining distance every second however long a frame happens to be.
+  // At nothing the target IS the camera and this is the flight it always was,
+  // to the digit — there is no lerp to round anything off.
+  var tYaw = 0, tPitch = 0, tPos = [0, 0, 3];
+  function flySync(){
+    tYaw = state.flyYaw; tPitch = state.flyPitch;
+    tPos = [state.flyPos[0], state.flyPos[1], state.flyPos[2]];
+  }
+  function easeK(amount, dt){
+    if(amount <= 0) return 1;
+    // 0.02 s of lag at the bottom of the slider, 0.9 s at the top
+    return 1 - Math.exp(-dt / (0.02 + amount * amount * 0.88));
+  }
   // put the camera at pos with the given point dead ahead
   function aimAt(pos, target){
     var d = [target[0]-pos[0], target[1]-pos[1], target[2]-pos[2]];
@@ -2668,17 +2745,34 @@ void main(){
     state.flyPos = [pos[0], pos[1], pos[2]];
     state.flyPitch = Math.asin(Math.max(-1, Math.min(1, d[1]/l)));
     state.flyYaw = Math.atan2(d[0]/l, d[2]/l);
+    flySync();                    // put there, not eased there
   }
   function flyStep(dt){
     var mx = (held.d ? 1 : 0) - (held.a ? 1 : 0);   // strafe
     var mz = (held.w ? 1 : 0) - (held.s ? 1 : 0);   // forward
     var my = (held.e ? 1 : 0) - (held.q ? 1 : 0);   // world up / down
-    if(!mx && !mz && !my) return;
-    var f = flyFwd(), r = flyRight();
-    var v = state.flySpeed * (held.shift ? 3.5 : 1.0) * dt;
-    state.flyPos[0] += (f[0]*mz + r[0]*mx) * v;
-    state.flyPos[1] += (f[1]*mz + my) * v;
-    state.flyPos[2] += (f[2]*mz + r[2]*mx) * v;
+    if(mx || mz || my){
+      var f = flyFwd(), r = flyRight();
+      var v = state.flySpeed * (held.shift ? 3.5 : 1.0) * dt;
+      tPos[0] += (f[0]*mz + r[0]*mx) * v;
+      tPos[1] += (f[1]*mz + my) * v;
+      tPos[2] += (f[2]*mz + r[2]*mx) * v;
+    }
+    if(state.moveSmooth <= 0){
+      state.flyPos[0] = tPos[0]; state.flyPos[1] = tPos[1]; state.flyPos[2] = tPos[2];
+    } else {
+      var km = easeK(state.moveSmooth, dt);
+      state.flyPos[0] += (tPos[0] - state.flyPos[0]) * km;
+      state.flyPos[1] += (tPos[1] - state.flyPos[1]) * km;
+      state.flyPos[2] += (tPos[2] - state.flyPos[2]) * km;
+    }
+    if(state.lookSmooth <= 0){
+      state.flyYaw = tYaw; state.flyPitch = tPitch;
+    } else {
+      var kl = easeK(state.lookSmooth, dt);
+      state.flyYaw   += (tYaw - state.flyYaw) * kl;
+      state.flyPitch += (tPitch - state.flyPitch) * kl;
+    }
   }
 
   // The sun as a direction, the same way the shader builds it.
@@ -3176,6 +3270,7 @@ void main(){
     if(on && !state.fly) aimAt(eye, tgt);
     state.fly = on ? 1 : 0;
     held = {};
+    flySync();
     state.velAz = 0; state.velEl = 0;
     Array.prototype.forEach.call(navBtns, function(b){
       b.setAttribute("aria-pressed", parseInt(b.dataset.nav, 10) === state.fly ? "true" : "false");
@@ -3306,6 +3401,8 @@ void main(){
     ["gIor","glassIor",100], ["gDensity","glassDensity",100],
     ["gDepth","glassDepth",1], ["pNoise","noise",100],
     ["dmAmt","depthAmt",100], ["dmDist","depthDist",100], ["pHaze","haze",100], ["pGlow","glow",100],
+    ["camMin","flyMin",1000], ["camMax","flyMax",10],
+    ["camLook","lookSmooth",100], ["camMove","moveSmooth",100],
     ["uiFont","uiFont",1], ["uiAlpha","uiAlpha",100], ["uiSplit","uiSplit",1]
   ];
   var DFLT = {};          // slider id -> { key, mul, btn }
@@ -3513,6 +3610,23 @@ void main(){
   numSlider("pNoise",     "noise",          0.01, f2);
   numSlider("pHaze",      "haze",           0.01, f2);
   numSlider("pGlow",      "glow",           0.01, f2);
+  // The slider reaches a thousandth of a unit a second; the reading can be
+  // typed into for anything below that, down to a ten-thousandth.
+  numSlider("camMin", "flyMin", 0.001, function(v){ return v.toFixed(3); },
+            function(v){ return Math.max(0.0001, Math.min(4, v)); });
+  numSlider("camMax", "flyMax", 0.1, function(v){ return v.toFixed(1); },
+            function(v){ return Math.max(0.05, Math.min(400, v)); });
+  numSlider("camLook", "lookSmooth", 0.01, f2);
+  numSlider("camMove", "moveSmooth", 0.01, f2);
+  // a limit that moves under the speed drags the speed with it
+  ["camMin", "camMax"].forEach(function(id){
+    document.getElementById(id).addEventListener("input", function(){
+      if(state.flyMin > state.flyMax){
+        if(id === "camMin") state.flyMax = state.flyMin; else state.flyMin = state.flyMax;
+      }
+      setFlySpeed(state.flySpeed);
+    });
+  });
   numSlider("shSteps",    "shadowSteps",    1,    function(v){ return String(Math.round(v)); },
             function(v){ return Math.max(4, Math.round(v)); });
 
@@ -4460,6 +4574,7 @@ void main(){
     aperture:"M8 1.7a6.3 6.3 0 1 0 .01 12.6A6.3 6.3 0 0 0 8 1.7 M8 1.7 5.3 13.8 M14 6 2.6 10.6 M12.8 12 4.3 3.4",
     window:"M2.2 3.2h11.6v9.6H2.2z M2.2 6.3h11.6 M4.3 4.7h.01 M6.3 4.7h.01",
     layers:"M8 1.9 14.2 5 8 8.1 1.8 5z M1.8 8.4 8 11.5l6.2-3.1 M1.8 11.3 8 14.4l6.2-3.1",
+    camera:"M2.2 4.9h2.7l1.1-1.6h4l1.1 1.6h2.7v7.5H2.2z M8 6.6a2.3 2.3 0 1 0 .01 4.6A2.3 2.3 0 0 0 8 6.6",
     decal: "M2.2 1.9h8v5.2h-8z M6.2 7.9v2.6 M4.6 9.2 6.2 10.8 7.8 9.2 M1.5 13.3c1.7-2.4 3 2.4 4.7 0s3 2.4 4.7 0"
   };
   Array.prototype.forEach.call(document.querySelectorAll(".grpt"), function(head){
@@ -4921,6 +5036,8 @@ void main(){
     "steps","stepsPin","warpAmt","warpFreq","warpOn","warpMode","lcOn","lcRelief","lcFreq","lcThick",
     "lcTwirl","colors","density","spike","spikeOn","thick","zoom","flySpeed","running","morph",
     "flyPos","flyYaw","flyPitch","favs","groups",
+    "flyMin","flyMax","lookSmooth","moveSmooth",
+    "clock","mClock","pClock","dragAz","dragEl",
     "shadowOn","sunAz","sunEl","shadowSoft","shadowDark","shadowReach",
     "matcapOn","matcap","normalOn","normalMc","normalAmt","normalScale",
     "glassOn","glassOpacity","glassEdge","glassIor","glassTint","glassDensity","glassDepth",
@@ -5040,6 +5157,8 @@ void main(){
     while(state.groups.length < GROUPN) state.groups.push(1);
     gTintIn.value = state.glassTint;
     applyLayout();
+    flySync();                       // the camera is where it was put, not easing toward it
+    state.velAz = 0; state.velEl = 0; // and it is not still carrying a drag
     drawSpheresAll();
     syncGroups();
     applyScene();                    // reloads this object's colours into the swatches
@@ -5345,7 +5464,9 @@ void main(){
     var t = TEMPLATES[i];
     if(!t || !t.data){ toast("Nothing on alt+" + ((i + 1) % 10)); return; }
     applySaved(t.data);
-    tplAt = i; drawTpl(); setDirty(false);
+    tplAt = i; fadeFrom = null;
+    if(mixEl){ mixEl.value = 0; paint(mixEl); }
+    drawTpl(); drawMix(); setDirty(false);
     toast(t.name);
   }
   document.getElementById("tplAdd").addEventListener("click", function(){
@@ -5358,25 +5479,122 @@ void main(){
     var t = { id: sphereId(), name: name, data: snapshot() };
     TEMPLATES.push(t);
     tplAt = TEMPLATES.length - 1;
+    fadeFrom = null;
     var here = tplWriteLocal();
-    drawTpl(); setDirty(false);
+    drawTpl(); drawMix(); setDirty(false);
     toast(here ? "Keeping " + name + "…" : "Cannot keep it on this device");
     tplCloudKeep(t).then(function(){ toast(name + " kept everywhere"); })
                    .catch(function(){ toast(here ? name + " kept on this device" : "Cannot keep " + name); });
   });
+  // Write over the one showing as chosen, keeping its name and its number.
+  document.getElementById("tplUpd").addEventListener("click", function(){
+    this.blur();
+    var t = TEMPLATES[tplAt];
+    if(!t){ toast("Choose a template first"); return; }
+    t.data = snapshot();
+    fadeFrom = null;                       // whatever it was fading from is gone
+    var here = tplWriteLocal();
+    drawTpl(); drawMix(); setDirty(false);
+    toast(here ? "Updating " + t.name + "\u2026" : "Cannot keep it on this device");
+    tplCloudKeep(t).then(function(){ toast(t.name + " updated everywhere"); })
+                   .catch(function(){ toast(here ? t.name + " updated on this device"
+                                                 : "Cannot update " + t.name); });
+  });
+
+  // ---- fading from here to the next one --------------------------------
+  // Numbers and colours cross over. Anything that is a choice rather than an
+  // amount — which bound, which build steps, whether a thing is on — flips at
+  // the half-way mark, because there is no half of a choice. Which object is on
+  // screen never moves at all: a fade is a fade, not a cut.
+  var MIX_SKIP = { scene:1, uiOrder:1, uiMods:1, uiNames:1, groups:1, favs:1,
+                   clock:1, mClock:1, pClock:1 };
+  var MIX_SNAP = { mode:1, fly:1, aa:1, resPin:1, bound:1, warpMode:1, stepsPin:1,
+                   uncap:1, running:1, morph:1, spikeOn:1, warpOn:1, lcOn:1,
+                   shadowOn:1, shadowSrc:1, shadowOnly:1, shadowMc:1,
+                   matcapOn:1, matcap:1, normalOn:1, normalMc:1,
+                   glassOn:1, glassDepth:1, depthOn:1, depthMc:1, depthPart:1 };
+  function mixHex(a, b, t){
+    var A = rgb(a), B = rgb(b), o = "#";
+    for(var i = 0; i < 3; i++){
+      var v = Math.round(255 * (A[i] + (B[i] - A[i]) * t));
+      o += ("0" + Math.max(0, Math.min(255, v)).toString(16)).slice(-2);
+    }
+    return o;
+  }
+  function mixVal(a, b, t){
+    if(typeof a === "number" && typeof b === "number") return a + (b - a) * t;
+    if(typeof a === "string" && a.charAt(0) === "#" &&
+       typeof b === "string" && b.charAt(0) === "#") return mixHex(a, b, t);
+    if(a instanceof Array && b instanceof Array){
+      var out = [];
+      for(var i = 0; i < a.length; i++) out.push(i < b.length ? mixVal(a[i], b[i], t) : a[i]);
+      return out;
+    }
+    return t < 0.5 ? a : b;
+  }
+  // Written straight into the state rather than through the controls: a fader
+  // being dragged would otherwise rebuild the whole console sixty times a
+  // second. The console is brought back in line when the fader is let go.
+  function applyMix(a, b, t){
+    for(var i = 0; i < SAVE_KEYS.length; i++){
+      var k = SAVE_KEYS[i];
+      if(MIX_SKIP[k] || a[k] === undefined || b[k] === undefined) continue;
+      var v = MIX_SNAP[k] ? (t < 0.5 ? a[k] : b[k]) : mixVal(a[k], b[k], t);
+      state[k] = (typeof v === "object" && v !== null) ? JSON.parse(JSON.stringify(v)) : v;
+    }
+    setFlySpeed(state.flySpeed);
+    applyUI(); flySync(); telemetry();
+  }
+
+  var mixEl = document.getElementById("tplMix");
+  var mixOut = document.getElementById("tplMixOut");
+  var fadeFrom = null;
+  function tplNext(){ return TEMPLATES.length ? (tplAt + 1) % TEMPLATES.length : -1; }
+  function drawMix(){
+    if(!mixOut) return;
+    var n = tplNext();
+    mixOut.textContent = n < 0 ? "None yet"
+      : (parseFloat(mixEl.value) / 100).toFixed(2) + " \u2192 " + TEMPLATES[n].name;
+  }
+  if(mixEl){
+    mixEl.addEventListener("input", function(){
+      var n = tplNext(), t = parseFloat(mixEl.value) / 100;
+      if(n < 0 || !TEMPLATES[n] || !TEMPLATES[n].data){ paint(mixEl); drawMix(); return; }
+      if(!fadeFrom) fadeFrom = snapshot();
+      applyMix(fadeFrom, TEMPLATES[n].data, t);
+      paint(mixEl); drawMix();
+      if(t <= 0){ fadeFrom = null; return; }   // back where it started, fade over
+      if(t >= 1){
+        // All the way across: that template is where you are now, and the next
+        // one is the one after it. The object still does not move — a fader is
+        // for crossing between looks, and a cut to another object is not one.
+        var land = JSON.parse(JSON.stringify(TEMPLATES[n].data));
+        land.scene = state.scene;
+        applySaved(land);
+        tplAt = n; fadeFrom = null;
+        mixEl.value = 0; paint(mixEl);
+        drawTpl(); drawMix(); setDirty(false);
+        toast(TEMPLATES[n].name);
+      }
+    });
+    mixEl.addEventListener("change", function(){ if(fadeFrom) syncUI(); });
+    paint(mixEl);
+  }
+
   document.getElementById("tplDel").addEventListener("click", function(){
     this.blur();
     var t = TEMPLATES[tplAt];
     if(!t){ toast("Choose a template first"); return; }
     TEMPLATES.splice(tplAt, 1);
     tplAt = Math.min(tplAt, TEMPLATES.length - 1);
-    tplWriteLocal(); drawTpl();
+    fadeFrom = null;
+    tplWriteLocal(); drawTpl(); drawMix();
     toast(t.name + " removed");
     tplCloudDrop(t.id).catch(function(){});
   });
   try{ TEMPLATES = JSON.parse(localStorage.getItem(TPL_LOCAL)) || []; }catch(e){ TEMPLATES = []; }
   if(!(TEMPLATES instanceof Array)) TEMPLATES = [];
-  drawTpl();
+  drawTpl(); drawMix();
   tplCloudRead().then(function(list){
     var added = 0;
     (list || []).forEach(function(t){
