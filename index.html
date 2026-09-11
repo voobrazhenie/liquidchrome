@@ -856,6 +856,15 @@
               </div>
             </div>
           </div>
+          <div class="mod" data-mod="glow">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="pGlow" title="The light that gathers around the surfaces. It is gathered one reading per march step, so anything that makes the march take smaller steps &#8212; a warp, or a depth map&#39;s beam &#8212; fills that volume with it.">Glow</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="pGlow" hidden></button><output id="pGlowOut">1.00</output></div>
+                <input id="pGlow" type="range" min="0" max="400" step="1" value="100">
+              </div>
+            </div>
+          </div>
           <div class="mod" data-mod="grain">
             <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="pNoise" title="Film grain laid over the finished frame. Off unless you ask for it.">Noise</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
             <div class="modc">
@@ -1046,6 +1055,7 @@ uniform float uShGrow;      // the sphere-traced one's floor, sized to that budg
 uniform float uShadowOnly;  // draw the shadow term itself, lit against unlit
 uniform float uNoise;       // how much film grain the finished frame gets
 uniform float uHaze;        // how thick the air between the eye and the object is
+uniform float uGlow;        // how much the light that gathers near a surface shows
 uniform float uOrtho;       // 1 = parallel rays, for standing where the sun does
 uniform float uOrthoSpan;   // half the width the parallel view covers
 
@@ -1115,6 +1125,7 @@ float sdEll(vec3 p, vec3 r){
 }
 
 // ---- the depth decal ---------------------------------------------------
+#ifdef F_DECAL
 // Read once per sample in world coordinates, then handed to whichever part of
 // the object it was aimed at. Every object's field subtracts the same number,
 // which is why a decal can be aimed at the axon and leave the dendrites alone
@@ -1147,6 +1158,14 @@ float decalH(vec3 q){
   vec3 t = texture2D(uDepthMap, uv * 0.5 + 0.5).rgb;
   return uDepthAmt * w * dot(t, vec3(0.299, 0.587, 0.114));
 }
+#else
+// Switched off it is not here at all: no globals for an SDF to test, no box to
+// evaluate, and nothing of it left in the program for the driver to find room
+// for. Every hook below folds to nothing against these.
+const float gDecH = 0.0;
+const float gDecR = 0.0;
+const float gDecP = 0.0;
+#endif
 
 #ifdef SCENE_BRAIN
 float shell(vec3 p){
@@ -1233,9 +1252,15 @@ float neuron(vec3 p, out float sd){
   float m = uMorph * 0.5;
   float r = uThick;
   float d = sd - (0.165 + r*0.8);
+#ifdef F_DECAL
   if(gDecP == 1.0) d -= gDecH;                  // the decal, aimed at the soma
   float den = gDecP == 2.0 ? gDecH : 0.0;       // or at every dendrite at once
   float grow = gDecP == 2.0 ? gDecR : 0.0;
+#else
+  // constants, so every subtraction below folds away at compile time
+  const float den = 0.0;
+  const float grow = 0.0;
+#endif
 
   for(int i=0;i<5;i++){
     float fi = float(i);
@@ -1276,7 +1301,9 @@ float neuron(vec3 p, out float sd){
                      vec3(0.26*sin(m*0.40), -0.70, 0.20),
                      vec3(-0.32, -1.24, -0.18 + 0.22*sin(m*0.33)),
                   r*1.5, r*1.05);
+#ifdef F_DECAL
   if(gDecP == 3.0) ax -= gDecH;                 // or at the axon on its own
+#endif
   d = smin(d, ax, 0.06);
 
   // organic membrane: coarse lobes for the silhouette, fine grain for skin
@@ -1381,7 +1408,9 @@ float liquid(vec3 p, out float sd){
   } else {
     d = 1e5;
   }
+#ifdef F_DECAL
   if(gDecP == 1.0) d -= gDecH;             // the decal, aimed at the slab
+#endif
 
   // tint by altitude: the crests take the accent colour
   sd = (0.5 - 0.5 * clamp(h / max(uLcRelief, 1e-3), -1.0, 1.0)) * 0.42;
@@ -1390,11 +1419,15 @@ float liquid(vec3 p, out float sd){
   // divided by the same bound as the slab so the caller's one rule — this
   // number times lip is the real distance — still holds when the cube is the
   // nearest thing.
+#ifdef F_CUBE
   if(uLcCube > 0.5){
     float dc = sdBox(p - vec3(0.0, cubeY(), 0.0), vec3(CUBE_R)) / lip;
+#ifdef F_DECAL
     if(gDecP == 2.0) dc -= gDecH;          // and the decal, aimed at the cube
+#endif
     if(dc < d){ d = dc; sd = 0.42; }   // plain structure colour, no crest tint
   }
+#endif
   return d;
 }
 
@@ -1464,7 +1497,9 @@ float scene(vec3 p, out float sd){
 #else
   sd = 1e5;
   float sh = shell(p);
+#ifdef F_DECAL
   if(gDecP == 1.0) sh -= gDecH;            // the decal, aimed at the shell
+#endif
   // The cells are kept inside the shell by the smax below, displaced or not,
   // so this shortcut is still a floor on the whole object either way.
   if(sh > 0.09) return sh - 0.02;
@@ -1497,7 +1532,9 @@ float scene(vec3 p, out float sd){
   float w1 = abs(gy(q))  - (0.27 + bead);
   float w2 = abs(gy(q2)) - (0.32 + bead);
   float d = smax(w1, w2, 0.22) / (2.1 * s);
+#ifdef F_DECAL
   if(gDecP == 2.0) d -= gDecH;             // or at the cells and their neurites
+#endif
   return smax(d, sh, 0.05);
 #endif
 }
@@ -1512,6 +1549,7 @@ float scene(vec3 p, out float sd){
 float map(vec3 p, out float sd, out float lip){
   // The decal is read in world coordinates, ahead of every warp, so the card
   // stays where it was put however the space around it is bent.
+#ifdef F_DECAL
   gDecH = 0.0; gDecP = 0.0; gDecR = 0.0;
   float beam = -1.0;
   if(uDepthOn > 0.5 && uDepthAmt != 0.0){
@@ -1521,6 +1559,7 @@ float map(vec3 p, out float sd, out float lip){
     beam = decalBox(dq, gDecR);
     if(beam <= 0.0) gDecH = decalH(dq) / sceneLip();
   }
+#endif
   vec3 q = domainWarp(p, lip);
   float d = scene(q, sd);
   if(uWarpMode > 0.5 && uWarpOn.x > 0.5 && uWarpAmt > 0.0){
@@ -1542,6 +1581,7 @@ float map(vec3 p, out float sd, out float lip){
       lip *= 1.0 + A * uWarpFreq * 1.5;      // smoothstep noise peaks at 1.5/cell
     }
   }
+#ifdef F_DECAL
   if(uDepthOn > 0.5 && uDepthAmt != 0.0){
     // Aimed at no part in particular, the decal bites the object entire; aimed
     // at one, that part has already taken it and this must not take it twice.
@@ -1559,6 +1599,7 @@ float map(vec3 p, out float sd, out float lip){
       lip *= uDepthLip;                    // in it, and a picture has a slope
     }
   }
+#endif
   return d / lip;
 }
 float map(vec3 p, out float sd){
@@ -1596,6 +1637,7 @@ vec3 calcNormal(vec3 p){
 // surface it set off from, the march reads that as a hit, and the stronger the
 // warp or the relief the more of them there are — which is why it showed on
 // ripples and on nothing flat.
+#ifdef F_SHADOW
 float softShadow(vec3 ro, vec3 rd, float tmax, float k, float t0){
   float res = 1.0, t = t0, dmy, lip;
   for(int i = 0; i < SHADOW_MAX; i++){
@@ -1621,6 +1663,7 @@ float softShadow(vec3 ro, vec3 rd, float tmax, float k, float t0){
   }
   return clamp(res, 0.0, 1.0);
 }
+#endif
 
 // Level slides the edge between light and shadow; contrast squeezes the ramp
 // around it until it is a step. This is where a soft grey shadow becomes a hard
@@ -1684,6 +1727,9 @@ float fogAt(float d){ return 1.0 - exp(-(uScene > 0.5 ? 0.22 : 0.52) * uHaze * m
 // repeats without a seam, whatever its size.
 vec2 tileUV(vec2 u){ vec2 f = fract(u * 0.5) * 2.0; return min(f, 2.0 - f); }
 vec3 bumpN(vec3 p, vec3 n){
+#ifndef F_NORMAL
+  return n;                  // not laid over anything, so not in the program
+#else
   // Amount at nothing hands the same normal straight back, bit for bit, rather
   // than putting it through a normalize that could move its last digit.
   if(uNormalOn < 0.5 || uNormalAmt <= 0.0) return n;
@@ -1698,13 +1744,19 @@ vec3 bumpN(vec3 p, vec3 n){
   if(dot(b, b) < 1e-8) return n;
   vec3 m = mix(n, normalize(b), uNormalAmt);
   return dot(m, m) < 1e-8 ? n : normalize(m);
+#endif
 }
 
 // One number for how much sun reaches this point, by whichever of the three
 // routes is switched on. 1 is full light, 0 is black. It is the same call from
 // the lit material and from a matcap, which is what lets a shadow sit over
 // either of them.
+// Switched off, none of this is in the program: no second march, no budget
+// loop, no painted sphere. The call folds to the one line below.
 float shadowAt(vec3 p, vec3 n, vec2 mn, vec3 key, float trueD){
+#ifndef F_SHADOW
+  return 1.0;
+#else
   if(uShadowOn < 0.5) return 1.0;
   float sh;
   if(uShadowSrc < 0.5){
@@ -1759,6 +1811,7 @@ float shadowAt(vec3 p, vec3 n, vec2 mn, vec3 key, float trueD){
     }
   }
   return shapeShadow(sh);
+#endif
 }
 
 // ---- bounding volume -------------------------------------------------
@@ -1774,7 +1827,9 @@ vec3 boundHalf(){
   // intersecting with the undeformed copy clips the relief straight back off
   bool isect = uLcOn.x > 0.5 && uLcOn.z > 0.5 && uLcOn.w > 0.5;
   float ry = uLcThick + (isect ? 0.0 : relief);
+#ifdef F_CUBE
   if(uLcCube > 0.5) ry = max(ry, cubeY() + CUBE_R);
+#endif
   // bend tips space about Z, which lifts the slab out of an axis-aligned box
   if(uWarpOn.z > 0.5) ry = 1.74;
   return vec3(1.4143, ry, 1.4143);
@@ -1833,12 +1888,14 @@ vec3 shade(vec3 p, vec3 n, vec3 rd, vec2 mn, float sdHit, float trueD, float fog
   if(uShadowOnly > 0.5){
     // the shadow term and nothing else: what is lit, against what is not
     col = display(vec3(sh));
+#ifdef F_MATCAP
   } else if(uMatcapOn > 0.5){
     // A matcap replaces the material outright, but the shadow still sits
     // over it — multiplied in display terms, because the sphere is a
     // picture and that is how a picture is darkened.
     vec3 mc = texture2D(uMatcap, mn * 0.5 + 0.5).rgb * mix(1.0, sh, uShadowDark);
     col = display(mc);
+#endif
   } else {
     float C = uScene > 0.5 ? 0.42 : 1.45 / uScale;
     float somaMix = 1.0 - smoothstep(C*0.18, C*0.62, sdHit);
@@ -1883,6 +1940,7 @@ vec3 shade(vec3 p, vec3 n, vec3 rd, vec2 mn, float sdHit, float trueD, float fog
 // works with the sign turned round. It stops the moment the field comes back
 // up to nothing: that is the far wall. Returns how far the crossing took, and
 // hit says whether a wall was reached at all.
+#ifdef F_GLASS
 float insideMarch(vec3 ro, vec3 rd, float tmax, float budget,
                   out float hit, out float sdHit, out vec3 nOut){
   float t = 0.0, sd = 1e5, lip = 1.0, got = 0.0;
@@ -1982,6 +2040,7 @@ vec3 glass(vec3 surf, vec3 p, vec3 n, vec3 rd, float travel, float pad, bool use
   }
   return acc + through * bgCol(dir);
 }
+#endif
 
 vec3 render(vec2 fc){
   vec2 uv = (fc - 0.5*uRes) / min(uRes.x, uRes.y);
@@ -2077,21 +2136,29 @@ vec3 render(vec2 fc){
         // is taken back out here or the sphere counter-rotates as the view leans.
         vec2 mn = screenN(n);
         col = shade(p, n, rd, mn, sdHit, trueD, fogAt(t - tNear));
-        // and it need not stop here. Switched off, none of this is reached.
+#ifdef F_GLASS
+        // and it need not stop here. Switched off, none of this is compiled.
         if(uGlassOn > 0.5 && uShadowOnly < 0.5)
           col = glass(col, p, n, rd, t - tNear, pad, useBox);
+#endif
       }
     }
   }
 
-  col += (uColA*0.60 + SPIKE*0.40) * glow * (0.55 + 0.70*uSpike);
+  // The light that gathers around the surfaces. It is summed as the ray goes,
+  // one reading per march step, so anything that makes the march take smaller
+  // steps — a warp, a decal's beam — gathers more of it over the same distance
+  // and fills that volume with haze. That is an accident of how it is measured
+  // rather than a property of the scene, and it is also the prettiest thing
+  // here, so it gets a control of its own rather than a correction.
+  col += (uColA*0.60 + SPIKE*0.40) * glow * (0.55 + 0.70*uSpike) * uGlow;
 
   col = col / (1.0 + col);
   col = pow(max(col, 0.0), vec3(0.4545));
 
   vec2 sv = fc/uRes - 0.5;
   col *= 1.0 - 0.55 * dot(sv, sv);
-  col += (hash33(vec3(fc, uTime)).x - 0.5) * 0.022 * uNoise;
+  if(uNoise > 0.0) col += (hash33(vec3(fc, uTime)).x - 0.5) * 0.022 * uNoise;
 
   return col;
 }
@@ -2214,19 +2281,47 @@ void main(){
     "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps","uOmega","uBound","uBoundPad","uWarpMode",
     "uShadowOn","uSunAz","uSunEl","uShadowSoft","uShadowDark","uShadowReach","uSunMark","uLcCube",
     "uMatcapOn","uMatcap","uShadowSrc","uShLevel","uShContrast","uShMatcap",
-    "uShadowOnly","uNoise","uHaze","uOrtho","uOrthoSpan","uShSteps","uShGrow",
+    "uShadowOnly","uNoise","uHaze","uGlow","uOrtho","uOrthoSpan","uShSteps","uShGrow",
     "uNormalOn","uNormalMap","uNormalAmt","uNormalScale",
     "uGlassOn","uGlassOpacity","uGlassEdge","uGlassIor","uGlassTint","uGlassDensity","uGlassDepth",
     "uDepthOn","uDepthMap","uDepthPos","uDepthRot","uDepthSize","uDepthDist","uDepthAmt","uDepthLip","uDepthPart"];
   var DEFS = ["#define SCENE_BRAIN\n", "#define SCENE_NEURON\n", "#define SCENE_CHROME\n"];
 
-  // One program per object, built the first time that object is shown. Each
-  // carries only its own SDF, which keeps the shader a third of the size and
-  // means opening the page compiles one object, not three.
-  var progs = [], progU = [];
-  function sceneProg(i){
-    if(progs[i] !== undefined) return progs[i];
-    var head = DEFS[i];
+  // Everything that can be left out of the shader entirely, rather than
+  // branched past inside it. A branch a uniform never takes still costs: the
+  // code is in the program, the registers it needs are reserved for every
+  // pixel whether it runs or not, and on a GPU that is fewer pixels in flight
+  // at once — which is why switching a feature off used to buy so little. Each
+  // of these is a #define instead, so off means not there.
+  var FEATS = [
+    ["F_SHADOW", function(){ return !!state.shadowOn; }],
+    ["F_MATCAP", function(){ return !!state.matcapOn && mcSlot.ready; }],
+    ["F_NORMAL", function(){ return !!state.normalOn && nmSlot.ready && state.normalAmt > 0; }],
+    ["F_GLASS",  function(){ return !!state.glassOn && !state.shadowOnly; }],
+    ["F_DECAL",  function(){ return !!state.depthOn && dmSlot.ready && state.depthAmt !== 0; }],
+    ["F_CUBE",   function(){ return state.scene === 2 && !!state.lcOn[5]; }]
+  ];
+  function featMask(){
+    var m = 0;
+    for(var i = 0; i < FEATS.length; i++) if(FEATS[i][1]()) m |= 1 << i;
+    return m;
+  }
+  function featDefs(mask){
+    var out = "";
+    for(var i = 0; i < FEATS.length; i++) if(mask & (1 << i)) out += "#define " + FEATS[i][0] + "\n";
+    return out;
+  }
+
+  // One program per object AND per set of features, built the first time that
+  // combination is asked for and kept. Each carries only its own SDF and only
+  // the features that are on, so opening the page compiles one small shader
+  // rather than one big one — and switching something off is a different, and
+  // smaller, program rather than the same program taking a different branch.
+  var progs = {}, progU = {};
+  function sceneProg(i, mask){
+    var key = i + ":" + mask;
+    if(progs[key] !== undefined) return progs[key];
+    var head = DEFS[i] + featDefs(mask);
     var p = null;
     for(var attempt = 0; attempt < 2 && !p; attempt++){
       // second pass hands the driver a much shorter march. ANGLE lays the
@@ -2238,15 +2333,15 @@ void main(){
       p = f ? link(f) : null;
       if(!p && attempt === 0) console.warn("retrying object " + i + " with a shorter march");
     }
-    progs[i] = p;
+    progs[key] = p;
     if(p){
       var u = {};
       UNIFORMS.forEach(function(nm){ u[nm] = gl.getUniformLocation(p, nm); });
-      progU[i] = u;
+      progU[key] = u;
     }
     return p;
   }
-  if(!sceneProg(0)){ fault(); return; }
+  if(!sceneProg(0, 0)){ fault(); return; }
 
   var P = {
     uTex:    gl.getUniformLocation(progPost, "uTex"),
@@ -2384,6 +2479,7 @@ void main(){
     shadowOnly: 0,                  // draw the shadow term itself instead of the object
     noise: 0.00,                    // film grain over the finished frame
     haze: 1.00,                     // how thick the air is, as a multiple of this object's own
+    glow: 1.00,                     // and how much the light gathered near the surfaces shows
     lcRelief: 0.26, lcFreq: 4.00, lcThick: 0.022, lcTwirl: 1.90,
     // structure + accent colour per object: brain, neuron, LiquidChrome
     colors: [["#2FD9C0", "#FFC98A"], ["#2FD9C0", "#FFC98A"], ["#009DFF", "#FF4271"]],
@@ -2818,9 +2914,13 @@ void main(){
     if(!bench.on) camera(state.clock);
     if(dmEdit) gizDraw();
 
-    var prog = sceneProg(state.scene);
+    var mask = featMask();
+    var prog = sceneProg(state.scene, mask);
+    // A combination the driver will not take is not a reason to show nothing:
+    // fall back to the one with everything switched off, which always builds.
+    if(!prog && mask){ mask = 0; prog = sceneProg(state.scene, 0); }
     if(!prog){ schedule(); return; }
-    var U = progU[state.scene];
+    var U = progU[state.scene + ":" + mask];
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
     gl.viewport(0, 0, RW, RH);
@@ -2906,6 +3006,7 @@ void main(){
     gl.uniform1f(U.uShadowOnly, state.shadowOnly && state.shadowOn ? 1 : 0);
     gl.uniform1f(U.uNoise, state.noise);
     gl.uniform1f(U.uHaze, state.haze);
+    gl.uniform1f(U.uGlow, state.glow);
     gl.uniform1f(U.uOrtho, sunView ? 1 : 0);
     gl.uniform1f(U.uOrthoSpan, SCENE_R[state.scene] * 1.45 * state.zoom);
     gl.uniform1f(U.uLcRelief, state.lcRelief);
@@ -3147,7 +3248,8 @@ void main(){
   Array.prototype.forEach.call(sceneBtns, function(btn){
     btn.addEventListener("click", function(){
       var want = parseInt(btn.dataset.scene, 10);
-      if(!sceneProg(want)){
+      // the plainest build of it: if that will not link, no feature set will
+      if(!sceneProg(want, 0)){
         btn.disabled = true;
         btn.title = "This object's shader will not build on this GPU";
         btn.blur();
@@ -3203,7 +3305,7 @@ void main(){
     ["gOpacity","glassOpacity",100], ["gEdge","glassEdge",100],
     ["gIor","glassIor",100], ["gDensity","glassDensity",100],
     ["gDepth","glassDepth",1], ["pNoise","noise",100],
-    ["dmAmt","depthAmt",100], ["dmDist","depthDist",100], ["pHaze","haze",100],
+    ["dmAmt","depthAmt",100], ["dmDist","depthDist",100], ["pHaze","haze",100], ["pGlow","glow",100],
     ["uiFont","uiFont",1], ["uiAlpha","uiAlpha",100], ["uiSplit","uiSplit",1]
   ];
   var DFLT = {};          // slider id -> { key, mul, btn }
@@ -3410,6 +3512,7 @@ void main(){
   numSlider("shContrast", "shadowContrast", 0.01, f2);
   numSlider("pNoise",     "noise",          0.01, f2);
   numSlider("pHaze",      "haze",           0.01, f2);
+  numSlider("pGlow",      "glow",           0.01, f2);
   numSlider("shSteps",    "shadowSteps",    1,    function(v){ return String(Math.round(v)); },
             function(v){ return Math.max(4, Math.round(v)); });
 
@@ -4822,7 +4925,7 @@ void main(){
     "matcapOn","matcap","normalOn","normalMc","normalAmt","normalScale",
     "glassOn","glassOpacity","glassEdge","glassIor","glassTint","glassDensity","glassDepth",
     "depthOn","depthMc","depthAmt","depthDist","depthPos","depthRot","depthSize","depthPart",
-    "shadowSrc","shadowLevel","shadowContrast","shadowMc","shadowOnly","noise","haze","shadowSteps",
+    "shadowSrc","shadowLevel","shadowContrast","shadowMc","shadowOnly","noise","haze","glow","shadowSteps",
     "uiFont","uiAlpha","uiBg","uiAccent","uiHeader","uiWidth","uiSplit","uncap",
     "uiOrder","uiMods","uiNames"];
 
@@ -5364,6 +5467,9 @@ void main(){
   // all it offers; it draws nothing and changes nothing on its own.
   window.__state = state;
   Object.defineProperty(window, "__sunMode", { get: function(){ return sunMode; } });
+  // how many shader variants have actually been built, so a check can prove a
+  // feature switched off is a different program and not the same one branching
+  Object.defineProperty(window, "__progs", { get: function(){ return Object.keys(progs).length; } });
   Object.defineProperty(window, "__sunView", { get: function(){ return sunView; } });
 })();
 </script>
