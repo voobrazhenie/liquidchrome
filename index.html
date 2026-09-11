@@ -847,6 +847,15 @@
           <button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button>
         </div>
         <div class="grpb" id="grpb6" data-grpb="6">
+          <div class="mod" data-mod="haze">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="pHaze" title="How thick the air between the eye and the object is. It fades whatever is further away into the background, which is what makes distance read as distance. At nothing the air is perfectly clear.">Haze</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="pHaze" hidden></button><output id="pHazeOut">1.00</output></div>
+                <input id="pHaze" type="range" min="0" max="300" step="1" value="100">
+              </div>
+            </div>
+          </div>
           <div class="mod" data-mod="grain">
             <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="pNoise" title="Film grain laid over the finished frame. Off unless you ask for it.">Noise</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
             <div class="modc">
@@ -1036,6 +1045,7 @@ uniform float uShSteps;     // how many the shadow ray is allowed, either method
 uniform float uShGrow;      // the sphere-traced one's floor, sized to that budget
 uniform float uShadowOnly;  // draw the shadow term itself, lit against unlit
 uniform float uNoise;       // how much film grain the finished frame gets
+uniform float uHaze;        // how thick the air between the eye and the object is
 uniform float uOrtho;       // 1 = parallel rays, for standing where the sun does
 uniform float uOrthoSpan;   // half the width the parallel view covers
 
@@ -1658,7 +1668,11 @@ float gCR, gSR;
 vec2 screenN(vec3 n){ return mat2(gCR, gSR, -gSR, gCR) * vec2(dot(gUU, n), dot(gVV, n)); }
 
 // How far the distance haze has closed over something this deep into the scene.
-float fogAt(float d){ return 1.0 - exp(-(uScene > 0.5 ? 0.22 : 0.52) * max(d, 0.0)); }
+// The air the object is standing in. Each object was given the thickness that
+// suited it, and the slider multiplies that rather than replacing it, so every
+// object keeps its own character across the whole range and 1.00 is the page as
+// it always was, to the byte. At nothing there is no air at all.
+float fogAt(float d){ return 1.0 - exp(-(uScene > 0.5 ? 0.22 : 0.52) * uHaze * max(d, 0.0)); }
 
 // ---- the normal map --------------------------------------------------
 // Read three times, once down each axis, and blended by how square-on the
@@ -2200,7 +2214,7 @@ void main(){
     "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps","uOmega","uBound","uBoundPad","uWarpMode",
     "uShadowOn","uSunAz","uSunEl","uShadowSoft","uShadowDark","uShadowReach","uSunMark","uLcCube",
     "uMatcapOn","uMatcap","uShadowSrc","uShLevel","uShContrast","uShMatcap",
-    "uShadowOnly","uNoise","uOrtho","uOrthoSpan","uShSteps","uShGrow",
+    "uShadowOnly","uNoise","uHaze","uOrtho","uOrthoSpan","uShSteps","uShGrow",
     "uNormalOn","uNormalMap","uNormalAmt","uNormalScale",
     "uGlassOn","uGlassOpacity","uGlassEdge","uGlassIor","uGlassTint","uGlassDensity","uGlassDepth",
     "uDepthOn","uDepthMap","uDepthPos","uDepthRot","uDepthSize","uDepthDist","uDepthAmt","uDepthLip","uDepthPart"];
@@ -2369,6 +2383,7 @@ void main(){
     shadowSteps: 96,                // the budget for either of the two that march
     shadowOnly: 0,                  // draw the shadow term itself instead of the object
     noise: 0.00,                    // film grain over the finished frame
+    haze: 1.00,                     // how thick the air is, as a multiple of this object's own
     lcRelief: 0.26, lcFreq: 4.00, lcThick: 0.022, lcTwirl: 1.90,
     // structure + accent colour per object: brain, neuron, LiquidChrome
     colors: [["#2FD9C0", "#FFC98A"], ["#2FD9C0", "#FFC98A"], ["#009DFF", "#FF4271"]],
@@ -2890,6 +2905,7 @@ void main(){
       Math.pow(Math.max(state.shadowReach, 0.05) / 0.01, 1 / Math.max(state.shadowSteps, 4)) - 1)));
     gl.uniform1f(U.uShadowOnly, state.shadowOnly && state.shadowOn ? 1 : 0);
     gl.uniform1f(U.uNoise, state.noise);
+    gl.uniform1f(U.uHaze, state.haze);
     gl.uniform1f(U.uOrtho, sunView ? 1 : 0);
     gl.uniform1f(U.uOrthoSpan, SCENE_R[state.scene] * 1.45 * state.zoom);
     gl.uniform1f(U.uLcRelief, state.lcRelief);
@@ -3187,7 +3203,7 @@ void main(){
     ["gOpacity","glassOpacity",100], ["gEdge","glassEdge",100],
     ["gIor","glassIor",100], ["gDensity","glassDensity",100],
     ["gDepth","glassDepth",1], ["pNoise","noise",100],
-    ["dmAmt","depthAmt",100], ["dmDist","depthDist",100],
+    ["dmAmt","depthAmt",100], ["dmDist","depthDist",100], ["pHaze","haze",100],
     ["uiFont","uiFont",1], ["uiAlpha","uiAlpha",100], ["uiSplit","uiSplit",1]
   ];
   var DFLT = {};          // slider id -> { key, mul, btn }
@@ -3393,6 +3409,7 @@ void main(){
   numSlider("shLevel",    "shadowLevel",    0.01, f2);
   numSlider("shContrast", "shadowContrast", 0.01, f2);
   numSlider("pNoise",     "noise",          0.01, f2);
+  numSlider("pHaze",      "haze",           0.01, f2);
   numSlider("shSteps",    "shadowSteps",    1,    function(v){ return String(Math.round(v)); },
             function(v){ return Math.max(4, Math.round(v)); });
 
@@ -4805,7 +4822,7 @@ void main(){
     "matcapOn","matcap","normalOn","normalMc","normalAmt","normalScale",
     "glassOn","glassOpacity","glassEdge","glassIor","glassTint","glassDensity","glassDepth",
     "depthOn","depthMc","depthAmt","depthDist","depthPos","depthRot","depthSize","depthPart",
-    "shadowSrc","shadowLevel","shadowContrast","shadowMc","shadowOnly","noise","shadowSteps",
+    "shadowSrc","shadowLevel","shadowContrast","shadowMc","shadowOnly","noise","haze","shadowSteps",
     "uiFont","uiAlpha","uiBg","uiAccent","uiHeader","uiWidth","uiSplit","uncap",
     "uiOrder","uiMods","uiNames"];
 
