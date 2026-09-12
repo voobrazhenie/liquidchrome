@@ -4044,19 +4044,41 @@ void main(){
   // going into a store with a size limit on it. Nothing here needs more than
   // 512 across, so bring it down to that and re-encode; PNG unless that comes
   // out large, in which case a high-quality JPEG.
+  // Is any of this image see-through? A sphere never is; a sprite is nothing
+  // but, and the difference decides what may be done to it to make it smaller.
+  function hasAlpha(g, w, h){
+    try{
+      var d = g.getImageData(0, 0, w, h).data;
+      for(var i = 3; i < d.length; i += 4) if(d[i] < 250) return true;
+    }catch(e){ return true; }        // cannot tell, so assume it matters
+    return false;
+  }
   function fitSphere(src, done, cap){
     var img = new Image();
     cap = cap || 512;
     img.onload = function(){
       var w = img.naturalWidth || 1, h = img.naturalHeight || 1;
-      var k = Math.min(1, cap / Math.max(w, h));
-      if(k >= 1 && src.length < 400000){ done(src); return; }
-      var c = document.createElement("canvas");
-      c.width = Math.max(1, Math.round(w * k));
-      c.height = Math.max(1, Math.round(h * k));
-      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-      var out = c.toDataURL("image/png");
-      if(out.length > 500000) out = c.toDataURL("image/jpeg", 0.92);
+      if(Math.max(w, h) <= cap && src.length < 400000){ done(src); return; }
+      // A JPEG is a fraction of the size and a sphere loses nothing by being
+      // one. A cut-out sprite loses everything: JPEG has no alpha at all, so
+      // every transparent pixel comes back black. An image that is see-through
+      // is made SMALLER instead of made worse — stepped down until the PNG of
+      // it fits, which is what has to go into a store with a size limit on it.
+      var out = null;
+      cap = Math.min(cap, Math.max(w, h));   // start from its own size, not above it
+      for(var pass = 0; pass < 5; pass++){
+        var k = Math.min(1, cap / Math.max(w, h));
+        var c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(w * k));
+        c.height = Math.max(1, Math.round(h * k));
+        var g = c.getContext("2d");
+        g.drawImage(img, 0, 0, c.width, c.height);
+        out = c.toDataURL("image/png");
+        if(out.length <= 700000) break;
+        if(!hasAlpha(g, c.width, c.height)){ out = c.toDataURL("image/jpeg", 0.92); break; }
+        if(cap <= 256) break;
+        cap = Math.max(256, Math.round(cap * 0.75));
+      }
       done(out);
     };
     img.onerror = function(){ done(null); };
