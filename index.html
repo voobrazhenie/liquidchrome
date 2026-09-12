@@ -417,6 +417,15 @@
               </div>
             </div>
           </div>
+          <div class="mod" data-mod="ball">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="oBall" title="Travel from whatever this object builds toward a plain ball, and back. It is real geometry the whole way: the silhouette, the shadows and everything marching through it follow, and at nothing the object is untouched to the byte.">Blend to sphere</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="oBall" hidden></button><output id="oBallOut">0.00</output></div>
+                <input id="oBall" type="range" min="0" max="100" step="1" value="0">
+              </div>
+            </div>
+          </div>
           <div class="mod" data-mod="raysteps">
             <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="rSteps">Ray steps</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
             <div class="modc">
@@ -1088,6 +1097,8 @@
                 <button type="button" id="tplAdd" title="Store everything as it is now under a name of your choosing. Alt and its number recalls it.">Save as</button>
                 <button type="button" id="tplUpd" title="Write everything as it is now into the template showing as chosen, keeping its name and its number.">Update</button>
                 <button type="button" id="tplRen" title="Give the template showing as chosen a different name. Nothing it holds changes.">Rename</button>
+                <button type="button" id="tplUp" title="Move the chosen template one place earlier in the list. Its number, and so its alt shortcut, moves with it.">Earlier</button>
+                <button type="button" id="tplDn" title="Move the chosen template one place later in the list. Its number, and so its alt shortcut, moves with it.">Later</button>
                 <button type="button" id="tplDel" title="Remove the template that is showing as chosen.">Delete</button>
               </div>
             </div>
@@ -1192,6 +1203,8 @@ uniform float uNoise;       // how much film grain the finished frame gets
 uniform float uHaze;        // how thick the air between the eye and the object is
 uniform float uGlow;        // how much the light that gathers near a surface shows
 uniform vec2  uMirror;      // fold the object in half about x, about y, or both
+uniform float uBall;        // travel from the object it builds toward a plain ball
+uniform float uBallR;       // how big that ball is, sized to whichever object it is
 uniform float uOrtho;       // 1 = parallel rays, for standing where the sun does
 uniform float uOrthoSpan;   // half the width the parallel view covers
 
@@ -1725,6 +1738,13 @@ float map(vec3 p, out float sd, out float lip){
       lip *= 1.0 + A * uWarpFreq * 1.5;      // smoothstep noise peaks at 1.5/cell
     }
   }
+  if(uBall > 0.0){
+    // Somewhere between the object and a plain ball. Two fields that are each
+    // a lower bound on a distance blend into one that still is, so the march
+    // needs no help for this and the surface simply travels from one shape to
+    // the other. The ball is read before the warps, so it stays a ball.
+    d = mix(d, (length(p) - uBallR) / sceneLip(), uBall);
+  }
 #ifdef F_DECAL
   if(uDepthOn > 0.5 && uDepthAmt != 0.0){
     // Aimed at no part in particular, the decal bites the object entire; aimed
@@ -1976,10 +1996,15 @@ vec3 boundHalf(){
 #endif
   // bend tips space about Z, which lifts the slab out of an axis-aligned box
   if(uWarpOn.z > 0.5) ry = 1.74;
-  return vec3(1.4143, ry, 1.4143);
+  vec3 he = vec3(1.4143, ry, 1.4143);
 #else
-  return vec3(1.74);
+  vec3 he = vec3(1.74);
 #endif
+  // A ball can reach past the object's own box — the chrome slab's is a
+  // fraction of a unit thick — and anything outside the bounds is never
+  // marched at all, so it would come out sliced flat.
+  if(uBall > 0.0) he = max(he, vec3(uBallR));
+  return he;
 }
 bool autoBox(){
 #if defined(SCENE_CHROME)
@@ -2425,7 +2450,7 @@ void main(){
     "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps","uOmega","uBound","uBoundPad","uWarpMode",
     "uShadowOn","uSunAz","uSunEl","uShadowSoft","uShadowDark","uShadowReach","uSunMark","uLcCube",
     "uMatcapOn","uMatcap","uShadowSrc","uShLevel","uShContrast","uShMatcap",
-    "uShadowOnly","uNoise","uHaze","uGlow","uMirror","uOrtho","uOrthoSpan","uShSteps","uShGrow",
+    "uShadowOnly","uNoise","uHaze","uGlow","uMirror","uBall","uBallR","uOrtho","uOrthoSpan","uShSteps","uShGrow",
     "uNormalOn","uNormalMap","uNormalAmt","uNormalScale",
     "uGlassOn","uGlassOpacity","uGlassEdge","uGlassIor","uGlassTint","uGlassDensity","uGlassDepth",
     "uDepthOn","uDepthMap","uDepthPos","uDepthRot","uDepthSize","uDepthDist","uDepthAmt","uDepthLip","uDepthPart"];
@@ -2625,6 +2650,7 @@ void main(){
     haze: 1.00,                     // how thick the air is, as a multiple of this object's own
     glow: 1.00,                     // and how much the light gathered near the surfaces shows
     mirror: [0, 0],                 // fold the object in half about x, about y, or both
+    ball: 0.00,                     // how far from the object it builds toward a plain ball
     // a sprite standing over the picture: off, which sheet, how tall as a share
     // of the window, how many frames the sheet holds and how fast it walks them
     spriteOn: 0, sprite: 0, spriteSize: 0.20, spriteFrames: 4, spriteFps: 6.0,
@@ -3224,6 +3250,8 @@ void main(){
     gl.uniform1f(U.uHaze, state.haze);
     gl.uniform1f(U.uGlow, state.glow);
     gl.uniform2f(U.uMirror, state.mirror[0], state.mirror[1]);
+    gl.uniform1f(U.uBall, state.ball);
+    gl.uniform1f(U.uBallR, SCENE_R[state.scene] * 0.62);
     gl.uniform1f(U.uOrtho, sunView ? 1 : 0);
     gl.uniform1f(U.uOrthoSpan, SCENE_R[state.scene] * 1.45 * state.zoom);
     gl.uniform1f(U.uLcRelief, state.lcRelief);
@@ -3527,6 +3555,7 @@ void main(){
     ["camMin","flyMin",1000], ["camMax","flyMax",10],
     ["camLook","lookSmooth",100], ["camMove","moveSmooth",100],
     ["spSize","spriteSize",100], ["spFrames","spriteFrames",1], ["spFps","spriteFps",10],
+    ["oBall","ball",100],
     ["uiFont","uiFont",1], ["uiAlpha","uiAlpha",100], ["uiSplit","uiSplit",1]
   ];
   var DFLT = {};          // slider id -> { key, mul, btn }
@@ -3743,6 +3772,7 @@ void main(){
   numSlider("pNoise",     "noise",          0.01, f2);
   numSlider("pHaze",      "haze",           0.01, f2);
   numSlider("pGlow",      "glow",           0.01, f2);
+  numSlider("oBall",      "ball",           0.01, f2);
   // The slider reaches a thousandth of a unit a second; the reading can be
   // typed into for anything below that, down to a ten-thousandth.
   numSlider("camMin", "flyMin", 0.001, function(v){ return v.toFixed(3); },
@@ -5272,7 +5302,7 @@ void main(){
     "matcapOn","matcap","normalOn","normalMc","normalAmt","normalScale",
     "glassOn","glassOpacity","glassEdge","glassIor","glassTint","glassDensity","glassDepth",
     "depthOn","depthMc","depthAmt","depthDist","depthPos","depthRot","depthSize","depthPart",
-    "shadowSrc","shadowLevel","shadowContrast","shadowMc","shadowOnly","noise","haze","glow","mirror","shadowSteps",
+    "shadowSrc","shadowLevel","shadowContrast","shadowMc","shadowOnly","noise","haze","glow","mirror","ball","shadowSteps",
     "spriteOn","sprite","spriteSize","spriteFrames","spriteFps",
     "uiFont","uiAlpha","uiBg","uiAccent","uiHeader","uiWidth","uiSplit","uncap",
     "uiOrder","uiMods","uiNames"];
@@ -5654,6 +5684,7 @@ void main(){
     return fetch(TPL_URL + "/" + t.id + MC_AUTH, {
       method: "PATCH", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({ fields: { name: {stringValue: t.name},
+                                       ord: {integerValue: String(Math.max(0, TEMPLATES.indexOf(t)))},
                                        json: {stringValue: JSON.stringify(t.data)} } })
     }).then(function(r){ if(!r.ok) throw 0; return true; });
   }
@@ -5669,8 +5700,11 @@ void main(){
           var f = doc.fields || {}, data = null;
           try{ data = JSON.parse((f.json && f.json.stringValue) || ""); }catch(e){}
           return { id: String(doc.name).split("/").pop(),
-                   name: (f.name && f.name.stringValue) || "Template", data: data };
-        }).filter(function(t){ return !!t.data; });
+                   name: (f.name && f.name.stringValue) || "Template",
+                   ord: parseInt((f.ord && f.ord.integerValue) || "99", 10),
+                   data: data };
+        }).filter(function(t){ return !!t.data; })
+          .sort(function(a, b){ return a.ord - b.ord; });
       });
   }
   function drawTpl(){
@@ -5850,6 +5884,26 @@ void main(){
     mixEl.addEventListener("change", function(){ if(fadeFrom) syncUI(); });
     paint(mixEl);
   }
+
+  // Move it one place along. The number a template answers to is its place in
+  // this list, so moving it moves its alt shortcut with it — which is the whole
+  // point of being able to move it.
+  function tplMove(dir){
+    var i = tplAt, j = i + dir, t = TEMPLATES[i];
+    if(!t){ toast("Choose a template first"); return; }
+    if(j < 0 || j >= TEMPLATES.length){ toast(t.name + " is at the end already"); return; }
+    var other = TEMPLATES[j];
+    TEMPLATES.splice(i, 1);
+    TEMPLATES.splice(j, 0, t);
+    tplAt = j; fadeFrom = null;
+    tplWriteLocal(); drawTpl(); drawMix();
+    toast(t.name + " is now " + ((j + 1) % 10));
+    // both of them have a new place, so both are written back
+    tplCloudKeep(t).catch(function(){});
+    if(other) tplCloudKeep(other).catch(function(){});
+  }
+  document.getElementById("tplUp").addEventListener("click", function(){ this.blur(); tplMove(-1); });
+  document.getElementById("tplDn").addEventListener("click", function(){ this.blur(); tplMove(1); });
 
   document.getElementById("tplDel").addEventListener("click", function(){
     this.blur();
