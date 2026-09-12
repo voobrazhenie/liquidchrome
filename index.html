@@ -4036,7 +4036,8 @@ void main(){
       var b = document.createElement("button");
       b.type = "button";
       b.textContent = m.name;
-      b.title = m.id ? m.name + (m.saved ? " \u00b7 kept" : " \u00b7 not kept yet") : m.name + " \u00b7 built in";
+      b.title = (m.id ? m.name + (m.saved ? " \u00b7 kept" : " \u00b7 not kept yet") : m.name + " \u00b7 built in")
+              + (m.clear === false ? " \u00b7 no see-through pixels" : "");
       b.setAttribute("aria-pressed", i === state[key] ? "true" : "false");
       b.addEventListener("click", function(){ pickSphere(key, i); b.blur(); });
       seg.appendChild(b);
@@ -4088,7 +4089,16 @@ void main(){
     cap = cap || 512;
     img.onload = function(){
       var w = img.naturalWidth || 1, h = img.naturalHeight || 1;
-      if(Math.max(w, h) <= cap && src.length < 400000){ done(src); return; }
+      // Does this image have anything see-through in it at all? Worth knowing
+      // out loud: a sheet exported flat looks exactly like one this page has
+      // flattened, and only one of those is anybody's to fix.
+      var pc = document.createElement("canvas");
+      pc.width = Math.max(1, Math.min(96, w));
+      pc.height = Math.max(1, Math.min(96, h));
+      var pg = pc.getContext("2d");
+      pg.drawImage(img, 0, 0, pc.width, pc.height);
+      var clear = hasAlpha(pg, pc.width, pc.height);
+      if(Math.max(w, h) <= cap && src.length < 400000){ done(src, clear); return; }
       // A JPEG is a fraction of the size and a sphere loses nothing by being
       // one. A cut-out sprite loses everything: JPEG has no alpha at all, so
       // every transparent pixel comes back black. An image that is see-through
@@ -4109,9 +4119,9 @@ void main(){
         if(cap <= 256) break;
         cap = Math.max(256, Math.round(cap * 0.75));
       }
-      done(out);
+      done(out, clear);
     };
-    img.onerror = function(){ done(null); };
+    img.onerror = function(){ done(null, false); };
     img.src = src;
   }
 
@@ -4123,17 +4133,22 @@ void main(){
     r.onload = function(){
       var name = (f.name.replace(/\.[^.]+$/, "") || "Loaded").slice(0, 12);
       // a strip of frames needs the room; one sphere does not
-      fitSphere(String(r.result), function(src){
+      var into = loadInto;
+      fitSphere(String(r.result), function(src, clear){
         if(!src){ toast("That file is not an image this browser can read"); return; }
-        MATCAPS.push({ name: name, src: src, id: sphereId(), saved: false });
-        state[loadInto] = MATCAPS.length - 1;
+        MATCAPS.push({ name: name, src: src, id: sphereId(), saved: false, clear: !!clear });
+        state[into] = MATCAPS.length - 1;
         drawSpheresAll();
-        if(loadInto === "normalMc") setNormalOn(true);
-        else if(loadInto === "depthMc") setDepthOn(true);
-        else if(loadInto === "sprite") setSpriteOn(true);
+        if(into === "normalMc") setNormalOn(true);
+        else if(into === "depthMc") setDepthOn(true);
+        else if(into === "sprite") setSpriteOn(true);
         else setMatcapOn(true);
-        toast(name + " loaded \u00b7 Keep to hold on to it");
-      }, loadInto === "sprite" ? 1600 : 512);
+        if(into === "sprite" && !clear){
+          toast(name + " has no see-through pixels in it \u2014 it will stand in a box");
+        } else {
+          toast(name + " loaded \u00b7 Keep to hold on to it");
+        }
+      }, into === "sprite" ? 1600 : 512);
     };
     r.readAsDataURL(f);
   });
@@ -5397,10 +5412,21 @@ void main(){
     for(var j = 0; j < 6; j++) markToggle("lc", j, state.lcOn, state.lcOn[j]);
     for(var k = 0; k < 2; k++) markToggle("mir", k, state.mirror, state.mirror[k]);
     setRunning(!!state.running); setMorph(!!state.morph); setSpikes(!!state.spikeOn);
-    // every slider, out of the one table that says how each reaches the state
+    // Every slider, out of the one table that says how each reaches the state.
+    // A value can have been TYPED past the end of its slider — that is what the
+    // reading is for — and showing it on the slider clamps it to the end, whose
+    // handler then writes the clamp back. So the wanted value is put back after
+    // the control has been set, and the reading is written by hand: the slider
+    // sits at its end, and the number it is standing in for is the real one.
     var pin = state.stepsPin;
     for(var si = 0; si < SLIDE.length; si++){
-      slide(document.getElementById(SLIDE[si][0]), state[SLIDE[si][1]] * SLIDE[si][2]);
+      var sid = SLIDE[si][0], key = SLIDE[si][1], want = state[key];
+      slide(document.getElementById(sid), want * SLIDE[si][2]);
+      if(typeof want === "number" && state[key] !== want){
+        state[key] = want;
+        var sout = document.getElementById(sid + "Out");
+        if(sout && FMT[sid]) sout.textContent = FMT[sid](want);
+      }
     }
     state.stepsPin = pin;            // rSteps pins the budget as a side effect
     setShadows(!!state.shadowOn);
