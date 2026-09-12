@@ -108,6 +108,36 @@
   }
   .lbl{font-family:var(--mono);font-size:.80em;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
 
+  /* The console: a window that comes down from the top and reaches across to
+     the menu's edge. Its own element rather than part of the HUD, so hiding
+     the panels leaves it where it is — and with them away it spans the lot. */
+  .term{position:fixed;top:0;left:0;right:min(var(--menu-w),94vw);z-index:4;
+        height:min(38vh,420px);display:flex;flex-direction:column;
+        background:var(--panel);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+        border-bottom:1px solid var(--line);
+        transform:translateY(-101%);transition:transform .18s ease;pointer-events:none}
+  .term.on{transform:none;pointer-events:auto}
+  .hud.hidden ~ .term{right:0}
+  .termh{display:flex;align-items:center;justify-content:space-between;gap:10px;flex:none;
+         padding:6px 10px;border-bottom:1px solid var(--line);
+         font-family:var(--mono);font-size:.78em;letter-spacing:.14em;
+         text-transform:uppercase;color:var(--dim)}
+  .termlog{flex:1 1 auto;min-height:0;overflow-y:auto;margin:0;padding:8px 10px;
+           font-family:var(--mono);font-size:11px;line-height:1.7;
+           color:var(--chrome);white-space:pre-wrap;word-break:break-word}
+  .termlog i{color:var(--dim);font-style:normal}
+  .termlog b{color:var(--fiber);font-weight:400}
+  .termlog s{color:var(--soma);text-decoration:none}
+  .termf{display:flex;align-items:center;gap:7px;flex:none;padding:6px 10px;border-top:1px solid var(--line)}
+  .termf span{flex:none;font-family:var(--mono);font-size:12px;color:var(--fiber)}
+  .termf input{flex:1 1 auto;min-width:0;appearance:none;background:transparent;border:0;
+               outline:none;font-family:var(--mono);font-size:12px;color:var(--chrome)}
+  .termlog::-webkit-scrollbar{width:6px;height:0}
+  .termlog::-webkit-scrollbar-track{background:rgba(47,217,192,.06)}
+  .termlog::-webkit-scrollbar-thumb{background:rgba(47,217,192,.38)}
+  @media (prefers-reduced-motion:reduce){ .term{transition:none} }
+
+
   /* Folding groups. The header is a filled bar exactly one row high; the body
      is a box of the same width hanging off it, so a group reads as one object
      rather than as a heading with loose rows under it. The gap before the next
@@ -254,6 +284,7 @@
     .telemetry dd{font-size:1.1em}
     #fpsGraph{height:52px}
     .console{width:min(var(--menu-w),92vw);gap:7px}
+    .term{right:min(var(--menu-w),92vw);height:min(46vh,360px)}
     .grpb{gap:8px}
     .seg button{padding:0 4px}
   }
@@ -1221,9 +1252,16 @@
         <button type="button" id="resetBtn" title="Go back to the settings that were last saved as the default. Templates are left alone.">Reset</button>
       </div>
       <p class="hint" id="cloudNote">Checking for saved settings…</p>
-      <p class="hint" id="hint">Drag to steer · scroll to range in · R new view · 1-4 resolution · 5-0 saved views, shift+5-0 to store · shift+` fly</p>
+      <p class="hint" id="hint">Drag to steer · scroll to range in · R new view · 1-4 resolution · 5-0 saved views, shift+5-0 to store · shift+` fly · T templates · ` console</p>
     </section>
   </div>
+</div>
+
+<div class="term" id="term" aria-label="Console" aria-hidden="true">
+  <div class="termh"><span>Console</span><span>` closes it · help</span></div>
+  <div class="termlog" id="termLog" role="log" aria-live="polite"></div>
+  <div class="termf"><span>&gt;</span><input id="termIn" type="text" autocomplete="off"
+       spellcheck="false" aria-label="Console command" placeholder="help"></div>
 </div>
 
 <div class="report" id="report" hidden>
@@ -2583,6 +2621,11 @@ void main(){
 (function(){
   "use strict";
 
+  // What the keyboard does, read before anything at all can flash a notice
+  // over the element it is written in — the software-rendering notice does
+  // exactly that, and it arrives long before the console is built.
+  var KEYLINE = ((document.getElementById("hint") || {}).textContent || "").trim();
+
   var VS = "attribute vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }";
   var UM_PER_UNIT = 200;
 
@@ -3169,10 +3212,10 @@ void main(){
     walkOnGround = false;
   }
   function walkMove(dt, mx, mz){
-    var R = SCENE_R[state.scene];
+    var R = SCENE_R[state.scene], moving = !!(mx || mz);
     var run = (state.runOn && held.shift) ? 2.4 : 1.0;
     var v = state.walkSpeed * walkS() * run * dt;
-    if(mx || mz){
+    if(moving){
       // forward flattened to the horizon: a walk does not climb because the
       // head is tipped up
       var f = [Math.sin(state.flyYaw), 0, Math.cos(state.flyYaw)];
@@ -3188,10 +3231,24 @@ void main(){
     walkOnGround = false;
     if(walkGround >= 0){
       var stand = state.flyPos[1] - walkGround + walkEyeH();
-      // Standing already, and the floor has only moved by as much as the answer
-      // itself is grainy: that is the same floor, so do not chase it. Without
-      // this a walker standing still jitters by one quantum a frame for ever.
-      if(wasOn && Math.abs(stand - state.flyPos[1]) < walkQ()) stand = state.flyPos[1];
+      // Standing already, and the floor has not really moved: hold exactly
+      // still rather than chase the answer.
+      //
+      // Chasing it does not converge. The ray starts at the eye, so the
+      // distance it comes back with depends on where the eye is; correcting
+      // the eye by that distance moves the start of the next ray, which comes
+      // back with a slightly different answer, which moves it back. The result
+      // is a two-frame cycle a millimetre or two wide that never damps out —
+      // which is what the jitter while standing still was.
+      //
+      // So the tolerance has to be as wide as the march's own error, not as
+      // wide as the quantum the answer is packed into. A few percent of the
+      // walker's own height is far below anything the eye can see, and it
+      // scales when the walker does. Standing is the only place it is that
+      // generous: a walk over a slope tracks the ground to the quantum, or it
+      // would climb in steps.
+      var slack = (!moving && walkVy <= 0) ? walkEyeH() * 0.06 : walkQ();
+      if(wasOn && Math.abs(stand - state.flyPos[1]) < slack) stand = state.flyPos[1];
       if(y <= stand){ y = stand; walkVy = 0; walkOnGround = true; }
     }
     state.flyPos[1] = y;
@@ -3742,6 +3799,7 @@ void main(){
   }
   showHint();                        // the sun has the mouse before anyone touches it
   function toast(msg){
+    termSay(msg);                    // the console keeps what the notice forgets
     if(!hintEl) return;
     clearTimeout(hintT);
     hintBusy = 1;
@@ -5359,6 +5417,154 @@ void main(){
   function setHud(v){ hud.classList.toggle("hidden", !v); reframe(); }
   setHud(true);
 
+  // T brings the menu up with nothing open but one group. Templates is the
+  // one you reach for when all you want is to pick a look, so that is what
+  // T does: show the menu, fold everything, open Templates.
+  var GRP_TPL = 8;
+  function onlyGroup(gid){
+    setHud(true);
+    for(var i = 0; i < GROUPN; i++) setGroup(i, i === gid);
+  }
+
+  // ---- the console ------------------------------------------------------
+  // A window that comes down from the top on ` and reaches across to the
+  // menu's edge. It writes down everything the page says out loud, and it
+  // takes commands, so a setting can be reached by name instead of hunted
+  // for among thirteen groups.
+  var termEl = document.getElementById("term");
+  var termLog = document.getElementById("termLog");
+  var termIn = document.getElementById("termIn");
+  var termT0 = Date.now(), termHist = [], termAt = -1;
+  function termStamp(){
+    var t = Math.floor((Date.now() - termT0) / 1000);
+    return ("0" + Math.floor(t / 60)).slice(-2) + ":" + ("0" + (t % 60)).slice(-2);
+  }
+  function termEsc(t){
+    return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  // kind: nothing for something the page said, "in" for something typed,
+  // "out" for an answer, "bad" for a complaint
+  function termSay(msg, kind){
+    if(!termLog) return;
+    var tag = kind === "in" ? "b" : kind === "bad" ? "s" : kind === "out" ? "span" : "i";
+    var row = document.createElement("div");
+    row.innerHTML = "<i>" + termStamp() + "</i>  <" + tag + ">" +
+                    termEsc(msg) + "</" + tag + ">";
+    termLog.appendChild(row);
+    while(termLog.childNodes.length > 400) termLog.removeChild(termLog.firstChild);
+    termLog.scrollTop = termLog.scrollHeight;
+  }
+  function termOpen(){ return !!(termEl && termEl.classList.contains("on")); }
+  function setTermOn(on){
+    if(!termEl) return;
+    termEl.classList.toggle("on", !!on);
+    termEl.setAttribute("aria-hidden", on ? "false" : "true");
+    if(on) termIn.focus(); else termIn.blur();
+  }
+  var TERM_HELP = [
+    "help                 this list",
+    "get <name>           what a setting is now",
+    "set <name> <value>   change one: a number, on/off, or [1,0,1]",
+    "find <text>          settings whose name has that in it",
+    "keys                 what the keyboard does",
+    "clear                empty the log"
+  ];
+  function termFind(q){
+    q = String(q).toLowerCase();
+    var out = [];
+    for(var i = 0; i < SAVE_KEYS.length; i++){
+      if(SAVE_KEYS[i].toLowerCase().indexOf(q) >= 0) out.push(SAVE_KEYS[i]);
+    }
+    return out;
+  }
+  function termShow(v){
+    if(v === null || v === undefined) return "—";
+    if(typeof v === "object") return JSON.stringify(v);
+    return String(v);
+  }
+  function termNoSuch(name){
+    var near = termFind(name);
+    termSay(near.length ? "no setting called “" + name + "”. Close: " + near.join("  ")
+                        : "no setting called “" + name + "”. Try find, or help.", "bad");
+  }
+  function termRead(raw){
+    if(raw === "on" || raw === "true" || raw === "yes") return 1;
+    if(raw === "off" || raw === "false" || raw === "no") return 0;
+    if(/^[\[{"]/.test(raw)){ try{ return JSON.parse(raw); }catch(e){ return undefined; } }
+    if(/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/.test(raw)) return parseFloat(raw);
+    return raw;                                   // a colour, or a name
+  }
+  function termRun(line){
+    var t = String(line).trim();
+    if(!t) return;
+    termSay(t, "in");
+    var sp = t.indexOf(" ");
+    var cmd = (sp < 0 ? t : t.slice(0, sp)).toLowerCase();
+    var rest = sp < 0 ? "" : t.slice(sp + 1).trim();
+    if(cmd === "help"){
+      for(var i = 0; i < TERM_HELP.length; i++) termSay(TERM_HELP[i], "out");
+      return;
+    }
+    if(cmd === "clear"){ termLog.innerHTML = ""; return; }
+    if(cmd === "keys"){ termSay(KEYLINE || "see the line under the menu", "out"); return; }
+    if(cmd === "find"){
+      var hits = termFind(rest);
+      termSay(hits.length ? hits.join("  ") : "nothing called that", hits.length ? "out" : "bad");
+      return;
+    }
+    if(cmd === "get"){
+      if(!rest){ termSay("get what?", "bad"); return; }
+      if(SAVE_KEYS.indexOf(rest) < 0){ termNoSuch(rest); return; }
+      termSay(rest + " = " + termShow(state[rest]), "out");
+      return;
+    }
+    if(cmd === "set"){
+      var gap = rest.indexOf(" ");
+      var key = gap < 0 ? rest : rest.slice(0, gap);
+      var raw = gap < 0 ? "" : rest.slice(gap + 1).trim();
+      if(!key){ termSay("set what?", "bad"); return; }
+      if(SAVE_KEYS.indexOf(key) < 0){ termNoSuch(key); return; }
+      if(!raw){ termSay("set " + key + " to what? It is " + termShow(state[key]) + " now.", "bad"); return; }
+      var v = termRead(raw);
+      if(v === undefined){ termSay("that is not a value I can read", "bad"); return; }
+      state[key] = v;
+      syncUI();                                  // through the controls, as a hand would
+      termSay(key + " = " + termShow(state[key]), "out");
+      return;
+    }
+    termSay("I do not know “" + cmd + "”. Try help.", "bad");
+  }
+  if(termIn){
+    termIn.addEventListener("keydown", function(e){
+      e.stopPropagation();                       // the page's own keys stand down
+      if(e.key === "Enter"){
+        e.preventDefault();
+        var v = termIn.value;
+        termIn.value = "";
+        if(v.trim()){ termHist.push(v); if(termHist.length > 60) termHist.shift(); }
+        termAt = termHist.length;
+        termRun(v);
+      } else if(e.code === "Escape"){
+        e.preventDefault(); setTermOn(false);
+      } else if(e.code === "Backquote" && !e.shiftKey && !termIn.value){
+        e.preventDefault(); setTermOn(false);
+      } else if(e.code === "ArrowUp" && termHist.length){
+        e.preventDefault();
+        termAt = Math.max(0, (termAt < 0 ? termHist.length : termAt) - 1);
+        termIn.value = termHist[termAt] || "";
+      } else if(e.code === "ArrowDown" && termHist.length){
+        e.preventDefault();
+        termAt = Math.min(termHist.length, termAt + 1);
+        termIn.value = termHist[termAt] || "";
+      }
+    });
+    // a fault is exactly the thing you open a console to read
+    window.addEventListener("error", function(e){
+      termSay("error: " + (e && e.message ? e.message : "something went wrong"), "bad");
+    });
+    termSay("Console. ` closes it, help lists what it takes.");
+  }
+
   // ---- full screen ------------------------------------------------------
   var root = document.documentElement;
   var enter = root.requestFullscreen || root.webkitRequestFullscreen;
@@ -5423,14 +5629,17 @@ void main(){
   }
 
   // WASDQE belong to fly mode while it is on; A would otherwise cycle the AA
-  var FLYKEYS = {w:1, a:1, s:1, d:1, q:1, e:1};
+  // Read by position, never by what the key prints. e.key is whatever the
+  // system's layout puts there — on a Russian keyboard W prints ц and every
+  // shortcut on this page silently stopped working. e.code is the key itself,
+  // so the same physical keys drive the page in any language.
+  var FLYKEYS = {KeyW:"w", KeyA:"a", KeyS:"s", KeyD:"d", KeyQ:"q", KeyE:"e"};
   var RES_KEY = {Digit1:0, Digit2:1, Digit3:2, Digit4:3,
                  Numpad1:0, Numpad2:1, Numpad3:2, Numpad4:3};
-  function keyName(e){ return e.key.length === 1 ? e.key.toLowerCase() : e.key; }
   window.addEventListener("keyup", function(e){
     held.shift = e.shiftKey ? 1 : 0;
-    var k = keyName(e);
-    if(FLYKEYS[k]) held[k] = 0;
+    var k = FLYKEYS[e.code];
+    if(k) held[k] = 0;
   });
   // a key held while the tab loses focus never sends its keyup
   window.addEventListener("blur", function(){ held = {}; });
@@ -5445,8 +5654,8 @@ void main(){
       if(tk !== undefined){ e.preventDefault(); tplRecall(tk); }
       return;
     }
-    var fk = keyName(e);
-    if(state.fly && FLYKEYS[fk] && !e.ctrlKey && !e.metaKey && !e.altKey){
+    var fk = FLYKEYS[e.code];
+    if(state.fly && fk && !e.ctrlKey && !e.metaKey && !e.altKey){
       held[fk] = 1; e.preventDefault(); return;
     }
     // space is the one "freeze everything" key: camera and field together
@@ -5456,20 +5665,26 @@ void main(){
     if(e.code === "Space" && state.fly && state.walkOn){ e.preventDefault(); walkJump(); return; }
     if(e.code === "Space"){ e.preventDefault(); var go = !state.running; setRunning(go); setMorph(go); }
     // M puts the console away; the field's own animation moves to shift+M
-    if(e.key === "m" || e.key === "M"){
+    if(e.code === "KeyM"){
       if(e.shiftKey) setMorph(!state.morph); else foldAll();
     }
     // P is the transport key: play and pause the field's own time
-    if(e.key === "p" || e.key === "P"){ setMorph(!state.morph); }
-    if(e.key === "i" || e.key === "I"){ setSpikes(!state.spikeOn); }
-    if(e.key === "r" || e.key === "R"){ randomView(); }
-    if(e.key === "l" || e.key === "L"){ setSunMode(!sunMode); }
-    if(e.key === "g" || e.key === "G"){ setDecalEdit(!dmEdit); }
-    if(e.key === "*" || e.code === "NumpadMultiply"){ e.preventDefault(); setSunView(!sunView); }
+    if(e.code === "KeyP"){ setMorph(!state.morph); }
+    if(e.code === "KeyI"){ setSpikes(!state.spikeOn); }
+    // T: the menu, with nothing open but Templates
+    if(e.code === "KeyT"){ onlyGroup(GRP_TPL); }
+    // ` brings the console down; shift+` is still the camera
+    if(e.code === "Backquote" && !e.shiftKey){ e.preventDefault(); setTermOn(!termOpen()); return; }
+    if(e.code === "KeyR"){ randomView(); }
+    if(e.code === "KeyL"){ setSunMode(!sunMode); }
+    if(e.code === "KeyG"){ setDecalEdit(!dmEdit); }
+    if(e.code === "NumpadMultiply" || (e.code === "Digit8" && e.shiftKey)){
+      e.preventDefault(); setSunView(!sunView);
+    }
     if(RES_KEY[e.code] !== undefined){ setRes(RES_KEY[e.code]); }
-    if(e.key === "a" || e.key === "A"){ setAA((state.aa + 1) % 3); }
-    if(e.key === "f" || e.key === "F"){ toggleFullscreen(); }
-    if(e.key === "h" || e.key === "H" || e.key === "u" || e.key === "U"){
+    if(e.code === "KeyA"){ setAA((state.aa + 1) % 3); }
+    if(e.code === "KeyF"){ toggleFullscreen(); }
+    if(e.code === "KeyH" || e.code === "KeyU"){
       setHud(hud.classList.contains("hidden"));
     }
     if(e.code === "Escape" && sunView){ e.preventDefault(); setSunView(false); return; }
@@ -5942,10 +6157,15 @@ void main(){
   var KEEP_OLD = { uiOrder:1, uiMods:1, uiNames:1, groups:1, favs:1,
                    uiFont:1, uiAlpha:1, uiBg:1, uiAccent:1, uiHeader:1,
                    uiWidth:1, uiSplit:1 };
-  function applySaved(o){
+  // How wide the menu is is one value for the whole page, not something each
+  // template carries: picking a different look should not resize the
+  // interface under your hand. A saved default still sets it, once.
+  var TPL_SKIP = { uiWidth:1 };
+  function applySaved(o, tpl){
     if(!o) return false;
     for(var i = 0; i < SAVE_KEYS.length; i++){
       var k = SAVE_KEYS[i];
+      if(tpl && TPL_SKIP[k]) continue;
       var v = o[k];
       // A key the snapshot does not carry goes back to what the page ships
       // with, not to what is set at the moment: a template is a complete
@@ -6265,7 +6485,7 @@ void main(){
   function tplRecall(i){
     var t = TEMPLATES[i];
     if(!t || !t.data){ toast("Nothing on alt+" + ((i + 1) % 10)); return; }
-    applySaved(t.data);
+    applySaved(t.data, true);
     tplAt = i; fadeFrom = null;
     if(mixEl){ mixEl.value = 0; paint(mixEl); }
     drawTpl(); drawMix(); setDirty(false);
@@ -6325,7 +6545,7 @@ void main(){
   // the half-way mark, because there is no half of a choice. Which object is on
   // screen never moves at all: a fade is a fade, not a cut.
   var MIX_SKIP = { scene:1, uiOrder:1, uiMods:1, uiNames:1, groups:1, favs:1,
-                   clock:1, mClock:1, pClock:1 };
+                   clock:1, mClock:1, pClock:1, uiWidth:1 };
   var MIX_SNAP = { mode:1, fly:1, aa:1, resPin:1, bound:1, warpMode:1, stepsPin:1,
                    uncap:1, running:1, morph:1, spikeOn:1, warpOn:1, lcOn:1,
                    shadowOn:1, shadowSrc:1, shadowOnly:1, shadowMc:1,
@@ -6397,7 +6617,7 @@ void main(){
         // for crossing between looks, and a cut to another object is not one.
         var land = JSON.parse(JSON.stringify(TEMPLATES[n].data));
         land.scene = state.scene;
-        applySaved(land);
+        applySaved(land, true);
         tplAt = n; fadeFrom = null;
         mixEl.value = 0; paint(mixEl);
         drawTpl(); drawMix(); setDirty(false);
@@ -6539,6 +6759,9 @@ void main(){
   Object.defineProperty(window, "__walk", { get: function(){
     return { ground: walkGround, vy: walkVy, onGround: walkOnGround };
   } });
+  // which movement keys are down, so a check can prove a key is read by where
+  // it sits on the keyboard rather than by the letter its layout prints
+  Object.defineProperty(window, "__held", { get: function(){ return held; } });
   Object.defineProperty(window, "__sunView", { get: function(){ return sunView; } });
 })();
 </script>
