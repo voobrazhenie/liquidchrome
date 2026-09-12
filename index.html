@@ -2794,7 +2794,7 @@ void main(){
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.bindTexture(gl.TEXTURE_2D, null);
   function probeGround(U){
-    if(!U || !U.uProbe){ walkGround = -1; return; }
+    if(!U || !U.uProbe){ walkPrevG = walkGround; walkGround = -1; return; }
     var maxT = 1.74 + SCENE_R[state.scene] * 6;
     gl.bindFramebuffer(gl.FRAMEBUFFER, probeFbo);
     gl.viewport(0, 0, 1, 1);
@@ -2805,6 +2805,7 @@ void main(){
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, probePx);
     gl.uniform1f(U.uProbe, 0);
+    walkPrevG = walkGround;
     walkGround = probePx[2] > 127 ? (probePx[0] + probePx[1] / 255) / 255 * maxT : -1;
   }
 
@@ -3193,7 +3194,7 @@ void main(){
   // straight down, rendered into a single pixel and read back after the frame
   // it belongs to, so what is underfoot is exactly the surface that was drawn.
   // It is a frame behind, which at a walking pace is a millimetre.
-  var walkGround = -1, walkVy = 0, walkDist = 0, walkOnGround = false;
+  var walkGround = -1, walkPrevG = -1, walkVy = 0, walkDist = 0, walkOnGround = false;
   // One size for the whole walker. Everything about a body scales together:
   // a creature a tenth as tall stands a tenth as high, takes a tenth of a
   // stride, walks a tenth as fast and jumps a tenth as far — which is what
@@ -3248,8 +3249,24 @@ void main(){
       // generous: a walk over a slope tracks the ground to the quantum, or it
       // would climb in steps.
       var slack = (!moving && walkVy <= 0) ? walkEyeH() * 0.06 : walkQ();
-      if(wasOn && Math.abs(stand - state.flyPos[1]) < slack) stand = state.flyPos[1];
-      if(y <= stand){ y = stand; walkVy = 0; walkOnGround = true; }
+      // The answer that is not the same answer twice is not a floor.
+      //
+      // A cycle cannot repeat itself: the ray starts at the eye, so the very
+      // act of correcting the eye changes what the next ray comes back with.
+      // A floor that is really there, or one that is moving because the field
+      // is animating, gives two readings in a row that agree. So while
+      // standing, only act on a reading the frame before it already agreed
+      // with — which holds the walker still however wide the cycle is, where
+      // a tolerance only holds it still while the cycle is narrower than the
+      // tolerance. How big the march's own error is depends on the relief and
+      // the warp, and it can be far wider than any fixed number.
+      var steady = walkPrevG < 0 || Math.abs(walkGround - walkPrevG) < slack;
+      if(wasOn && !moving && walkVy <= 0 && !steady){
+        y = state.flyPos[1]; walkVy = 0; walkOnGround = true;
+      } else {
+        if(wasOn && Math.abs(stand - state.flyPos[1]) < slack) stand = state.flyPos[1];
+        if(y <= stand){ y = stand; walkVy = 0; walkOnGround = true; }
+      }
     }
     state.flyPos[1] = y;
     // walked off the end of the world: put it back above rather than fall for ever
@@ -4285,7 +4302,7 @@ void main(){
     if(on && !state.fly) setFly(true);
     state.walkOn = on ? 1 : 0;
     wOnBtn.setAttribute("aria-pressed", on ? "true" : "false");
-    walkVy = 0; walkDist = 0; walkGround = -1; walkOnGround = false;
+    walkVy = 0; walkDist = 0; walkGround = -1; walkPrevG = -1; walkOnGround = false;
     if(on) audio();                 // a press is the gesture a sound needs
     telemetry();
   }
@@ -5467,6 +5484,8 @@ void main(){
     "set <name> <value>   change one: a number, on/off, or [1,0,1]",
     "find <text>          settings whose name has that in it",
     "keys                 what the keyboard does",
+    "dump                 every setting as JSON, on the clipboard",
+    "dump <template>      one template the same way, by name or number",
     "clear                empty the log"
   ];
   function termFind(q){
@@ -5506,6 +5525,39 @@ void main(){
       return;
     }
     if(cmd === "clear"){ termLog.innerHTML = ""; return; }
+    // Everything, as text, so a setting that only exists on this machine can
+    // be handed to someone else. The clipboard is the point of it: the log is
+    // there to read, and a page of JSON is not for reading.
+    if(cmd === "dump"){
+      var what = snapshot(), label = "these settings";
+      if(rest){
+        var n = parseInt(rest, 10);
+        var t = (n > 0 && TEMPLATES[n - 1]) ? TEMPLATES[n - 1] : null;
+        if(!t){
+          for(var q = 0; q < TEMPLATES.length; q++){
+            if(TEMPLATES[q].name.toLowerCase().indexOf(rest.toLowerCase()) >= 0){ t = TEMPLATES[q]; break; }
+          }
+        }
+        if(!t){
+          termSay("no template called \u201c" + rest + "\u201d. There are: " +
+                  (TEMPLATES.map(function(x){ return x.name; }).join(", ") || "none"), "bad");
+          return;
+        }
+        what = t.data; label = "\u201c" + t.name + "\u201d";
+      }
+      var text = JSON.stringify(what);
+      termSay(text, "out");
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){
+          termSay(label + " is on the clipboard \u2014 " + text.length + " characters");
+        }, function(){
+          termSay("could not reach the clipboard; select the line above instead", "bad");
+        });
+      } else {
+        termSay("no clipboard here; select the line above instead", "bad");
+      }
+      return;
+    }
     if(cmd === "keys"){ termSay(KEYLINE || "see the line under the menu", "out"); return; }
     if(cmd === "find"){
       var hits = termFind(rest);
