@@ -342,6 +342,81 @@
               </div>
             </div>
           </div>
+          <div class="mod" data-mod="walk">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt">Walking</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport">
+                <button type="button" id="wOn" aria-pressed="false" title="Put the camera on the ground. It finds whatever surface is below it, falls onto it, and walks over it. Tab while flying does the same. Space jumps.">Walking</button>
+                <button type="button" id="wJumpOn" aria-pressed="true" title="Whether space lifts the walker off the ground at all.">Jump</button>
+                <button type="button" id="wRunOn" aria-pressed="true" title="Whether holding shift breaks into a run.">Run</button>
+                <button type="button" id="wStepsOn" aria-pressed="false" title="A step sound each time a foot lands, timed off how fast the walk is going. Add loads a sample of your own; without one it makes a plain thud.">Steps</button>
+                <button type="button" id="wStepAdd" title="Load a step sound from this computer. It lasts the session.">Add</button>
+              </div>
+              <input type="file" id="wStepFile" accept="audio/*" hidden>
+            </div>
+          </div>
+          <div class="mod" data-mod="wspeed">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="wSpeed" title="How fast the walk goes over the ground, in units a second. Running multiplies it.">Walk speed</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="wSpeed" hidden></button><output id="wSpeedOut">0.45</output></div>
+                <input id="wSpeed" type="range" min="3" max="400" step="1" value="45">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="wjump">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="wJump" title="How high off the ground a jump carries, in the same units. Gravity is worked back out of it so the arc always lands.">Jump height</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="wJump" hidden></button><output id="wJumpOut">0.22</output></div>
+                <input id="wJump" type="range" min="1" max="200" step="1" value="22">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="camfov">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="camFov" title="The lens. The reading is the angle it takes in from top to bottom, and a number can be typed into it in degrees; the slider runs the other way, from a wide angle out to a long one.">Field of view</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="camFov" hidden></button><output id="camFovOut">42&#176;</output></div>
+                <input id="camFov" type="range" min="40" max="700" step="1" value="130">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="dof">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt">Depth of field</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport">
+                <button type="button" id="dofOn" aria-pressed="false" title="Put everything but one distance out of focus. Off, not a tap of it is read and the frame is the one it always was.">Depth of field</button>
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="doffocus">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="dofFocus" title="How far off the surface that stays sharp is. Distance from the eye, in the same units the flight speed is in.">Focus distance</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="dofFocus" hidden></button><output id="dofFocusOut">3.00</output></div>
+                <input id="dofFocus" type="range" min="10" max="1200" step="1" value="300">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="dofrange">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="dofRange" title="How deep the sharp band is, the same amount in front of the focus surface and behind it. Beyond it the blur comes on over another band's width.">Focus depth</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="dofRange" hidden></button><output id="dofRangeOut">0.80</output></div>
+                <input id="dofRange" type="range" min="5" max="600" step="1" value="80">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="dofblur">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="dofBlur" title="How wide the widest circle of confusion gets, in pixels of the rendered frame.">Blur</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="dofBlur" hidden></button><output id="dofBlurOut">4.0</output></div>
+                <input id="dofBlur" type="range" min="0" max="400" step="1" value="40">
+              </div>
+            </div>
+          </div>
           <div class="mod" data-mod="camlook">
             <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="camLook" title="How much the view lags the mouse when flying. At nothing it follows exactly, which is how it has always been.">Look smoothing</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
             <div class="modc">
@@ -1203,6 +1278,9 @@ uniform float uNoise;       // how much film grain the finished frame gets
 uniform float uHaze;        // how thick the air between the eye and the object is
 uniform float uGlow;        // how much the light that gathers near a surface shows
 uniform vec2  uMirror;      // fold the object in half about x, about y, or both
+uniform float uDofOn;       // whether anything is out of focus at all
+uniform float uDofFocus;    // how far off the surface being focused on is
+uniform float uDofRange;    // how deep the band that stays sharp is, either side
 uniform float uBall;        // travel from the object it builds toward a plain ball
 uniform float uBallR;       // how big that ball is, sized to whichever object it is
 uniform float uOrtho;       // 1 = parallel rays, for standing where the sun does
@@ -2211,6 +2289,19 @@ vec3 glass(vec3 surf, vec3 p, vec3 n, vec3 rd, float travel, float pad, bool use
 }
 #endif
 
+// How far out of focus this pixel is: nothing inside the sharp band, all the
+// way by the time it is a band's width beyond it. Worked out here rather than
+// in the post pass because THIS is where the distance is known — the post pass
+// has a picture and no depths — and it is carried across in the alpha channel,
+// which nothing else was using. Spending the whole of those eight bits on the
+// out-of-focus amount rather than on a distance puts every one of them where
+// the blur actually changes.
+float gCoC = 1.0;
+void setCoC(float dist){
+  if(uDofOn < 0.5) return;
+  gCoC = clamp((abs(dist - uDofFocus) - uDofRange) / max(uDofRange, 0.25), 0.0, 1.0);
+}
+
 vec3 render(vec2 fc){
   vec2 uv = (fc - 0.5*uRes) / min(uRes.x, uRes.y);
   uv.y -= uShift;
@@ -2234,6 +2325,7 @@ vec3 render(vec2 fc){
   }
 
   vec3 col = bgCol(rd);
+  gCoC = uDofOn > 0.5 ? clamp((40.0 - uDofFocus - uDofRange) / max(uDofRange, 0.25), 0.0, 1.0) : 1.0;
   float glow = 0.0;
 
   // rotations preserve radius; only the noise term can push the surface out
@@ -2294,6 +2386,7 @@ vec3 render(vec2 fc){
         hit = 1.0; sdHit = sd;
       }
 
+      if(hit > 0.5) setCoC(t);
       if(hit > 0.5){
         vec3 p = ro + rd*t;
         // The map moves the normal before anything reads it, so the matcap
@@ -2332,8 +2425,44 @@ vec3 render(vec2 fc){
   return col;
 }
 
+#ifdef F_WALK
+// ---- what is underfoot -------------------------------------------------
+// The field lives here and the walker lives in the page, so the only way to
+// ask what is under it is to render the answer. One ray, one pixel, read back:
+// the same program with the same uniforms, so what the walker stands on is
+// exactly the surface that was drawn — warps, folds, decal and all.
+uniform float uProbe;       // this draw is a question, not a picture
+uniform vec3  uProbeOrg;
+uniform vec3  uProbeDir;
+uniform float uProbeMax;
+vec4 probeRay(){
+  float t = 0.0, sd, lip, hit = 0.0;
+  for(int i = 0; i < 192; i++){
+    // Step by exactly what map returns, the way the march itself does. That
+    // number is a lower bound on the distance and is the only thing it is safe
+    // to move by; multiplying it back up gives a number that is too big
+    // wherever an intersection picks the uncompressed side of itself — and a
+    // step of that size walks clean through the floor.
+    float m = map(uProbeOrg + uProbeDir*t, sd, lip);
+    if(m < 0.0016){ hit = 1.0; break; }     // negative counts: that is inside
+    t += max(m, 0.0016);
+    if(t > uProbeMax) break;
+  }
+  // two bytes of range for the distance, because a walker standing on a number
+  // quantised to 1/255 of the scene visibly shivers
+  float v = clamp(t / max(uProbeMax, 1e-3), 0.0, 1.0) * 255.0;
+  return vec4(floor(v) / 255.0, fract(v), hit, 1.0);
+}
+#endif
+
 void main(){
-  gl_FragColor = vec4(render(gl_FragCoord.xy), 1.0);
+#ifdef F_WALK
+  if(uProbe > 0.5){ gl_FragColor = probeRay(); return; }
+#endif
+  // the alpha channel carries the blur, not an opacity: the drawing buffer has
+  // no alpha of its own, so nothing else was ever going to read it
+  vec3 c = render(gl_FragCoord.xy);
+  gl_FragColor = vec4(c, gCoC);
 }
 </script>
 
@@ -2343,15 +2472,43 @@ uniform sampler2D uTex;
 uniform vec2  uOutRes;   // size being drawn
 uniform vec2  uTexel;    // 1 / size of the texture being read
 uniform float uFxaa;
+uniform float uDofOn;
+uniform float uDofBlur;   // how wide the widest circle of confusion gets, in pixels
 
 const vec3 LUMA = vec3(0.299, 0.587, 0.114);
+
+// Thirteen taps on a turned spiral: enough to read as a lens and few enough to
+// cost nothing when nothing is out of focus, which is the usual case. Each tap
+// is weighted by its OWN blur, so something sharp in front does not smear
+// itself over the soft distance behind it.
+vec3 defocus(vec2 uv, float coc){
+  float r = coc * uDofBlur;
+  vec3 acc = vec3(0.0);
+  float wsum = 0.0;
+  for(int i = 0; i < 13; i++){
+    float fi = float(i);
+    float a = fi * 2.39996323;                    // the golden angle
+    float rad = sqrt((fi + 0.5) / 13.0) * r;
+    vec2 o = vec2(cos(a), sin(a)) * rad * uTexel;
+    vec4 t = texture2D(uTex, uv + o);
+    float w = max(t.a, 0.05);
+    acc += t.rgb * w;
+    wsum += w;
+  }
+  return acc / max(wsum, 1e-4);
+}
 
 void main(){
   vec2 uv = gl_FragCoord.xy / uOutRes;
   // no FXAA: a plain read. When the texture is larger than the output the
   // bilinear filter resolves it, which for an exact 2x is a box filter.
   if(uFxaa < 0.5){
-    gl_FragColor = texture2D(uTex, uv);
+    vec4 flat4 = texture2D(uTex, uv);
+    if(uDofOn > 0.5 && uDofBlur > 0.0 && flat4.a > 0.004){
+      gl_FragColor = vec4(mix(flat4.rgb, defocus(uv, flat4.a), min(flat4.a * 1.6, 1.0)), 1.0);
+      return;
+    }
+    gl_FragColor = flat4;
     return;
   }
   vec2 inv = uTexel;
@@ -2376,7 +2533,12 @@ void main(){
   vec3 b = a * 0.5 + 0.25 * (texture2D(uTex, uv - dir * 0.5).rgb +
                              texture2D(uTex, uv + dir * 0.5).rgb);
   float lB = dot(b, LUMA);
-  gl_FragColor = vec4((lB < lMin || lB > lMax) ? a : b, 1.0);
+  vec3 outC = (lB < lMin || lB > lMax) ? a : b;
+  float coc = texture2D(uTex, uv).a;
+  if(uDofOn > 0.5 && uDofBlur > 0.0 && coc > 0.004){
+    outC = mix(outC, defocus(uv, coc), min(coc * 1.6, 1.0));
+  }
+  gl_FragColor = vec4(outC, 1.0);
 }
 </script>
 
@@ -2451,6 +2613,8 @@ void main(){
     "uShadowOn","uSunAz","uSunEl","uShadowSoft","uShadowDark","uShadowReach","uSunMark","uLcCube",
     "uMatcapOn","uMatcap","uShadowSrc","uShLevel","uShContrast","uShMatcap",
     "uShadowOnly","uNoise","uHaze","uGlow","uMirror","uBall","uBallR","uOrtho","uOrthoSpan","uShSteps","uShGrow",
+    "uDofOn","uDofFocus","uDofRange",
+    "uProbe","uProbeOrg","uProbeDir","uProbeMax",
     "uNormalOn","uNormalMap","uNormalAmt","uNormalScale",
     "uGlassOn","uGlassOpacity","uGlassEdge","uGlassIor","uGlassTint","uGlassDensity","uGlassDepth",
     "uDepthOn","uDepthMap","uDepthPos","uDepthRot","uDepthSize","uDepthDist","uDepthAmt","uDepthLip","uDepthPart"];
@@ -2468,7 +2632,8 @@ void main(){
     ["F_NORMAL", function(){ return !!state.normalOn && nmSlot.ready && state.normalAmt > 0; }],
     ["F_GLASS",  function(){ return !!state.glassOn && !state.shadowOnly; }],
     ["F_DECAL",  function(){ return !!state.depthOn && dmSlot.ready && state.depthAmt !== 0; }],
-    ["F_CUBE",   function(){ return state.scene === 2 && !!state.lcOn[5]; }]
+    ["F_CUBE",   function(){ return state.scene === 2 && !!state.lcOn[5]; }],
+    ["F_WALK",   function(){ return !!state.walkOn && !!state.fly; }]
   ];
   function featMask(){
     var m = 0;
@@ -2516,7 +2681,9 @@ void main(){
     uTex:    gl.getUniformLocation(progPost, "uTex"),
     uOutRes: gl.getUniformLocation(progPost, "uOutRes"),
     uTexel:  gl.getUniformLocation(progPost, "uTexel"),
-    uFxaa:   gl.getUniformLocation(progPost, "uFxaa")
+    uFxaa:   gl.getUniformLocation(progPost, "uFxaa"),
+    uDofOn:  gl.getUniformLocation(progPost, "uDofOn"),
+    uDofBlur:gl.getUniformLocation(progPost, "uDofBlur")
   };
 
   // offscreen target: the scene is marched into it, the post pass resolves it
@@ -2530,6 +2697,37 @@ void main(){
   gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  // One pixel of its own to ask the field a question in. Rendered with the very
+  // same program the frame was drawn with, so nothing can disagree about what
+  // the surface is.
+  var probeFbo = gl.createFramebuffer();
+  var probeTex = gl.createTexture();
+  var probePx = new Uint8Array(4);
+  gl.bindTexture(gl.TEXTURE_2D, probeTex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, probeFbo);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, probeTex, 0);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+  function probeGround(U){
+    if(!U || !U.uProbe){ walkGround = -1; return; }
+    var maxT = 1.74 + SCENE_R[state.scene] * 6;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, probeFbo);
+    gl.viewport(0, 0, 1, 1);
+    gl.uniform1f(U.uProbe, 1);
+    gl.uniform3f(U.uProbeOrg, state.flyPos[0], state.flyPos[1], state.flyPos[2]);
+    gl.uniform3f(U.uProbeDir, 0, -1, 0);
+    gl.uniform1f(U.uProbeMax, maxT);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, probePx);
+    gl.uniform1f(U.uProbe, 0);
+    walkGround = probePx[2] > 127 ? (probePx[0] + probePx[1] / 255) / 255 * maxT : -1;
+  }
+
   function sizeTarget(w, h){
     gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
@@ -2651,6 +2849,12 @@ void main(){
     glow: 1.00,                     // and how much the light gathered near the surfaces shows
     mirror: [0, 0],                 // fold the object in half about x, about y, or both
     ball: 0.00,                     // how far from the object it builds toward a plain ball
+    // the lens: what is in focus, how deep that stays sharp, and how soft the
+    // rest of it goes. Off, and not a tap of it is read.
+    dofOn: 0, dofFocus: 3.00, dofRange: 0.80, dofBlur: 4.0,
+    // walking: off, how fast, how high a jump carries, and whether jumping and
+    // running are allowed at all
+    walkOn: 0, walkSpeed: 0.45, jumpHeight: 0.22, jumpOn: 1, runOn: 1, stepsOn: 0,
     // a sprite standing over the picture: off, which sheet, how tall as a share
     // of the window, how many frames the sheet holds and how fast it walks them
     spriteOn: 0, sprite: 0, spriteSize: 0.20, spriteFrames: 4, spriteFps: 6.0,
@@ -2890,10 +3094,72 @@ void main(){
     state.flyYaw = Math.atan2(d[0]/l, d[2]/l);
     flySync();                    // put there, not eased there
   }
+  // ---- walking ---------------------------------------------------------
+  // Gravity, a floor, and a stride. The floor comes from the shader: one ray
+  // straight down, rendered into a single pixel and read back after the frame
+  // it belongs to, so what is underfoot is exactly the surface that was drawn.
+  // It is a frame behind, which at a walking pace is a millimetre.
+  var walkGround = -1, walkVy = 0, walkDist = 0, walkOnGround = false;
+  function walkEyeH(){ return SCENE_R[state.scene] * 0.10; }
+  // the smallest step the ground can come back in: two bytes of the reach the
+  // probe was given, with a little room over it
+  function walkQ(){ return (1.74 + SCENE_R[state.scene] * 6) / 65535 * 3; }
+  // worked back out of the jump height, so the arc always reaches it and lands
+  function walkG(){ return Math.max(1.5, 2 * Math.max(state.jumpHeight, 0.005) / 0.1296); }
+  function walkJump(){
+    if(!state.jumpOn || !walkOnGround) return;
+    walkVy = Math.sqrt(2 * walkG() * Math.max(state.jumpHeight, 0.005));
+    walkOnGround = false;
+  }
+  function walkMove(dt, mx, mz){
+    var R = SCENE_R[state.scene];
+    var run = (state.runOn && held.shift) ? 2.4 : 1.0;
+    var v = state.walkSpeed * run * dt;
+    if(mx || mz){
+      // forward flattened to the horizon: a walk does not climb because the
+      // head is tipped up
+      var f = [Math.sin(state.flyYaw), 0, Math.cos(state.flyYaw)];
+      var r = flyRight();
+      var k = 1 / Math.max(1, Math.sqrt(mx*mx + mz*mz));
+      state.flyPos[0] += (f[0]*mz + r[0]*mx) * v * k;
+      state.flyPos[2] += (f[2]*mz + r[2]*mx) * v * k;
+      walkDist += Math.abs(v);
+    }
+    walkVy -= walkG() * dt;
+    var y = state.flyPos[1] + walkVy * dt;
+    var wasOn = walkOnGround;
+    walkOnGround = false;
+    if(walkGround >= 0){
+      var stand = state.flyPos[1] - walkGround + walkEyeH();
+      // Standing already, and the floor has only moved by as much as the answer
+      // itself is grainy: that is the same floor, so do not chase it. Without
+      // this a walker standing still jitters by one quantum a frame for ever.
+      if(wasOn && Math.abs(stand - state.flyPos[1]) < walkQ()) stand = state.flyPos[1];
+      if(y <= stand){ y = stand; walkVy = 0; walkOnGround = true; }
+    }
+    state.flyPos[1] = y;
+    // walked off the end of the world: put it back above rather than fall for ever
+    if(y < -(1.74 + R * 5)){ state.flyPos[1] = 1.74 + R; walkVy = 0; walkDist = 0; }
+    tPos[0] = state.flyPos[0]; tPos[1] = state.flyPos[1]; tPos[2] = state.flyPos[2];
+    if(!walkOnGround){ walkDist = 0; return; }
+    if(!wasOn && state.stepsOn){ walkDist = 0; stepSound(); return; }   // landing
+    if(state.stepsOn && walkDist >= R * 0.17){ walkDist = 0; stepSound(); }
+  }
+
   function flyStep(dt){
     var mx = (held.d ? 1 : 0) - (held.a ? 1 : 0);   // strafe
     var mz = (held.w ? 1 : 0) - (held.s ? 1 : 0);   // forward
     var my = (held.e ? 1 : 0) - (held.q ? 1 : 0);   // world up / down
+    if(state.walkOn){
+      walkMove(dt, mx, mz);
+      if(state.lookSmooth <= 0){ tYaw = state.flyYaw; tPitch = state.flyPitch; }
+      else {
+        var kw = easeK(state.lookSmooth, dt);
+        state.flyYaw   = wrapPi(state.flyYaw + wrapPi(tYaw - state.flyYaw) * kw);
+        state.flyPitch += (tPitch - state.flyPitch) * kw;
+      }
+      return;
+    }
     var eased = state.moveSmooth > 0;
     var into = eased ? tPos : state.flyPos;
     if(mx || mz || my){
@@ -3251,6 +3517,9 @@ void main(){
     gl.uniform1f(U.uGlow, state.glow);
     gl.uniform2f(U.uMirror, state.mirror[0], state.mirror[1]);
     gl.uniform1f(U.uBall, state.ball);
+    gl.uniform1f(U.uDofOn, state.dofOn ? 1 : 0);
+    gl.uniform1f(U.uDofFocus, state.dofFocus);
+    gl.uniform1f(U.uDofRange, state.dofRange);
     gl.uniform1f(U.uBallR, SCENE_R[state.scene] * 0.62);
     gl.uniform1f(U.uOrtho, sunView ? 1 : 0);
     gl.uniform1f(U.uOrthoSpan, SCENE_R[state.scene] * 1.45 * state.zoom);
@@ -3270,6 +3539,7 @@ void main(){
     gl.uniform1f(U.uShadowReach, state.shadowReach);
     gl.uniform1f(U.uSunMark, sunMode && state.shadowOn ? 1 : 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    if(state.walkOn && state.fly) probeGround(U);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, W, H);
@@ -3280,6 +3550,8 @@ void main(){
     gl.uniform2f(P.uOutRes, W, H);
     gl.uniform2f(P.uTexel, 1.0 / RW, 1.0 / RH);
     gl.uniform1f(P.uFxaa, state.aa === 1 ? 1.0 : 0.0);
+    gl.uniform1f(P.uDofOn, state.dofOn ? 1 : 0);
+    gl.uniform1f(P.uDofBlur, state.dofBlur);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     // snap up on a spike so one bad frame is enough to trigger a correction
@@ -3554,6 +3826,9 @@ void main(){
     ["dmAmt","depthAmt",100], ["dmDist","depthDist",100], ["pHaze","haze",100], ["pGlow","glow",100],
     ["camMin","flyMin",1000], ["camMax","flyMax",10],
     ["camLook","lookSmooth",100], ["camMove","moveSmooth",100],
+    ["camFov","fov",100], ["dofFocus","dofFocus",100],
+    ["wSpeed","walkSpeed",100], ["wJump","jumpHeight",100],
+    ["dofRange","dofRange",100], ["dofBlur","dofBlur",10],
     ["spSize","spriteSize",100], ["spFrames","spriteFrames",1], ["spFps","spriteFps",10],
     ["oBall","ball",100],
     ["uiFont","uiFont",1], ["uiAlpha","uiAlpha",100], ["uiSplit","uiSplit",1]
@@ -3779,6 +4054,105 @@ void main(){
             function(v){ return Math.max(0.0001, Math.min(4, v)); });
   numSlider("camMax", "flyMax", 0.1, function(v){ return v.toFixed(1); },
             function(v){ return Math.max(0.05, Math.min(400, v)); });
+  // The slider is linear in the lens factor; the reading is the angle it sees,
+  // and typing an angle into it converts back. Keeping the lens factor as the
+  // value is what leaves the default exactly where it has always been.
+  FMT.camFov = function(v){ return Math.round(2 * Math.atan(0.5 / Math.max(v, 0.05)) * 180 / Math.PI) + "\u00b0"; };
+  numSlider("camFov", "fov", 0.01, FMT.camFov,
+            function(v){ return v > 3 ? 0.5 / Math.tan(Math.max(1, Math.min(170, v)) * Math.PI / 360) : v; });
+  numSlider("dofFocus", "dofFocus", 0.01, function(v){ return v.toFixed(2); });
+  numSlider("dofRange", "dofRange", 0.01, function(v){ return v.toFixed(2); });
+  numSlider("dofBlur", "dofBlur", 0.1, function(v){ return v.toFixed(1); });
+  var dofBtn = document.getElementById("dofOn");
+  function setDof(on){
+    state.dofOn = on ? 1 : 0;
+    dofBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    telemetry();
+  }
+  dofBtn.addEventListener("click", function(){ setDof(!state.dofOn); this.blur(); });
+  numSlider("wSpeed", "walkSpeed", 0.01, f2);
+  numSlider("wJump", "jumpHeight", 0.01, f2);
+
+  // ---- the sound of a step ---------------------------------------------
+  // A browser will not make a sound until somebody has pressed something, so
+  // the audio is only built when a button is pressed. Without a sample of your
+  // own it makes a plain thud: a short burst of noise through a low filter,
+  // which is enough to hear the timing and nothing more.
+  var actx = null, stepBuf = null;
+  function audio(){
+    if(!actx){
+      var A = window.AudioContext || window.webkitAudioContext;
+      try{ actx = A ? new A() : null; }catch(e){ actx = null; }
+    }
+    if(actx && actx.state === "suspended"){ try{ actx.resume(); }catch(e){} }
+    return actx;
+  }
+  function stepSound(){
+    var a = audio();
+    if(!a) return;
+    var out = a.createGain();
+    out.gain.value = 0.55;
+    out.connect(a.destination);
+    var src = a.createBufferSource();
+    if(stepBuf){
+      src.buffer = stepBuf;
+      src.connect(out);
+    } else {
+      var n = Math.max(1, Math.floor(a.sampleRate * 0.085));
+      var buf = a.createBuffer(1, n, a.sampleRate);
+      var d = buf.getChannelData(0);
+      for(var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3.4);
+      src.buffer = buf;
+      var lp = a.createBiquadFilter();
+      lp.type = "lowpass"; lp.frequency.value = 430;
+      src.connect(lp); lp.connect(out);
+    }
+    try{ src.start(a.currentTime); }catch(e){}
+  }
+  var stepFile = document.getElementById("wStepFile");
+  document.getElementById("wStepAdd").addEventListener("click", function(){ this.blur(); stepFile.click(); });
+  stepFile.addEventListener("change", function(){
+    var f = stepFile.files && stepFile.files[0];
+    stepFile.value = "";
+    if(!f) return;
+    var a = audio();
+    if(!a){ toast("This browser will not play sound"); return; }
+    var r = new FileReader();
+    r.onload = function(){
+      a.decodeAudioData(r.result, function(buf){
+        stepBuf = buf;
+        toast(f.name.slice(0, 18) + " is the step now");
+      }, function(){ toast("That file is not a sound this browser can read"); });
+    };
+    r.readAsArrayBuffer(f);
+  });
+
+  // ---- walking, on and off ---------------------------------------------
+  var wOnBtn = document.getElementById("wOn");
+  function setWalk(on){
+    on = !!on;
+    if(on && !state.fly) setFly(true);
+    state.walkOn = on ? 1 : 0;
+    wOnBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    walkVy = 0; walkDist = 0; walkGround = -1; walkOnGround = false;
+    if(on) audio();                 // a press is the gesture a sound needs
+    telemetry();
+  }
+  wOnBtn.addEventListener("click", function(){ setWalk(!state.walkOn); this.blur(); });
+  function walkToggle(id, key){
+    var b = document.getElementById(id);
+    b.addEventListener("click", function(){
+      state[key] = state[key] ? 0 : 1;
+      b.setAttribute("aria-pressed", state[key] ? "true" : "false");
+      if(key === "stepsOn" && state[key]) audio();
+      this.blur(); telemetry();
+    });
+    return b;
+  }
+  var wJumpBtn = walkToggle("wJumpOn", "jumpOn");
+  var wRunBtn = walkToggle("wRunOn", "runOn");
+  var wStepsBtn = walkToggle("wStepsOn", "stepsOn");
+
   numSlider("camLook", "lookSmooth", 0.01, f2);
   numSlider("camMove", "moveSmooth", 0.01, f2);
   numSlider("spSize", "spriteSize", 0.01, function(v){ return Math.round(v * 100) + "%"; },
@@ -4983,6 +5357,10 @@ void main(){
       held[fk] = 1; e.preventDefault(); return;
     }
     // space is the one "freeze everything" key: camera and field together
+    // Tab hands the camera to the ground and back, the way Blender's walk does.
+    // Only while flying: there is nothing to stand on along an auto path.
+    if(e.code === "Tab" && state.fly){ e.preventDefault(); setWalk(!state.walkOn); return; }
+    if(e.code === "Space" && state.fly && state.walkOn){ e.preventDefault(); walkJump(); return; }
     if(e.code === "Space"){ e.preventDefault(); var go = !state.running; setRunning(go); setMorph(go); }
     // M puts the console away; the field's own animation moves to shift+M
     if(e.key === "m" || e.key === "M"){
@@ -5318,6 +5696,8 @@ void main(){
     "glassOn","glassOpacity","glassEdge","glassIor","glassTint","glassDensity","glassDepth",
     "depthOn","depthMc","depthAmt","depthDist","depthPos","depthRot","depthSize","depthPart",
     "shadowSrc","shadowLevel","shadowContrast","shadowMc","shadowOnly","noise","haze","glow","mirror","ball","shadowSteps",
+    "fov","dofOn","dofFocus","dofRange","dofBlur",
+    "walkOn","walkSpeed","jumpHeight","jumpOn","runOn","stepsOn",
     "spriteOn","sprite","spriteSize","spriteFrames","spriteFps",
     "uiFont","uiAlpha","uiBg","uiAccent","uiHeader","uiWidth","uiSplit","uncap",
     "uiOrder","uiMods","uiNames"];
@@ -5442,6 +5822,11 @@ void main(){
     setGlassOn(!!state.glassOn);
     setDepthOn(!!state.depthOn);
     setSpriteOn(!!state.spriteOn);
+    setDof(!!state.dofOn);
+    setWalk(!!state.walkOn);
+    wJumpBtn.setAttribute("aria-pressed", state.jumpOn ? "true" : "false");
+    wRunBtn.setAttribute("aria-pressed", state.runOn ? "true" : "false");
+    wStepsBtn.setAttribute("aria-pressed", state.stepsOn ? "true" : "false");
     // a layout saved before a group existed leaves it open, not missing
     while(state.groups.length < GROUPN) state.groups.push(1);
     gTintIn.value = state.glassTint;
@@ -5835,7 +6220,8 @@ void main(){
                    shadowOn:1, shadowSrc:1, shadowOnly:1, shadowMc:1,
                    matcapOn:1, matcap:1, normalOn:1, normalMc:1,
                    glassOn:1, glassDepth:1, depthOn:1, depthMc:1, depthPart:1,
-                   mirror:1, spriteOn:1, sprite:1, spriteFrames:1 };
+                   mirror:1, spriteOn:1, sprite:1, spriteFrames:1, dofOn:1,
+                   walkOn:1, jumpOn:1, runOn:1, stepsOn:1 };
   // headings: cross them the short way, never the long one
   var MIX_ANGLE = { flyYaw:1, dragAz:1, sunAz:1 };
   function mixHex(a, b, t){
@@ -6038,6 +6424,10 @@ void main(){
   // how many shader variants have actually been built, so a check can prove a
   // feature switched off is a different program and not the same one branching
   Object.defineProperty(window, "__progs", { get: function(){ return Object.keys(progs).length; } });
+  // what the walker is standing on, for anything that needs to check it
+  Object.defineProperty(window, "__walk", { get: function(){
+    return { ground: walkGround, vy: walkVy, onGround: walkOnGround };
+  } });
   Object.defineProperty(window, "__sunView", { get: function(){ return sunView; } });
 })();
 </script>
