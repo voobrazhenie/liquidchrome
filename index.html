@@ -355,6 +355,15 @@
               <input type="file" id="wStepFile" accept="audio/*" hidden>
             </div>
           </div>
+          <div class="mod" data-mod="wsize">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="wSize" title="How big the walker is. Everything about it scales together &#8212; how tall it stands, how long its stride is, how fast it walks and how high it jumps &#8212; so turning it right down walks over the fine detail of the object instead of striding across it.">Controller size</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="wSize" hidden></button><output id="wSizeOut">1.00</output></div>
+                <input id="wSize" type="range" min="1" max="400" step="1" value="100">
+              </div>
+            </div>
+          </div>
           <div class="mod" data-mod="wspeed">
             <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="wSpeed" title="How fast the walk goes over the ground, in units a second. Running multiplies it.">Walk speed</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
             <div class="modc">
@@ -501,6 +510,18 @@
               </div>
             </div>
           </div>
+          <div class="mod" data-mod="seed">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="oSeed" title="Which roll of everything generated is on screen: where the cells sit, which way the dendrites leave the soma, what the chrome landscape looks like and how the warp falls. Zero is the page&#39;s own, and a number can be typed into the reading.">Seed</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="oSeed" hidden></button><output id="oSeedOut">0</output></div>
+                <input id="oSeed" type="range" min="0" max="999" step="1" value="0">
+              </div>
+              <div class="transport">
+                <button type="button" id="seedRoll" title="Take a roll at random.">Roll</button>
+              </div>
+            </div>
+          </div>
           <div class="mod" data-mod="raysteps">
             <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="rSteps">Ray steps</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
             <div class="modc">
@@ -629,6 +650,18 @@
                 <button type="button" id="playBtn" aria-pressed="true" title="Camera flight and field (space)">Flight</button>
                 <button type="button" id="morphBtn" aria-pressed="true" title="Animate the field (shift+M)">Morph</button>
                 <button type="button" id="spikeBtn" aria-pressed="true" title="Travelling impulse lights (I)">Impulses</button>
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="time">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="tTimeOut" title="The field&#39;s own clock, in seconds. Play runs it and holds it still (P) &#8212; the same switch as Morph, shown here with the number it drives. Type a number into the reading to jump the field to that moment.">Time</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport">
+                <button type="button" id="tPlay" aria-pressed="true" title="Run the field&#39;s time, or hold it still (P).">Play</button>
+                <button type="button" id="tZero" title="Put the clock back to the start.">Rewind</button>
+              </div>
+              <div class="slider">
+                <div class="sval"><output id="tTimeOut">0.00 s</output></div>
               </div>
             </div>
           </div>
@@ -1274,6 +1307,7 @@ uniform sampler2D uShMatcap;
 uniform float uShSteps;     // how many the shadow ray is allowed, either method
 uniform float uShGrow;      // the sphere-traced one's floor, sized to that budget
 uniform float uShadowOnly;  // draw the shadow term itself, lit against unlit
+uniform vec3  uSeedOff;     // re-roll every generated thing; zero is the page's own
 uniform float uNoise;       // how much film grain the finished frame gets
 uniform float uHaze;        // how thick the air between the eye and the object is
 uniform float uGlow;        // how much the light that gathers near a surface shows
@@ -1420,6 +1454,7 @@ float dot2(vec3 v){ return dot(v, v); }
 
 // 3D value noise — two octaves of it perturb the membrane
 float vn(vec3 p){
+  p += uSeedOff;
   vec3 i = floor(p), f = fract(p);
   f = f*f*(3.0 - 2.0*f);
   vec2 e = vec2(0.0, 1.0);
@@ -1491,7 +1526,7 @@ float neuron(vec3 p, out float sd){
 
   for(int i=0;i<5;i++){
     float fi = float(i);
-    vec3 hh = hash33(vec3(fi*1.7 + 0.3, 3.1, 7.3));
+    vec3 hh = hash33(vec3(fi*1.7 + 0.3, 3.1, 7.3) + uSeedOff);
     float ang = fi * 2.39996 + hh.x*0.7;
     float z = 1.0 - (2.0*fi + 1.0) / 5.0;
     float rr = sqrt(max(0.0, 1.0 - z*z));
@@ -1574,6 +1609,7 @@ float sdBox(vec3 p, vec3 b){
 // dotted with the offset and blended with the quintic fade, so it is C2
 float pgd(vec3 i, vec3 f){ return dot(normalize(hash33(i) - 0.5), f); }
 float perlin(vec3 p){
+  p += uSeedOff;
   vec3 i = floor(p), f = fract(p);
   vec3 u = f*f*f*(f*(f*6.0 - 15.0) + 10.0);
   float a = pgd(i + vec3(0.0,0.0,0.0), f - vec3(0.0,0.0,0.0));
@@ -1662,6 +1698,7 @@ float liquid(vec3 p, out float sd){
 #endif
 
 vec3 vn3(vec3 p){
+  p += uSeedOff;
   vec3 i = floor(p), f = fract(p);
   f = f*f*(3.0 - 2.0*f);
   vec2 e = vec2(0.0, 1.0);
@@ -1742,7 +1779,7 @@ float scene(vec3 p, out float sd){
     for(int j=0;j<2;j++){
       for(int k=0;k<2;k++){
         vec3 cid = id + vec3(float(i), float(j), float(k));
-        vec3 h = hash33(cid);
+        vec3 h = hash33(cid + uSeedOff);
         vec3 cen = (cid + 0.5 + (h - 0.5) * 0.55) * C;
         cen += C * 0.40 * (wob * (h - 0.5) + wob.zxy * (h.yzx - 0.5));
         sd = min(sd, length(p - cen) / (0.70 + 0.50*h.z));
@@ -2613,7 +2650,7 @@ void main(){
     "uShadowOn","uSunAz","uSunEl","uShadowSoft","uShadowDark","uShadowReach","uSunMark","uLcCube",
     "uMatcapOn","uMatcap","uShadowSrc","uShLevel","uShContrast","uShMatcap",
     "uShadowOnly","uNoise","uHaze","uGlow","uMirror","uBall","uBallR","uOrtho","uOrthoSpan","uShSteps","uShGrow",
-    "uDofOn","uDofFocus","uDofRange",
+    "uDofOn","uDofFocus","uDofRange","uSeedOff",
     "uProbe","uProbeOrg","uProbeDir","uProbeMax",
     "uNormalOn","uNormalMap","uNormalAmt","uNormalScale",
     "uGlassOn","uGlassOpacity","uGlassEdge","uGlassIor","uGlassTint","uGlassDensity","uGlassDepth",
@@ -2854,7 +2891,11 @@ void main(){
     dofOn: 0, dofFocus: 3.00, dofRange: 0.80, dofBlur: 4.0,
     // walking: off, how fast, how high a jump carries, and whether jumping and
     // running are allowed at all
+    // how big the walker itself is. One knob for the whole body: how tall it
+    // stands, how long its stride is, how fast it walks and how high it jumps
+    // all scale with it, so shrinking to an ant leaves it still walkable.
     walkOn: 0, walkSpeed: 0.45, jumpHeight: 0.22, jumpOn: 1, runOn: 1, stepsOn: 0,
+    walkSize: 1.00,
     // a sprite standing over the picture: off, which sheet, how tall as a share
     // of the window, how many frames the sheet holds and how fast it walks them
     spriteOn: 0, sprite: 0, spriteSize: 0.20, spriteFrames: 4, spriteFps: 6.0,
@@ -2874,6 +2915,9 @@ void main(){
     clock: 12.0,
     mClock: 0.0,
     pClock: 6.0,
+    // Which roll of everything generated is on screen. Zero is the page's own,
+    // so it is what every stored baseline and every older template mean.
+    seed: 0,
     dragAz: 0, dragEl: 0,
     velAz: 0, velEl: 0,
     // free navigation: world position, look angles, metres per second
@@ -2912,6 +2956,13 @@ void main(){
     uiOrder: null, uiMods: null, uiNames: null,
     uncap: 0                        // draw as fast as the machine will, not as fast as the display
   };
+
+  // The page as it ships, kept before anything is restored over it. A template
+  // saved before a control existed says nothing about that control, and what it
+  // means is "as the page shipped" — not "whatever happens to be set right
+  // now". Without this, recalling a template made months ago left walking on
+  // because walking happened to be on, and the flight it was saved in was gone.
+  var FACTORY = JSON.parse(JSON.stringify(state));
 
   // An angle has no size, only a direction: 7.5 radians and 1.2 are the same
   // way round. Left to grow, a heading picks up whole turns that nothing can
@@ -3100,21 +3151,27 @@ void main(){
   // it belongs to, so what is underfoot is exactly the surface that was drawn.
   // It is a frame behind, which at a walking pace is a millimetre.
   var walkGround = -1, walkVy = 0, walkDist = 0, walkOnGround = false;
-  function walkEyeH(){ return SCENE_R[state.scene] * 0.10; }
+  // One size for the whole walker. Everything about a body scales together:
+  // a creature a tenth as tall stands a tenth as high, takes a tenth of a
+  // stride, walks a tenth as fast and jumps a tenth as far — which is what
+  // keeps a slider that shrinks it to an ant from also making it a rocket.
+  function walkS(){ return Math.max(0.01, state.walkSize || 1); }
+  function walkEyeH(){ return SCENE_R[state.scene] * 0.10 * walkS(); }
+  function walkH(){ return Math.max(state.jumpHeight, 0.005) * walkS(); }
   // the smallest step the ground can come back in: two bytes of the reach the
   // probe was given, with a little room over it
   function walkQ(){ return (1.74 + SCENE_R[state.scene] * 6) / 65535 * 3; }
   // worked back out of the jump height, so the arc always reaches it and lands
-  function walkG(){ return Math.max(1.5, 2 * Math.max(state.jumpHeight, 0.005) / 0.1296); }
+  function walkG(){ return Math.max(1.5, 2 * walkH() / 0.1296); }
   function walkJump(){
     if(!state.jumpOn || !walkOnGround) return;
-    walkVy = Math.sqrt(2 * walkG() * Math.max(state.jumpHeight, 0.005));
+    walkVy = Math.sqrt(2 * walkG() * walkH());
     walkOnGround = false;
   }
   function walkMove(dt, mx, mz){
     var R = SCENE_R[state.scene];
     var run = (state.runOn && held.shift) ? 2.4 : 1.0;
-    var v = state.walkSpeed * run * dt;
+    var v = state.walkSpeed * walkS() * run * dt;
     if(mx || mz){
       // forward flattened to the horizon: a walk does not climb because the
       // head is tipped up
@@ -3143,7 +3200,7 @@ void main(){
     tPos[0] = state.flyPos[0]; tPos[1] = state.flyPos[1]; tPos[2] = state.flyPos[2];
     if(!walkOnGround){ walkDist = 0; return; }
     if(!wasOn && state.stepsOn){ walkDist = 0; stepSound(); return; }   // landing
-    if(state.stepsOn && walkDist >= R * 0.17){ walkDist = 0; stepSound(); }
+    if(state.stepsOn && walkDist >= R * 0.17 * walkS()){ walkDist = 0; stepSound(); }
   }
 
   function flyStep(dt){
@@ -3406,6 +3463,7 @@ void main(){
     if(!bench.on){
       if(state.running) state.clock += dt;
       if(state.morph) state.mClock += dt;
+      if(state.morph && tTimeOut) showTime();
       if(state.running || state.morph) state.pClock += dt;
 
       state.dragAz = wrapPi(state.dragAz + state.velAz); state.dragEl += state.velEl;
@@ -3512,6 +3570,9 @@ void main(){
     gl.uniform1f(U.uShGrow, Math.max(0.01, Math.min(0.5,
       Math.pow(Math.max(state.shadowReach, 0.05) / 0.01, 1 / Math.max(state.shadowSteps, 4)) - 1)));
     gl.uniform1f(U.uShadowOnly, state.shadowOnly && state.shadowOn ? 1 : 0);
+    // A seed is a place to look in the noise rather than a number fed to it:
+    // three irrational-ish strides mean no two seeds land on the same lattice.
+    gl.uniform3f(U.uSeedOff, state.seed * 13.117, state.seed * 7.733, state.seed * 19.311);
     gl.uniform1f(U.uNoise, state.noise);
     gl.uniform1f(U.uHaze, state.haze);
     gl.uniform1f(U.uGlow, state.glow);
@@ -3827,7 +3888,8 @@ void main(){
     ["camMin","flyMin",1000], ["camMax","flyMax",10],
     ["camLook","lookSmooth",100], ["camMove","moveSmooth",100],
     ["camFov","fov",100], ["dofFocus","dofFocus",100],
-    ["wSpeed","walkSpeed",100], ["wJump","jumpHeight",100],
+    ["wSpeed","walkSpeed",100], ["wJump","jumpHeight",100], ["wSize","walkSize",100],
+    ["oSeed","seed",1],
     ["dofRange","dofRange",100], ["dofBlur","dofBlur",10],
     ["spSize","spriteSize",100], ["spFrames","spriteFrames",1], ["spFps","spriteFps",10],
     ["oBall","ball",100],
@@ -3901,14 +3963,36 @@ void main(){
   setRunning(state.running);
 
   var morphBtn = document.getElementById("morphBtn");
+  var tPlayBtn = document.getElementById("tPlay");
+  var tTimeOut = document.getElementById("tTimeOut");
+  function fmtTime(v){ return v.toFixed(2) + " s"; }
+  function showTime(){
+    // not while it is being typed into: that would overwrite what is being typed
+    if(document.activeElement !== tTimeOut) tTimeOut.textContent = fmtTime(state.mClock);
+  }
   function setMorph(v){
     state.morph = v;
     morphBtn.setAttribute("aria-pressed", v ? "true" : "false");
     morphBtn.title = (v ? "Freeze the field" : "Animate the field") + " (shift+M)";
+    // Play and Morph are one switch shown twice: the transport beside the clock
+    // and the button in Animation. Both light up, because both are it.
+    tPlayBtn.setAttribute("aria-pressed", v ? "true" : "false");
+    tPlayBtn.title = (v ? "Hold the field's time still" : "Run the field's time") + " (P)";
     telemetry();
   }
   morphBtn.addEventListener("click", function(){ setMorph(!state.morph); morphBtn.blur(); });
+  tPlayBtn.addEventListener("click", function(){ setMorph(!state.morph); this.blur(); });
+  document.getElementById("tZero").addEventListener("click", function(){
+    state.mClock = 0; state.pClock = 0; showTime(); this.blur(); telemetry();
+  });
+  // Typing a number into the clock puts the field at that moment. The pulse
+  // clock goes with it: the impulses belong to the same moment as the shape.
+  editable(tTimeOut, showTime, function(v){
+    state.mClock = Math.max(0, v);
+    state.pClock = state.mClock;
+  });
   setMorph(state.morph);
+  showTime();
 
   var spikeBtn = document.getElementById("spikeBtn");
   function setSpikes(v){
@@ -4048,6 +4132,14 @@ void main(){
   numSlider("pHaze",      "haze",           0.01, f2);
   numSlider("pGlow",      "glow",           0.01, f2);
   numSlider("oBall",      "ball",           0.01, f2);
+  // A seed is a whole number, and the slider is a way to flip through rolls
+  // rather than a scale: any number can be typed into the reading.
+  var fInt = function(v){ return String(Math.round(v)); };
+  numSlider("oSeed", "seed", 1, fInt, function(v){ return Math.round(v); });
+  document.getElementById("seedRoll").addEventListener("click", function(){
+    slide(document.getElementById("oSeed"), Math.floor(Math.random() * 1000));
+    this.blur();
+  });
   // The slider reaches a thousandth of a unit a second; the reading can be
   // typed into for anything below that, down to a ten-thousandth.
   numSlider("camMin", "flyMin", 0.001, function(v){ return v.toFixed(3); },
@@ -4071,6 +4163,7 @@ void main(){
   }
   dofBtn.addEventListener("click", function(){ setDof(!state.dofOn); this.blur(); });
   numSlider("wSpeed", "walkSpeed", 0.01, f2);
+  numSlider("wSize", "walkSize", 0.01, f2, function(v){ return Math.max(0.005, Math.min(40, v)); });
   numSlider("wJump", "jumpHeight", 0.01, f2);
 
   // ---- the sound of a step ---------------------------------------------
@@ -5366,6 +5459,8 @@ void main(){
     if(e.key === "m" || e.key === "M"){
       if(e.shiftKey) setMorph(!state.morph); else foldAll();
     }
+    // P is the transport key: play and pause the field's own time
+    if(e.key === "p" || e.key === "P"){ setMorph(!state.morph); }
     if(e.key === "i" || e.key === "I"){ setSpikes(!state.spikeOn); }
     if(e.key === "r" || e.key === "R"){ randomView(); }
     if(e.key === "l" || e.key === "L"){ setSunMode(!sunMode); }
@@ -5697,7 +5792,7 @@ void main(){
     "depthOn","depthMc","depthAmt","depthDist","depthPos","depthRot","depthSize","depthPart",
     "shadowSrc","shadowLevel","shadowContrast","shadowMc","shadowOnly","noise","haze","glow","mirror","ball","shadowSteps",
     "fov","dofOn","dofFocus","dofRange","dofBlur",
-    "walkOn","walkSpeed","jumpHeight","jumpOn","runOn","stepsOn",
+    "walkOn","walkSpeed","jumpHeight","jumpOn","runOn","stepsOn","walkSize","seed",
     "spriteOn","sprite","spriteSize","spriteFrames","spriteFps",
     "uiFont","uiAlpha","uiBg","uiAccent","uiHeader","uiWidth","uiSplit","uncap",
     "uiOrder","uiMods","uiNames"];
@@ -5792,6 +5887,7 @@ void main(){
     for(var j = 0; j < 6; j++) markToggle("lc", j, state.lcOn, state.lcOn[j]);
     for(var k = 0; k < 2; k++) markToggle("mir", k, state.mirror, state.mirror[k]);
     setRunning(!!state.running); setMorph(!!state.morph); setSpikes(!!state.spikeOn);
+    showTime();                      // the clock a template was saved at
     // Every slider, out of the one table that says how each reaches the state.
     // A value can have been TYPED past the end of its slider — that is what the
     // reading is for — and showing it on the slider clamps it to the end, whose
@@ -5839,13 +5935,28 @@ void main(){
     resize(); telemetry(); chipsAll();
     restoring = false;
   }
+  // What a saved snapshot that predates a key leaves alone: the console's own
+  // arrangement, and the viewpoints in the number keys. Neither is what the
+  // picture looks like, and a template that never mentioned them should not
+  // tear them down.
+  var KEEP_OLD = { uiOrder:1, uiMods:1, uiNames:1, groups:1, favs:1,
+                   uiFont:1, uiAlpha:1, uiBg:1, uiAccent:1, uiHeader:1,
+                   uiWidth:1, uiSplit:1 };
   function applySaved(o){
     if(!o) return false;
     for(var i = 0; i < SAVE_KEYS.length; i++){
       var k = SAVE_KEYS[i];
-      if(o[k] === undefined) continue;
-      state[k] = (typeof o[k] === "object" && o[k] !== null)
-               ? JSON.parse(JSON.stringify(o[k])) : o[k];
+      var v = o[k];
+      // A key the snapshot does not carry goes back to what the page ships
+      // with, not to what is set at the moment: a template is a complete
+      // description of the picture, including the parts it is too old to name.
+      if(v === undefined){
+        if(KEEP_OLD[k]) continue;
+        v = FACTORY[k];
+        if(v === undefined) continue;
+      }
+      state[k] = (typeof v === "object" && v !== null)
+               ? JSON.parse(JSON.stringify(v)) : v;
     }
     // Pressing 4 is a deliberate act and always gets Full HD. Reopening the
     // page is not: a saved 1080p default on a machine with no GPU would greet
@@ -6221,7 +6332,7 @@ void main(){
                    matcapOn:1, matcap:1, normalOn:1, normalMc:1,
                    glassOn:1, glassDepth:1, depthOn:1, depthMc:1, depthPart:1,
                    mirror:1, spriteOn:1, sprite:1, spriteFrames:1, dofOn:1,
-                   walkOn:1, jumpOn:1, runOn:1, stepsOn:1 };
+                   walkOn:1, jumpOn:1, runOn:1, stepsOn:1, seed:1 };
   // headings: cross them the short way, never the long one
   var MIX_ANGLE = { flyYaw:1, dragAz:1, sunAz:1 };
   function mixHex(a, b, t){
