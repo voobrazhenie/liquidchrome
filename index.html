@@ -78,6 +78,13 @@
   /* The gizmo is drawn over the picture rather than in it: one SVG the size of
      the window, rebuilt every frame from where the card now stands. Only the
      handles take the pointer, so a drag anywhere else still steers the camera. */
+  /* Over the picture and under the interface, and outside .hud on purpose:
+     hiding the panels leaves him standing there, because he is part of the
+     shot and not part of the console. */
+  .sprite{position:fixed;left:50%;bottom:5%;transform:translateX(-50%);
+          display:none;pointer-events:none;background-repeat:no-repeat;
+          background-position:0 0}
+  .sprite.on{display:block}
   .giz{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;display:none}
   .giz.on{display:block}
   .giz .gh{pointer-events:auto;cursor:grab}
@@ -256,6 +263,8 @@
 </head>
 <body>
 <canvas id="stage" aria-label="Ray-marched field of neuron cell bodies and neurites in a brain-shaped volume, with the camera in flight"></canvas>
+
+<div class="sprite" id="sprite" aria-hidden="true"></div>
 
 <div class="hud" id="hud">
   <svg class="giz" id="giz" aria-hidden="true"></svg>
@@ -818,6 +827,77 @@
           </div>
         </div>
       </div>
+      <div class="grp" data-gid="11">
+        <div class="grph">
+          <button type="button" class="grpt" data-grp="11" data-ico="mirror" aria-expanded="true" aria-controls="grpb11"><span class="grpn">Mirror</span></button>
+          <button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button>
+        </div>
+        <div class="grpb" id="grpb11" data-grpb="11">
+          <div class="mod" data-mod="mirror">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt" id="mirLbl">Fold</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport" role="group" aria-labelledby="mirLbl">
+                <button type="button" data-mir="0" aria-pressed="false" title="Keep the half on one side of the up-down plane and draw it on both. Real geometry &#8212; the silhouette, the shadows and the shading all follow.">Mirror X</button>
+                <button type="button" data-mir="1" aria-pressed="false" title="The same about the horizontal plane: the top half is drawn as the bottom half too.">Mirror Y</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="grp" data-gid="12">
+        <div class="grph">
+          <button type="button" class="grpt" data-grp="12" data-ico="figure" aria-expanded="true" aria-controls="grpb12"><span class="grpn">Overlay</span></button>
+          <button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button>
+        </div>
+        <div class="grpb" id="grpb12" data-grpb="12">
+          <div class="mod" data-mod="overlay">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt">Overlay</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport">
+                <button type="button" id="spOn" aria-pressed="false" title="Stand a sprite over the picture: centred across, a little clear of the bottom, walking its frames on a loop. It sits over the render and costs it nothing.">Overlay</button>
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="sprite">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><span class="modt" id="spLbl">Sprite</span><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="transport wrap" id="spSeg" role="group" aria-labelledby="spLbl"></div>
+              <div class="transport">
+                <button type="button" id="spAdd" title="Load a sprite sheet from this computer &#8212; every frame side by side in one strip. It joins the list above and is used straight away.">Add</button>
+                <button type="button" id="spSave" title="Keep the chosen sheet: on this device, and in the cloud so it follows the page to any computer.">Keep</button>
+                <button type="button" id="spDel" title="Remove the chosen sheet, here and in the cloud. The two built-in images stay.">Delete</button>
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="spsize">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="spSize" title="How tall the sprite stands, as a share of the window. He keeps a twentieth of the height clear beneath him whatever size he is.">Size</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="spSize" hidden></button><output id="spSizeOut">20%</output></div>
+                <input id="spSize" type="range" min="3" max="80" step="1" value="20">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="spframes">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="spFrames" title="How many frames are laid side by side in the sheet. Four for the skater.">Frames</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="spFrames" hidden></button><output id="spFramesOut">4</output></div>
+                <input id="spFrames" type="range" min="1" max="16" step="1" value="4">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="spfps">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="spFps" title="How many frames a second the sheet is walked through. At nothing it holds on the first one.">Speed</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="spFps" hidden></button><output id="spFpsOut">6.0/s</output></div>
+                <input id="spFps" type="range" min="0" max="240" step="1" value="60">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="grp" data-gid="5">
         <div class="grph">
           <button type="button" class="grpt" data-grp="5" data-ico="glass" aria-expanded="true" aria-controls="grpb5"><span class="grpn">Transparency</span></button>
@@ -1007,6 +1087,7 @@
               <div class="transport">
                 <button type="button" id="tplAdd" title="Store everything as it is now under a name of your choosing. Alt and its number recalls it.">Save as</button>
                 <button type="button" id="tplUpd" title="Write everything as it is now into the template showing as chosen, keeping its name and its number.">Update</button>
+                <button type="button" id="tplRen" title="Give the template showing as chosen a different name. Nothing it holds changes.">Rename</button>
                 <button type="button" id="tplDel" title="Remove the template that is showing as chosen.">Delete</button>
               </div>
             </div>
@@ -1110,6 +1191,7 @@ uniform float uShadowOnly;  // draw the shadow term itself, lit against unlit
 uniform float uNoise;       // how much film grain the finished frame gets
 uniform float uHaze;        // how thick the air between the eye and the object is
 uniform float uGlow;        // how much the light that gathers near a surface shows
+uniform vec2  uMirror;      // fold the object in half about x, about y, or both
 uniform float uOrtho;       // 1 = parallel rays, for standing where the sun does
 uniform float uOrthoSpan;   // half the width the parallel view covers
 
@@ -1614,6 +1696,14 @@ float map(vec3 p, out float sd, out float lip){
     if(beam <= 0.0) gDecH = decalH(dq) / sceneLip();
   }
 #endif
+  // Blender's mirror modifier, the way a distance field does it: fold the space
+  // in half about the plane and whichever half is left gets drawn on both
+  // sides. A fold is an isometry on each side of it, so the field stays a
+  // valid lower bound on the distance and the march pays nothing for it. It is
+  // applied after the decal has been read, so the card stays where it was put
+  // and its beam falls on the mirrored half like anything else in the world.
+  if(uMirror.x > 0.5) p.x = abs(p.x);
+  if(uMirror.y > 0.5) p.y = abs(p.y);
   vec3 q = domainWarp(p, lip);
   float d = scene(q, sd);
   if(uWarpMode > 0.5 && uWarpOn.x > 0.5 && uWarpAmt > 0.0){
@@ -2335,7 +2425,7 @@ void main(){
     "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps","uOmega","uBound","uBoundPad","uWarpMode",
     "uShadowOn","uSunAz","uSunEl","uShadowSoft","uShadowDark","uShadowReach","uSunMark","uLcCube",
     "uMatcapOn","uMatcap","uShadowSrc","uShLevel","uShContrast","uShMatcap",
-    "uShadowOnly","uNoise","uHaze","uGlow","uOrtho","uOrthoSpan","uShSteps","uShGrow",
+    "uShadowOnly","uNoise","uHaze","uGlow","uMirror","uOrtho","uOrthoSpan","uShSteps","uShGrow",
     "uNormalOn","uNormalMap","uNormalAmt","uNormalScale",
     "uGlassOn","uGlassOpacity","uGlassEdge","uGlassIor","uGlassTint","uGlassDensity","uGlassDepth",
     "uDepthOn","uDepthMap","uDepthPos","uDepthRot","uDepthSize","uDepthDist","uDepthAmt","uDepthLip","uDepthPart"];
@@ -2534,6 +2624,10 @@ void main(){
     noise: 0.00,                    // film grain over the finished frame
     haze: 1.00,                     // how thick the air is, as a multiple of this object's own
     glow: 1.00,                     // and how much the light gathered near the surfaces shows
+    mirror: [0, 0],                 // fold the object in half about x, about y, or both
+    // a sprite standing over the picture: off, which sheet, how tall as a share
+    // of the window, how many frames the sheet holds and how fast it walks them
+    spriteOn: 0, sprite: 0, spriteSize: 0.20, spriteFrames: 4, spriteFps: 6.0,
     lcRelief: 0.26, lcFreq: 4.00, lcThick: 0.022, lcTwirl: 1.90,
     // structure + accent colour per object: brain, neuron, LiquidChrome
     colors: [["#2FD9C0", "#FFC98A"], ["#2FD9C0", "#FFC98A"], ["#009DFF", "#FF4271"]],
@@ -2578,7 +2672,7 @@ void main(){
     glassOn: 0, glassOpacity: 0.15, glassEdge: 0.60, glassIor: 1.45,
     glassTint: "#BFE9FF", glassDensity: 0.90, glassDepth: 2,
     // which console groups are open
-    groups: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    groups: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     // the console's own look, and how wide it is
     uiFont: 12, uiAlpha: 0.94, uiBg: "#04070c", uiAccent: "#2fd9c0",
     uiHeader: "#2fd9c0", uiWidth: 240, uiSplit: 36,
@@ -2588,6 +2682,19 @@ void main(){
     uiOrder: null, uiMods: null, uiNames: null,
     uncap: 0                        // draw as fast as the machine will, not as fast as the display
   };
+
+  // An angle has no size, only a direction: 7.5 radians and 1.2 are the same
+  // way round. Left to grow, a heading picks up whole turns that nothing can
+  // see — until something interpolates it, and then they all come out at once
+  // as a spin. So headings are kept inside half a turn either side of nothing,
+  // and every difference between two of them is taken the short way round.
+  var TAU = Math.PI * 2;
+  function wrapPi(a){
+    a = (a + Math.PI) % TAU;
+    if(a < 0) a += TAU;
+    return a - Math.PI;
+  }
+  function wrapTau(a){ a = a % TAU; return a < 0 ? a + TAU : a; }
 
   var rgbCache = {};
   function rgb(hex){
@@ -2635,6 +2742,7 @@ void main(){
     var cw = canvas.clientWidth || window.innerWidth;
     var ch = canvas.clientHeight || window.innerHeight;
     state.fit = ch > cw * 1.25 ? 0.92 : 1.0;
+    sprLayout();                     // he is measured in windows, so he follows it
   }
 
   // The opening frames are capped hard. Nothing has been measured yet, and on a
@@ -2714,10 +2822,19 @@ void main(){
   function flyRight(){
     return [-Math.cos(state.flyYaw), 0, Math.sin(state.flyYaw)];
   }
+  // With no smoothing asked for these write the camera directly and carry the
+  // target along, which is the flight this page has always had — and it means
+  // anything that puts the camera somewhere (a saved view, a template, R) is
+  // simply obeyed, with no stale target waiting to drag it back.
   function flyLook(dx, dy){
-    tYaw  -= dx * 0.0040;
+    if(state.lookSmooth <= 0){
+      state.flyYaw = wrapPi(state.flyYaw - dx * 0.0040);
+      state.flyPitch = Math.max(-1.553, Math.min(1.553, state.flyPitch - dy * 0.0040));
+      tYaw = state.flyYaw; tPitch = state.flyPitch;
+      return;
+    }
+    tYaw  = wrapPi(tYaw - dx * 0.0040);
     tPitch = Math.max(-1.553, Math.min(1.553, tPitch - dy * 0.0040));
-    if(state.lookSmooth <= 0){ state.flyYaw = tYaw; state.flyPitch = tPitch; }
   }
   function setFlySpeed(v){
     state.flySpeed = Math.max(state.flyMin, Math.min(state.flyMax, v));
@@ -2751,15 +2868,17 @@ void main(){
     var mx = (held.d ? 1 : 0) - (held.a ? 1 : 0);   // strafe
     var mz = (held.w ? 1 : 0) - (held.s ? 1 : 0);   // forward
     var my = (held.e ? 1 : 0) - (held.q ? 1 : 0);   // world up / down
+    var eased = state.moveSmooth > 0;
+    var into = eased ? tPos : state.flyPos;
     if(mx || mz || my){
       var f = flyFwd(), r = flyRight();
       var v = state.flySpeed * (held.shift ? 3.5 : 1.0) * dt;
-      tPos[0] += (f[0]*mz + r[0]*mx) * v;
-      tPos[1] += (f[1]*mz + my) * v;
-      tPos[2] += (f[2]*mz + r[2]*mx) * v;
+      into[0] += (f[0]*mz + r[0]*mx) * v;
+      into[1] += (f[1]*mz + my) * v;
+      into[2] += (f[2]*mz + r[2]*mx) * v;
     }
-    if(state.moveSmooth <= 0){
-      state.flyPos[0] = tPos[0]; state.flyPos[1] = tPos[1]; state.flyPos[2] = tPos[2];
+    if(!eased){
+      tPos[0] = state.flyPos[0]; tPos[1] = state.flyPos[1]; tPos[2] = state.flyPos[2];
     } else {
       var km = easeK(state.moveSmooth, dt);
       state.flyPos[0] += (tPos[0] - state.flyPos[0]) * km;
@@ -2767,10 +2886,12 @@ void main(){
       state.flyPos[2] += (tPos[2] - state.flyPos[2]) * km;
     }
     if(state.lookSmooth <= 0){
-      state.flyYaw = tYaw; state.flyPitch = tPitch;
+      tYaw = state.flyYaw; tPitch = state.flyPitch;
     } else {
       var kl = easeK(state.lookSmooth, dt);
-      state.flyYaw   += (tYaw - state.flyYaw) * kl;
+      // the short way round, so a heading that has just wrapped does not
+      // unwind the whole turn to get back to where it already is
+      state.flyYaw   = wrapPi(state.flyYaw + wrapPi(tYaw - state.flyYaw) * kl);
       state.flyPitch += (tPitch - state.flyPitch) * kl;
     }
   }
@@ -2995,7 +3116,7 @@ void main(){
       if(state.morph) state.mClock += dt;
       if(state.running || state.morph) state.pClock += dt;
 
-      state.dragAz += state.velAz; state.dragEl += state.velEl;
+      state.dragAz = wrapPi(state.dragAz + state.velAz); state.dragEl += state.velEl;
       state.velAz *= 0.90; state.velEl *= 0.90;
       state.dragEl = Math.max(-1.0, Math.min(1.0, state.dragEl));
 
@@ -3007,6 +3128,7 @@ void main(){
     resize();
     if(!bench.on) camera(state.clock);
     if(dmEdit) gizDraw();
+    sprLoad(); sprStep(now);
 
     var mask = featMask();
     var prog = sceneProg(state.scene, mask);
@@ -3101,6 +3223,7 @@ void main(){
     gl.uniform1f(U.uNoise, state.noise);
     gl.uniform1f(U.uHaze, state.haze);
     gl.uniform1f(U.uGlow, state.glow);
+    gl.uniform2f(U.uMirror, state.mirror[0], state.mirror[1]);
     gl.uniform1f(U.uOrtho, sunView ? 1 : 0);
     gl.uniform1f(U.uOrthoSpan, SCENE_R[state.scene] * 1.45 * state.zoom);
     gl.uniform1f(U.uLcRelief, state.lcRelief);
@@ -3212,7 +3335,7 @@ void main(){
     if(state.fly){ flyLook(dx, dy); return; }
     state.velAz = -dx * 0.0032;
     state.velEl =  dy * 0.0024;
-    state.dragAz += state.velAz * 3;
+    state.dragAz = wrapPi(state.dragAz + state.velAz * 3);
     state.dragEl = Math.max(-1.0, Math.min(1.0, state.dragEl + state.velEl * 3));
   });
   function release(e){
@@ -3403,6 +3526,7 @@ void main(){
     ["dmAmt","depthAmt",100], ["dmDist","depthDist",100], ["pHaze","haze",100], ["pGlow","glow",100],
     ["camMin","flyMin",1000], ["camMax","flyMax",10],
     ["camLook","lookSmooth",100], ["camMove","moveSmooth",100],
+    ["spSize","spriteSize",100], ["spFrames","spriteFrames",1], ["spFps","spriteFps",10],
     ["uiFont","uiFont",1], ["uiAlpha","uiAlpha",100], ["uiSplit","uiSplit",1]
   ];
   var DFLT = {};          // slider id -> { key, mul, btn }
@@ -3499,6 +3623,15 @@ void main(){
       state.warpOn[i] = state.warpOn[i] ? 0 : 1;
       btn.setAttribute("aria-pressed", state.warpOn[i] ? "true" : "false");
       btn.blur();
+    });
+  });
+  var mirBtns = document.querySelectorAll("[data-mir]");
+  Array.prototype.forEach.call(mirBtns, function(btn){
+    btn.addEventListener("click", function(){
+      var i = parseInt(btn.dataset.mir, 10);
+      state.mirror[i] = state.mirror[i] ? 0 : 1;
+      btn.setAttribute("aria-pressed", state.mirror[i] ? "true" : "false");
+      btn.blur(); telemetry();
     });
   });
   var wmBtns = document.querySelectorAll("[data-wm]");
@@ -3618,6 +3751,68 @@ void main(){
             function(v){ return Math.max(0.05, Math.min(400, v)); });
   numSlider("camLook", "lookSmooth", 0.01, f2);
   numSlider("camMove", "moveSmooth", 0.01, f2);
+  numSlider("spSize", "spriteSize", 0.01, function(v){ return Math.round(v * 100) + "%"; },
+            function(v){ return v > 1 ? v / 100 : v; });
+  numSlider("spFrames", "spriteFrames", 1, function(v){ return String(Math.round(v)); });
+  numSlider("spFps", "spriteFps", 0.1, function(v){ return v.toFixed(1) + "/s"; });
+  ["spSize", "spFrames"].forEach(function(id){
+    document.getElementById(id).addEventListener("input", sprLayout);
+  });
+
+  // ---- the sprite standing over it ------------------------------------
+  // A plain element above the canvas rather than anything in the shader: it
+  // costs the render nothing, it cannot disturb a single pixel of it, and a
+  // sheet of frames side by side is exactly what a background position walks
+  // through. He keeps a twentieth of the window clear beneath him, so at the
+  // size he comes at there is three quarters of the height above his head.
+  var sprEl = document.getElementById("sprite");
+  var sprAt = "", sprW = 1, sprH = 1, sprReady = false;
+  function setSpriteOn(on){
+    state.spriteOn = on ? 1 : 0;
+    spOnBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    sprLayout(); telemetry();
+  }
+  function sprLoad(){
+    if(!sprEl || !MATCAPS) return;          // the first frames can beat the wiring
+    var m = MATCAPS[state.sprite];
+    if(!m || m.src === sprAt) return;
+    sprAt = m.src; sprReady = false;
+    var img = new Image();
+    img.onload = function(){
+      if(sprAt !== m.src) return;              // the choice moved on while it decoded
+      sprW = img.naturalWidth || 1; sprH = img.naturalHeight || 1;
+      sprReady = true;
+      sprEl.style.backgroundImage = 'url("' + m.src + '")';
+      sprLayout();
+    };
+    img.onerror = function(){ sprReady = false; sprLayout(); };
+    img.src = m.src;
+  }
+  function sprLayout(){
+    if(!sprEl) return;
+    var on = !!state.spriteOn && sprReady;
+    sprEl.classList.toggle("on", on);
+    if(!on) return;
+    var n = Math.max(1, Math.round(state.spriteFrames));
+    var h = (canvas.clientHeight || window.innerHeight) * state.spriteSize;
+    sprEl.style.height = h + "px";
+    sprEl.style.width = (h * (sprW / n) / sprH) + "px";
+    sprEl.style.backgroundSize = (n * 100) + "% 100%";
+  }
+  function sprStep(now){
+    if(!sprEl || !state.spriteOn || !sprReady) return;
+    var n = Math.max(1, Math.round(state.spriteFrames));
+    if(n < 2 || state.spriteFps <= 0){ sprEl.style.backgroundPositionX = "0%"; return; }
+    var i = Math.floor(now / 1000 * state.spriteFps) % n;
+    sprEl.style.backgroundPositionX = (i * 100 / (n - 1)) + "%";
+  }
+  var spOnBtn = document.getElementById("spOn");
+  spOnBtn.addEventListener("click", function(){ setSpriteOn(!state.spriteOn); this.blur(); });
+  document.getElementById("spAdd").addEventListener("click", function(){
+    loadInto = "sprite"; mcFile.click(); this.blur();
+  });
+  document.getElementById("spSave").addEventListener("click", function(){ this.blur(); keepSphere("sprite"); });
+  document.getElementById("spDel").addEventListener("click", function(){ this.blur(); dropSphere("sprite"); });
   // a limit that moves under the speed drags the speed with it
   ["camMin", "camMax"].forEach(function(id){
     document.getElementById(id).addEventListener("input", function(){
@@ -3791,6 +3986,7 @@ void main(){
   var shMcSeg = document.getElementById("shMcSeg");
   var nmSeg = document.getElementById("nmSeg");
   var dmSeg = document.getElementById("dmSeg");
+  var spSeg = document.getElementById("spSeg");
   var mcFile = document.getElementById("mcFile");
   var nmOnBtn = document.getElementById("nmOn");
   // where the next Add drops what it loads
@@ -3821,6 +4017,7 @@ void main(){
     drawSpheres(shMcSeg, "shadowMc");
     drawSpheres(nmSeg, "normalMc");
     drawSpheres(dmSeg, "depthMc");
+    drawSpheres(spSeg, "sprite");
   }
   function setNormalOn(on){
     state.normalOn = on ? 1 : 0;
@@ -3847,11 +4044,12 @@ void main(){
   // going into a store with a size limit on it. Nothing here needs more than
   // 512 across, so bring it down to that and re-encode; PNG unless that comes
   // out large, in which case a high-quality JPEG.
-  function fitSphere(src, done){
+  function fitSphere(src, done, cap){
     var img = new Image();
+    cap = cap || 512;
     img.onload = function(){
       var w = img.naturalWidth || 1, h = img.naturalHeight || 1;
-      var k = Math.min(1, 512 / Math.max(w, h));
+      var k = Math.min(1, cap / Math.max(w, h));
       if(k >= 1 && src.length < 400000){ done(src); return; }
       var c = document.createElement("canvas");
       c.width = Math.max(1, Math.round(w * k));
@@ -3872,6 +4070,7 @@ void main(){
     var r = new FileReader();
     r.onload = function(){
       var name = (f.name.replace(/\.[^.]+$/, "") || "Loaded").slice(0, 12);
+      // a strip of frames needs the room; one sphere does not
       fitSphere(String(r.result), function(src){
         if(!src){ toast("That file is not an image this browser can read"); return; }
         MATCAPS.push({ name: name, src: src, id: sphereId(), saved: false });
@@ -3879,9 +4078,10 @@ void main(){
         drawSpheresAll();
         if(loadInto === "normalMc") setNormalOn(true);
         else if(loadInto === "depthMc") setDepthOn(true);
+        else if(loadInto === "sprite") setSpriteOn(true);
         else setMatcapOn(true);
         toast(name + " loaded \u00b7 Keep to hold on to it");
-      });
+      }, loadInto === "sprite" ? 1600 : 512);
     };
     r.readAsDataURL(f);
   });
@@ -3952,6 +4152,7 @@ void main(){
     if(state.shadowMc >= i) state.shadowMc = Math.max(0, state.shadowMc - 1);
     if(state.normalMc >= i) state.normalMc = Math.max(0, state.normalMc - 1);
     if(state.depthMc >= i) state.depthMc = Math.max(0, state.depthMc - 1);
+    if(state.sprite >= i) state.sprite = Math.max(0, state.sprite - 1);
     writeLocalSpheres();
     drawSpheresAll();
     toast(m.name + " removed");
@@ -4575,6 +4776,8 @@ void main(){
     window:"M2.2 3.2h11.6v9.6H2.2z M2.2 6.3h11.6 M4.3 4.7h.01 M6.3 4.7h.01",
     layers:"M8 1.9 14.2 5 8 8.1 1.8 5z M1.8 8.4 8 11.5l6.2-3.1 M1.8 11.3 8 14.4l6.2-3.1",
     camera:"M2.2 4.9h2.7l1.1-1.6h4l1.1 1.6h2.7v7.5H2.2z M8 6.6a2.3 2.3 0 1 0 .01 4.6A2.3 2.3 0 0 0 8 6.6",
+    mirror:"M8 1.6v12.8 M6.1 4.6 2.2 8l3.9 3.4z M9.9 4.6 13.8 8l-3.9 3.4z",
+    figure:"M8 1.8a1.5 1.5 0 1 0 .01 3A1.5 1.5 0 0 0 8 1.8 M8 5.2v4.6 M5 6.6h6 M6.2 14.2 8 9.8l1.8 4.4",
     decal: "M2.2 1.9h8v5.2h-8z M6.2 7.9v2.6 M4.6 9.2 6.2 10.8 7.8 9.2 M1.5 13.3c1.7-2.4 3 2.4 4.7 0s3 2.4 4.7 0"
   };
   Array.prototype.forEach.call(document.querySelectorAll(".grpt"), function(head){
@@ -4667,6 +4870,11 @@ void main(){
     // path left it, which would overwrite the position being restored
     if(!!f.fly !== !!state.fly) setFly(!!f.fly);
     state.flyPos = f.pos.slice(); state.flyYaw = f.yaw; state.flyPitch = f.pitch;
+    // Being put somewhere is a jump, never an ease — and without this the
+    // smoothing's target is still the old place, so the next frame walks
+    // straight back to it. At no smoothing at all that walk is instant, which
+    // is what made a recalled view look as though it had not been recalled.
+    flySync();
     state.clock = f.clock; state.zoom = f.zoom;
     state.dragAz = f.az; state.dragEl = f.el;
     state.velAz = 0; state.velEl = 0;
@@ -5042,7 +5250,8 @@ void main(){
     "matcapOn","matcap","normalOn","normalMc","normalAmt","normalScale",
     "glassOn","glassOpacity","glassEdge","glassIor","glassTint","glassDensity","glassDepth",
     "depthOn","depthMc","depthAmt","depthDist","depthPos","depthRot","depthSize","depthPart",
-    "shadowSrc","shadowLevel","shadowContrast","shadowMc","shadowOnly","noise","haze","glow","shadowSteps",
+    "shadowSrc","shadowLevel","shadowContrast","shadowMc","shadowOnly","noise","haze","glow","mirror","shadowSteps",
+    "spriteOn","sprite","spriteSize","spriteFrames","spriteFps",
     "uiFont","uiAlpha","uiBg","uiAccent","uiHeader","uiWidth","uiSplit","uncap",
     "uiOrder","uiMods","uiNames"];
 
@@ -5134,6 +5343,7 @@ void main(){
     setFly(!!state.fly);
     for(var i = 0; i < 3; i++) markToggle("warp", i, state.warpOn, state.warpOn[i]);
     for(var j = 0; j < 6; j++) markToggle("lc", j, state.lcOn, state.lcOn[j]);
+    for(var k = 0; k < 2; k++) markToggle("mir", k, state.mirror, state.mirror[k]);
     setRunning(!!state.running); setMorph(!!state.morph); setSpikes(!!state.spikeOn);
     // every slider, out of the one table that says how each reaches the state
     var pin = state.stepsPin;
@@ -5153,6 +5363,7 @@ void main(){
     setNormalOn(!!state.normalOn);
     setGlassOn(!!state.glassOn);
     setDepthOn(!!state.depthOn);
+    setSpriteOn(!!state.spriteOn);
     // a layout saved before a group existed leaves it open, not missing
     while(state.groups.length < GROUPN) state.groups.push(1);
     gTintIn.value = state.glassTint;
@@ -5454,9 +5665,22 @@ void main(){
       var b = document.createElement("button");
       b.type = "button";
       b.textContent = ((i + 1) % 10) + " " + t.name;
-      b.title = "Recall " + t.name + " · alt+" + ((i + 1) % 10);
+      b.title = "Recall " + t.name + " · alt+" + ((i + 1) % 10) +
+                "\nShift-click to point Update, Rename and Delete at it without loading it";
       b.setAttribute("aria-pressed", i === tplAt ? "true" : "false");
-      b.addEventListener("click", function(){ tplRecall(i); b.blur(); });
+      // A click loads it. Shift and a click only points at it, so the one you
+      // want to rename or delete need not be the one you are sitting on.
+      b.addEventListener("click", function(ev){
+        if(ev.shiftKey){
+          tplAt = i; fadeFrom = null;
+          if(mixEl){ mixEl.value = 0; paint(mixEl); }
+          drawTpl(); drawMix();
+          toast(t.name + " — chosen, not loaded");
+        } else {
+          tplRecall(i);
+        }
+        b.blur();
+      });
       tplSeg.appendChild(b);
     });
   }
@@ -5501,6 +5725,22 @@ void main(){
                                                  : "Cannot update " + t.name); });
   });
 
+  document.getElementById("tplRen").addEventListener("click", function(){
+    this.blur();
+    var t = TEMPLATES[tplAt];
+    if(!t){ toast("Choose a template first"); return; }
+    var name = window.prompt("A new name for " + t.name, t.name);
+    if(name === null) return;
+    name = String(name).replace(/\s+/g, " ").trim().slice(0, 18);
+    if(!name){ toast("A template needs a name"); return; }
+    t.name = name;
+    var here = tplWriteLocal();
+    drawTpl(); drawMix();
+    toast(here ? "Renaming to " + name + "…" : "Cannot keep it on this device");
+    tplCloudKeep(t).then(function(){ toast("Renamed to " + name); })
+                   .catch(function(){ toast(here ? "Renamed on this device" : "Cannot rename it"); });
+  });
+
   // ---- fading from here to the next one --------------------------------
   // Numbers and colours cross over. Anything that is a choice rather than an
   // amount — which bound, which build steps, whether a thing is on — flips at
@@ -5512,7 +5752,10 @@ void main(){
                    uncap:1, running:1, morph:1, spikeOn:1, warpOn:1, lcOn:1,
                    shadowOn:1, shadowSrc:1, shadowOnly:1, shadowMc:1,
                    matcapOn:1, matcap:1, normalOn:1, normalMc:1,
-                   glassOn:1, glassDepth:1, depthOn:1, depthMc:1, depthPart:1 };
+                   glassOn:1, glassDepth:1, depthOn:1, depthMc:1, depthPart:1,
+                   mirror:1, spriteOn:1, sprite:1, spriteFrames:1 };
+  // headings: cross them the short way, never the long one
+  var MIX_ANGLE = { flyYaw:1, dragAz:1, sunAz:1 };
   function mixHex(a, b, t){
     var A = rgb(a), B = rgb(b), o = "#";
     for(var i = 0; i < 3; i++){
@@ -5539,7 +5782,12 @@ void main(){
     for(var i = 0; i < SAVE_KEYS.length; i++){
       var k = SAVE_KEYS[i];
       if(MIX_SKIP[k] || a[k] === undefined || b[k] === undefined) continue;
-      var v = MIX_SNAP[k] ? (t < 0.5 ? a[k] : b[k]) : mixVal(a[k], b[k], t);
+      var v;
+      if(MIX_ANGLE[k]) v = a[k] + wrapPi(b[k] - a[k]) * t;
+      else if(MIX_SNAP[k]) v = t < 0.5 ? a[k] : b[k];
+      else v = mixVal(a[k], b[k], t);
+      if(k === "sunAz") v = wrapTau(v);      // its slider reads 0 to 360
+      else if(MIX_ANGLE[k]) v = wrapPi(v);
       state[k] = (typeof v === "object" && v !== null) ? JSON.parse(JSON.stringify(v)) : v;
     }
     setFlySpeed(state.flySpeed);
