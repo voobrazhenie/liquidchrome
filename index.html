@@ -325,7 +325,6 @@
                 <button type="button" data-scene="0" aria-pressed="true">Brain</button>
                 <button type="button" data-scene="1" aria-pressed="false">Neuron</button>
                 <button type="button" data-scene="2" aria-pressed="false" title="LiquidChrome">Chrome</button>
-                <button type="button" data-scene="3" aria-pressed="false" title="A burning body, with the flame gathered along the ray rather than hit">Fire</button>
               </div>
             </div>
           </div>
@@ -515,6 +514,15 @@
               </div>
             </div>
           </div>
+          <div class="mod" data-mod="lcoct" data-only="2" hidden>
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="lcOct" title="How many layers of noise the landscape is built from. Each one is half as tall and twice as fine as the last, and the total keeps the height Relief asks for &#8212; so this adds detail, never size. Every layer costs march time.">Relief octaves</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="lcOct" hidden></button><output id="lcOctOut">2 octaves</output></div>
+                <input id="lcOct" type="range" min="1" max="4" step="1" value="2">
+              </div>
+            </div>
+          </div>
           <div class="mod" data-mod="slab" data-only="2" hidden>
             <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="lcThick">Slab thickness</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
             <div class="modc">
@@ -530,60 +538,6 @@
               <div class="slider">
                 <div class="sval"><button type="button" class="dflt" data-dflt="lcTwirl" hidden></button><output id="lcTwirlOut">1.90 rad</output></div>
                 <input id="lcTwirl" type="range" min="0" max="300" step="5" value="190">
-              </div>
-            </div>
-          </div>
-          <div class="mod" data-mod="fheight" data-only="3" hidden>
-            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="fHeight" title="How far the plume reaches above the burning body. The bounding volume grows with it, so the flame is never sliced off at the top.">Flame height</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
-            <div class="modc">
-              <div class="slider">
-                <div class="sval"><button type="button" class="dflt" data-dflt="fHeight" hidden></button><output id="fHeightOut">1.90</output></div>
-                <input id="fHeight" type="range" min="10" max="400" step="1" value="190">
-              </div>
-            </div>
-          </div>
-          <div class="mod" data-mod="fturb" data-only="3" hidden>
-            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="fTurb" title="How ragged the fire is &#8212; it cuts the plume into tongues and eats the same pattern into the body&#39;s crust. At nothing the body is a smooth ball in a smooth glow.">Turbulence</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
-            <div class="modc">
-              <div class="slider">
-                <div class="sval"><button type="button" class="dflt" data-dflt="fTurb" hidden></button><output id="fTurbOut">1.00</output></div>
-                <input id="fTurb" type="range" min="0" max="300" step="1" value="100">
-              </div>
-            </div>
-          </div>
-          <div class="mod" data-mod="frise" data-only="3" hidden>
-            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="fRise" title="How fast the pattern travels upward. It moves with the field&#39;s own clock, so Play stops it and a template comes back to the same moment of it.">Rise</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
-            <div class="modc">
-              <div class="slider">
-                <div class="sval"><button type="button" class="dflt" data-dflt="fRise" hidden></button><output id="fRiseOut">1.00</output></div>
-                <input id="fRise" type="range" min="0" max="400" step="1" value="100">
-              </div>
-            </div>
-          </div>
-          <div class="mod" data-mod="fsmoke" data-only="3" hidden>
-            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="fSmoke" title="How much of the top of the plume goes to soot. Soot both dims the flame and blocks what is behind it, so a smoky fire hides its own far side.">Smoke</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
-            <div class="modc">
-              <div class="slider">
-                <div class="sval"><button type="button" class="dflt" data-dflt="fSmoke" hidden></button><output id="fSmokeOut">0.35</output></div>
-                <input id="fSmoke" type="range" min="0" max="100" step="1" value="35">
-              </div>
-            </div>
-          </div>
-          <div class="mod" data-mod="fwindaz" data-only="3" hidden>
-            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="fWindAz" title="Which way the plume leans, the same way round as the sun&#39;s.">Wind direction</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
-            <div class="modc">
-              <div class="slider">
-                <div class="sval"><button type="button" class="dflt" data-dflt="fWindAz" hidden></button><output id="fWindAzOut">0&#176;</output></div>
-                <input id="fWindAz" type="range" min="0" max="360" step="1" value="0">
-              </div>
-            </div>
-          </div>
-          <div class="mod" data-mod="fwindamt" data-only="3" hidden>
-            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="fWindAmt" title="How hard it leans. At nothing the flame stands straight up.">Wind strength</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
-            <div class="modc">
-              <div class="slider">
-                <div class="sval"><button type="button" class="dflt" data-dflt="fWindAmt" hidden></button><output id="fWindAmtOut">0.00</output></div>
-                <input id="fWindAmt" type="range" min="0" max="200" step="1" value="0">
               </div>
             </div>
           </div>
@@ -697,6 +651,15 @@
               <div class="slider">
                 <div class="sval"><button type="button" class="dflt" data-dflt="warpFreq" hidden></button><output id="warpFreqOut">3.75 /unit</output></div>
                 <input id="warpFreq" type="range" min="30" max="400" step="5" value="375">
+              </div>
+            </div>
+          </div>
+          <div class="mod" data-mod="warpoct">
+            <div class="modn"><span class="mgrip" aria-hidden="true"></span><label class="modt" for="warpOct" title="How many layers of noise the warp is made from. Each one is half the amount and twice as fine as the last, and the total keeps the strength Warp strength asks for. More layers means finer creases &#8212; and shorter march steps to find them, so it is not free.">Warp octaves</label><button type="button" class="pen" title="Rename"><svg class="peni" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.6 14.4 4.7 5.2 13.9 1.4 14.6 2.1 10.8z"/></svg></button></div>
+            <div class="modc">
+              <div class="slider">
+                <div class="sval"><button type="button" class="dflt" data-dflt="warpOct" hidden></button><output id="warpOctOut">1 octave</output></div>
+                <input id="warpOct" type="range" min="1" max="4" step="1" value="1">
               </div>
             </div>
           </div>
@@ -1364,14 +1327,8 @@ uniform float uLcTwirl;   // step 5, radians at the centre; 0 when the step is o
 uniform float uLcRelief;
 uniform float uLcFreq;
 uniform float uLcThick;   // half-thickness of the slab
-// ---- the fire ----
-// Read by sceneLip(), which sits above every object's own code, so these are
-// declared up here with the rest rather than inside the fire's own #ifdef.
-uniform float uFireHeight;  // how far the plume reaches above the body
-uniform float uFireTurb;    // how ragged the flame and the crust are
-uniform float uFireRise;    // how fast the pattern travels upward
-uniform float uFireSmoke;   // how much of the top goes to soot
-uniform vec2  uFireWind;    // which way it leans, and how hard
+uniform float uLcOct;     // how many octaves of relief the height field has
+uniform float uWarpOct;   // and how many the noise warp has
 uniform float uEps;       // how close to the surface a ray must get to count as a hit
 uniform float uOmega;     // over-relaxation: how far past the safe radius a step reaches
 uniform float uBound;     // bounding volume: 0 sphere, 1 box, 2 pick per object
@@ -1681,24 +1638,46 @@ float neuron(vec3 p, out float sd){
 
 #endif
 
-const float FIRE_R = 0.62;        // the burning body
-const float FIRE_CRUST = 0.130;   // how deep the flame eats into its surface
-const float FIRE_FREQ = 4.2;      // how fine that crust is
-const float FIRE_STEP = 0.055;    // how finely the plume is sampled
+// ---- octaves ----------------------------------------------------------
+// Each octave is half the amplitude of the one before it and 2.03 times the
+// rate. Two numbers fall out of that and both are needed: what they sum to,
+// which is what the total has to be divided by so that adding octaves adds
+// detail and never strength; and how much steeper the sum is than one octave,
+// which is what the march has to be told about or it steps through the surface
+// the finer octaves just carved. Neither depends on where you are, only on how
+// many octaves there are.
+#define OCT_MAX 4
+void octSum(float n, out float sum, out float slope){
+  sum = 0.0; slope = 0.0;
+  float a = 1.0, f = 1.0;
+  for(int k = 0; k < OCT_MAX; k++){
+    if(float(k) >= n) break;
+    sum += a; slope += a * f;
+    a *= 0.5; f *= 2.03;
+  }
+  sum = max(sum, 1e-4);
+}
 
 float sceneLip(){
 #if defined(SCENE_CHROME)
   if(uLcOn.y > 0.5){
     // the height field turns the box map into I - y (x) grad h, whose operator
-    // norm is sqrt(1 + |grad h|^2) — tighter than 1 + |grad h|, so bigger steps
+    // norm is sqrt(1 + |grad h|^2) — tighter than 1 + |grad h|, so bigger steps.
+    // The 3.0 was the two-octave figure; 1.34333 is what two octaves make of
+    // slope/sum, so dividing by it leaves two octaves at exactly 3.0 and lets
+    // any other count scale from there.
+    // 3.0 is the two-octave figure. Any other count scales from it by how
+    // much steeper its octaves are, and at two the scaling is left off
+    // altogether rather than multiplied by a number that is only nearly one.
     float g = uLcRelief * uLcFreq * 3.0;
+    if(uLcOct != 2.0){
+      float sum, slope, sum2, slope2;
+      octSum(uLcOct, sum, slope);
+      octSum(2.0, sum2, slope2);
+      g *= (slope * sum2) / (sum * slope2);
+    }
     return sqrt(1.0 + g*g);
   }
-#elif defined(SCENE_FIRE)
-  // The crust displaces the ball's surface, and the slope of that displacement
-  // adds to the gradient, so divide by an upper bound on it. Smoothstep noise
-  // peaks at 1.5 per cell, the same bound the surface warp uses.
-  return 1.0 + FIRE_CRUST * uFireTurb * FIRE_FREQ * 1.5;
 #endif
   return 1.0;
 }
@@ -1757,13 +1736,36 @@ float liquid(vec3 p, out float sd){
 
   vec3 he = vec3(1.0, uLcThick, 1.0);
 
-  // 2 - the height field, two octaves, drifting when the field is animated
+  // 2 - the height field, drifting when the field is animated. As many
+  // octaves as Relief octaves asks for: each one half the amplitude and 2.03
+  // times the rate of the last, offset so they do not line up, and drifting a
+  // little faster. Written so that k = 0 and k = 1 are exactly the two it has
+  // always had — the same arguments, the same constants — and the 1.5/sum puts
+  // the total back to what those two summed to, so two octaves is the picture
+  // it always was, to the byte.
   float h = 0.0, lip = 1.0;
   if(uLcOn.y > 0.5){
-    float f = uLcFreq;
-    h = perlin(vec3(q.x*f, uMorph*0.06, q.z*f))
-      + 0.5 * perlin(vec3(q.x*f*2.03 + 5.2, uMorph*0.09 + 1.7, q.z*f*2.03 - 3.1));
-    h *= 0.667 * uLcRelief;
+    // Written out rather than looped, and the first two terms are the two it
+    // has always had, character for character. A loop that computed the same
+    // arguments would not give the same numbers: 0.06 + 0.03 is not the float
+    // 0.09, and that alone moved every chrome baseline in the file.
+    float f = uLcFreq, sum = 1.0;
+    h = perlin(vec3(q.x*f, uMorph*0.06, q.z*f));
+    if(uLcOct > 1.5){
+      h += 0.5 * perlin(vec3(q.x*f*2.03 + 5.2, uMorph*0.09 + 1.7, q.z*f*2.03 - 3.1));
+      sum += 0.5;
+    }
+    if(uLcOct > 2.5){
+      h += 0.25 * perlin(vec3(q.x*f*4.1209 + 10.4, uMorph*0.12 + 3.4, q.z*f*4.1209 - 6.2));
+      sum += 0.25;
+    }
+    if(uLcOct > 3.5){
+      h += 0.125 * perlin(vec3(q.x*f*8.3654 + 15.6, uMorph*0.15 + 5.1, q.z*f*8.3654 - 9.3));
+      sum += 0.125;
+    }
+    // back to what the old two summed to, so more octaves is more detail and
+    // never more height. At two this is 1.5/1.5 — exactly one, exactly as it was.
+    h *= 0.667 * uLcRelief * (1.5 / sum);
     // a displaced box is no longer 1-Lipschitz; the slope of the height field
     // adds to the gradient, so divide by an upper bound on it
     lip = sceneLip();
@@ -1857,107 +1859,33 @@ vec3 domainWarp(vec3 p, out float lip){
   if(uWarpOn.x > 0.5 && uWarpMode < 0.5){
     float f = uWarpFreq;
     float A = 0.55 * amt;
-    p += A * vn3(p*f + vec3(0.0, uMorph*0.045, 0.0));
-    lip *= 1.0 + A * f * 2.2;
+    // As many octaves as Warp octaves asks for, normalised back to one
+    // octave's amplitude so that asking for more adds detail and never
+    // strength. At one it is the single sample it always was, exactly: k = 0
+    // puts no offset on and leaves the rate at f.
+    vec3 w = vec3(0.0);
+    float a = 1.0, fk = 1.0, sum, slope;
+    for(int k = 0; k < OCT_MAX; k++){
+      if(float(k) >= uWarpOct) break;
+      float kf = float(k);
+      w += a * vn3(p*f*fk + vec3(5.2*kf, uMorph*0.045, -3.1*kf));
+      a *= 0.5; fk *= 2.03;
+    }
+    octSum(uWarpOct, sum, slope);
+    p += A * w / sum;
+    // the finer octaves are steeper, and a march that is not told so walks
+    // straight through what they carved
+    lip *= 1.0 + A * f * 2.2 * (slope / sum);
   }
   return p;
 }
 
-
-#ifdef SCENE_FIRE
-// ---- the fire ----------------------------------------------------------
-// Two things seen out of one field.
-//
-// The body is a ball with a crust: the same noise the flames are made of,
-// eating into its surface. It is a real distance field, so the march hits it
-// and everything else in the page — shadows, the matcap, normal maps, the
-// mirror, the decal, walking — works on it without knowing it is on fire.
-//
-// The flame is not a surface and there is nothing here to hit. It is emission
-// gathered along the ray at the steps the march is already taking, so it adds
-// no second loop — only a shorter step wherever the plume reaches.
-
-// The crust. Ridges are cool and dark, the cracks between them glow: sd small
-// is the accent colour, which is how the chrome's crests work too.
-float fireBody(vec3 p, out float sd){
-  vec3 q = p * FIRE_FREQ - vec3(0.0, uMorph * uFireRise * 0.85, 0.0);
-  float n = vn3(q).x;                                 // -0.5 .. 0.5, the shape
-  // The cracks are read off a far finer field than the one that moves the
-  // surface. That costs nothing: a colour does not have to be Lipschitz, and
-  // only what displaces the surface has to be paid for in step size.
-  float c = vn3(q * 3.3 + 7.1).y + 0.55 * vn3(q * 7.9 - 2.4).z;
-  sd = clamp(0.80 + n * 0.9 + c * 1.5, 0.0, 1.0) * 0.42;
-  return (length(p) - FIRE_R - FIRE_CRUST * uFireTurb * n) / sceneLip();
-}
-
-// How far out the flame can reach. Nothing outside this is sampled, and inside
-// it the march is made to take small enough steps to see the plume at all.
-float fireReach(vec3 p){
-  float h = max(uFireHeight, 1e-3);
-  vec3 q = p;
-  q.xz -= uFireWind * clamp(q.y, 0.0, h) * 0.9;       // the downwind lean
-  q.y -= clamp(q.y, 0.0, h);                          // a capsule, body to tip
-  return length(q) - FIRE_R * 1.45;
-}
-
-// How much fire is at a point. An envelope — a teardrop hugging the ball and
-// drawn up into a column — cut into tongues by noise that travels upward.
-float fireDens(vec3 p){
-  float h = max(uFireHeight, 1e-3);
-  vec3 q = p;
-  q.xz -= uFireWind * clamp(q.y, 0.0, h) * 0.9;
-  float up = clamp(q.y / h, 0.0, 1.0);
-  // Two shapes, whichever is the stronger: a corona hugging the body all round
-  // it, and a column drawn up out of the top of that corona. The corona is
-  // what makes the thing look alight rather than lit — it is the fire the ray
-  // crosses in front of the surface before it ever reaches it.
-  float shell = 1.0 - smoothstep(FIRE_R * 0.75, FIRE_R * 2.05, length(p));
-  float top = clamp((q.y - FIRE_R * 0.55) / h, 0.0, 1.0);
-  float rad = FIRE_R * (1.20 - 0.58 * top);
-  float colm = (1.0 - smoothstep(rad * 0.32, rad * 1.05, length(q.xz)))
-             * (1.0 - smoothstep(0.42, 1.02, top))
-             * smoothstep(-0.30, 0.10, q.y);
-  float env = max(shell, colm);
-  if(env <= 0.0) return 0.0;
-  // The pattern is sampled at a point pushed back down by the clock, so a
-  // flame rises out of a field that is itself standing still. Three octaves,
-  // and they CUT the envelope rather than shade it: that is the difference
-  // between a plume with tongues in it and a cone of fog.
-  vec3 s = vec3(q.x, q.y * 0.42, q.z) * 2.90 - vec3(0.0, uMorph * uFireRise * 0.85, 0.0);
-  float n = (vn3(s).x + 0.55 * vn3(s * 2.13 + 4.1).y + 0.28 * vn3(s * 4.37 - 2.3).z) / 1.83;
-  return max(env * (1.05 + 2.30 * n * uFireTurb) - 0.46, 0.0) * 1.8;
-}
-
-// What that much fire looks like: emission in rgb, how much it swallows in a.
-// The object's own two colours are the ramp — accent at the hottest, structure
-// further out — and Smoke takes the top of the plume to soot, which both dims
-// it and makes it block what is behind.
-vec4 fireAt(vec3 p){
-  float d = fireDens(p);
-  if(d <= 0.0) return vec4(0.0);
-  float up = clamp(p.y / max(uFireHeight, 1e-3), 0.0, 1.0);
-  float heat = clamp(d * 0.55 * (1.0 - 0.60 * up), 0.0, 1.0);
-  // A ramp that spends most of itself in the ember and only its last third
-  // going to the accent: a fire that reaches white everywhere is a light bulb.
-  vec3 hot = mix(uColA * 0.30, uColA, smoothstep(0.00, 0.42, heat));
-  hot = mix(hot, uColB, smoothstep(0.66, 1.00, heat));
-  float soot = uFireSmoke * smoothstep(0.28, 1.0, up);
-  // Fire is nearly all emission and hardly any of it absorbs; soot is the
-  // other way about, which is why a smoky plume goes solid at the top.
-  vec3 em = mix(hot * (0.55 + 4.0 * heat * heat), vec3(0.055, 0.05, 0.045), soot);
-  return vec4(em, d * (0.55 + 11.0 * soot));
-}
-#endif
-
-// the undistorted scene: whichever object is on, evaluated in whatever space
-// it is given
+// the undistorted scene: both objects, evaluated in whatever space it is given
 float scene(vec3 p, out float sd){
 #if defined(SCENE_CHROME)
   return liquid(p, sd);
 #elif defined(SCENE_NEURON)
   return neuron(p, sd);
-#elif defined(SCENE_FIRE)
-  return fireBody(p, sd);
 #else
   sd = 1e5;
   float sh = shell(p);
@@ -2049,8 +1977,18 @@ float map(vec3 p, out float sd, out float lip){
       // far branch ever reading as a hit in its own right.
       d -= reach;
     } else {
-      d -= A * vn3(q*uWarpFreq + vec3(0.0, uMorph*0.045, 0.0)).x;
-      lip *= 1.0 + A * uWarpFreq * 1.5;      // smoothstep noise peaks at 1.5/cell
+      // the same octaves the space warp uses, on the surface instead
+      float w = 0.0, a = 1.0, fk = 1.0, sum, slope;
+      for(int k = 0; k < OCT_MAX; k++){
+        if(float(k) >= uWarpOct) break;
+        float kf = float(k);
+        w += a * vn3(q*uWarpFreq*fk + vec3(5.2*kf, uMorph*0.045, -3.1*kf)).x;
+        a *= 0.5; fk *= 2.03;
+      }
+      octSum(uWarpOct, sum, slope);
+      d -= A * w / sum;
+      // smoothstep noise peaks at 1.5/cell, and the finer octaves are steeper
+      lip *= 1.0 + A * uWarpFreq * 1.5 * (slope / sum);
     }
   }
   if(uBall > 0.0){
@@ -2077,18 +2015,6 @@ float map(vec3 p, out float sd, out float lip){
     } else {
       lip *= uDepthLip;                    // in it, and a picture has a slope
     }
-  }
-#endif
-#ifdef SCENE_FIRE
-  // A volume has to be sampled, not skipped. A sphere trace crosses the plume
-  // in three or four enormous strides and would draw it as three or four
-  // shells, so inside the flame's reach the step is cut to something that can
-  // actually see it — through lip, and never through the distance. Clamping
-  // the distance shortens the step too, but it also tells the volumetric glow
-  // a surface is near, which hangs a bright ghost of the plume in empty air.
-  if(fireReach(p) < 0.0){
-    float step = d / lip;
-    if(step > FIRE_STEP) lip *= step / FIRE_STEP;
   }
 #endif
   return d / lip;
@@ -2576,18 +2502,9 @@ vec3 render(vec2 fc){
   vec3 col = bgCol(rd);
   gCoC = uDofOn > 0.5 ? clamp((40.0 - uDofFocus - uDofRange) / max(uDofRange, 0.25), 0.0, 1.0) : 1.0;
   float glow = 0.0;
-#ifdef SCENE_FIRE
-  vec3 fireCol = vec3(0.0);     // what the flame has put into this ray so far
-  float fireT = 1.0;            // and how much of what is behind still gets through
-#endif
 
   // rotations preserve radius; only the noise term can push the surface out
   float pad = (uWarpOn.x > 0.5 ? 0.55 * uWarpAmt : 0.0) + uBoundPad;
-#ifdef SCENE_FIRE
-  // Anything outside the bounding volume is never marched, and the plume rises
-  // well clear of the body: without this the flame comes out sliced flat.
-  pad += max(0.0, uFireHeight + FIRE_R * 1.5 - 1.74);
-#endif
   bool useBox = uBound > 1.5 ? autoBox() : (uBound > 0.5);
 
   float tNear, tFar;
@@ -2612,14 +2529,6 @@ vec3 render(vec2 fc){
         // the warp shrinks reported distances; the glow wants the real one,
         // otherwise warped regions bloom into a milky haze
         float lipT = lip * sceneLip();          // reported distance -> true distance
-#ifdef SCENE_FIRE
-        // The glow is summed once per march step, so anything that shortens
-        // the step gathers more of it over the same distance. Inside the plume
-        // the step has been cut to a fraction, which would drown the whole
-        // object in milk — and there is nothing to gather anyway, because in
-        // there the flame is the light.
-        if(fireReach(p) >= 0.0)
-#endif
         glow += exp(-38.0 * max(d * lipT, 0.0)) * (0.45 + 1.05*spikeAt(p)) * (uScene > 0.5 ? 0.008 : 0.017);
         // the spheres no longer overlap, so the last step jumped a gap it had
         // no right to: undo the relaxed part of it and march plainly from here
@@ -2633,19 +2542,6 @@ vec3 render(vec2 fc){
         } else {
           stepLen = d * omega * 0.98;
         }
-#ifdef SCENE_FIRE
-        // Front to back, so what is nearest hides what is behind it: the top
-        // of a smoky plume really does swallow the flame on the far side.
-        // A walked-back step covers no ground, so it gathers nothing.
-        {
-          vec4 e = fireAt(p);
-          if(e.a > 0.0){
-            float a = 1.0 - exp(-e.a * max(stepLen, 0.0));
-            fireCol += fireT * e.rgb * a;
-            fireT *= 1.0 - a;
-          }
-        }
-#endif
         prevD = d;
         t += stepLen;
         steps += 1.0;
@@ -2677,18 +2573,6 @@ vec3 render(vec2 fc){
         // is taken back out here or the sphere counter-rotates as the view leans.
         vec2 mn = screenN(n);
         col = shade(p, n, rd, mn, sdHit, trueD, fogAt(t - tNear));
-#ifdef SCENE_FIRE
-        // The body is not lit, it is alight. Everything else in this page
-        // reflects a light; the cracks between this crust's ridges emit, which
-        // is the whole difference between a hot thing and a bright one.
-        {
-          // Charcoal reflects almost nothing. What you see of it is what it
-          // emits, so the lit result is knocked right back and the heat in the
-          // cracks is added on top of the dark that is left.
-          float crack = 1.0 - smoothstep(0.0, 0.13, sdHit);
-          col = col * 0.20 + mix(uColA, uColB, crack * crack) * (0.08 + 2.1 * crack);
-        }
-#endif
 #ifdef F_GLASS
         // and it need not stop here. Switched off, none of this is compiled.
         if(uGlassOn > 0.5 && uShadowOnly < 0.5)
@@ -2704,11 +2588,6 @@ vec3 render(vec2 fc){
   // and fills that volume with haze. That is an accident of how it is measured
   // rather than a property of the scene, and it is also the prettiest thing
   // here, so it gets a control of its own rather than a correction.
-#ifdef SCENE_FIRE
-  // The flame stands between the eye and everything else, so whatever the ray
-  // found back there arrives dimmed by however much fire it had to cross.
-  col = col * fireT + fireCol;
-#endif
   col += (uColA*0.60 + SPIKE*0.40) * glow * (0.55 + 0.70*uSpike) * uGlow;
 
   col = col / (1.0 + col);
@@ -2910,8 +2789,7 @@ void main(){
 
   var UNIFORMS = ["uRes","uTime","uEye","uTgt","uRoll","uScale","uSpike","uSteps","uFov",
     "uShift","uMorph","uPulse","uScene","uThick","uWarpAmt","uWarpFreq","uWarpOn",
-    "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uEps","uOmega","uBound","uBoundPad","uWarpMode",
-    "uFireHeight","uFireTurb","uFireRise","uFireSmoke","uFireWind",
+    "uColA","uColB","uLcOn","uLcTwirl","uLcRelief","uLcFreq","uLcThick","uLcOct","uWarpOct","uEps","uOmega","uBound","uBoundPad","uWarpMode",
     "uShadowOn","uSunAz","uSunEl","uShadowSoft","uShadowDark","uShadowReach","uSunMark","uLcCube",
     "uMatcapOn","uMatcap","uShadowSrc","uShLevel","uShContrast","uShMatcap",
     "uShadowOnly","uNoise","uHaze","uGlow","uMirror","uBall","uBallR","uOrtho","uOrthoSpan","uShSteps","uShGrow",
@@ -2920,8 +2798,7 @@ void main(){
     "uNormalOn","uNormalMap","uNormalAmt","uNormalScale",
     "uGlassOn","uGlassOpacity","uGlassEdge","uGlassIor","uGlassTint","uGlassDensity","uGlassDepth",
     "uDepthOn","uDepthMap","uDepthPos","uDepthRot","uDepthSize","uDepthDist","uDepthAmt","uDepthLip","uDepthPart"];
-  var DEFS = ["#define SCENE_BRAIN\n", "#define SCENE_NEURON\n", "#define SCENE_CHROME\n",
-              "#define SCENE_FIRE\n"];
+  var DEFS = ["#define SCENE_BRAIN\n", "#define SCENE_NEURON\n", "#define SCENE_CHROME\n"];
 
   // Everything that can be left out of the shader entirely, rather than
   // branched past inside it. A branch a uniform never takes still costs: the
@@ -3167,14 +3044,11 @@ void main(){
     // of the window, how many frames the sheet holds and how fast it walks them
     spriteOn: 0, sprite: 0, spriteSize: 0.20, spriteFrames: 4, spriteFps: 6.0,
     lcRelief: 0.26, lcFreq: 4.00, lcThick: 0.022, lcTwirl: 1.90,
-    // the fire: how far the plume reaches, how ragged it is, how fast the
-    // pattern climbs, how much of the top goes to soot, and the wind that
-    // leans it over — a direction in radians and a strength
-    fireHeight: 1.90, fireTurb: 1.00, fireRise: 1.00, fireSmoke: 0.35,
-    fireWindAz: 0.00, fireWindAmt: 0.00,
+    // how many octaves the relief and the noise warp are made of. Two and one
+    // are what they have always been, and are exactly the pictures they were.
+    lcOct: 2, warpOct: 1,
     // structure + accent colour per object: brain, neuron, LiquidChrome
-    colors: [["#2FD9C0", "#FFC98A"], ["#2FD9C0", "#FFC98A"], ["#009DFF", "#FF4271"],
-             ["#7E1E04", "#FFD98A"]],
+    colors: [["#2FD9C0", "#FFC98A"], ["#2FD9C0", "#FFC98A"], ["#009DFF", "#FF4271"]],
     steps: mobile ? 68 : 320,
     fov: mobile ? 1.15 : 1.30,
     density: 15.0,
@@ -3214,7 +3088,7 @@ void main(){
     // per object: a part of the brain means nothing while the neuron is on.
     depthOn: 0, depthMc: 0, depthAmt: 0.12, depthDist: 1.20,
     depthPos: [0, 0, 1.80], depthRot: [0, 0, 0, 1], depthSize: [0.80, 0.80],
-    depthPart: [0, 0, 0, 0],
+    depthPart: [0, 0, 0],
     // transparency: off, and what it would look like if it were not
     glassOn: 0, glassOpacity: 0.15, glassEdge: 0.60, glassIor: 1.45,
     glassTint: "#BFE9FF", glassDensity: 0.90, glassDepth: 2,
@@ -3887,13 +3761,8 @@ void main(){
     gl.uniform1f(U.uBallR, SCENE_R[state.scene] * 0.62);
     gl.uniform1f(U.uOrtho, sunView ? 1 : 0);
     gl.uniform1f(U.uOrthoSpan, SCENE_R[state.scene] * 1.45 * state.zoom);
-    // the wind is a direction and a strength in the console, and a vector here
-    gl.uniform1f(U.uFireHeight, state.fireHeight);
-    gl.uniform1f(U.uFireTurb, state.fireTurb);
-    gl.uniform1f(U.uFireRise, state.fireRise);
-    gl.uniform1f(U.uFireSmoke, state.fireSmoke);
-    gl.uniform2f(U.uFireWind, Math.sin(state.fireWindAz) * state.fireWindAmt,
-                              Math.cos(state.fireWindAz) * state.fireWindAmt);
+    gl.uniform1f(U.uLcOct, state.lcOct);
+    gl.uniform1f(U.uWarpOct, state.warpOct);
     gl.uniform1f(U.uLcRelief, state.lcRelief);
     gl.uniform1f(U.uLcFreq, state.lcFreq);
     gl.uniform1f(U.uLcThick, state.lcThick);
@@ -4082,7 +3951,7 @@ void main(){
 
   // how far each object actually reaches; every jump stays inside it, close
   // enough that the object overruns the frame instead of sitting in the middle
-  var SCENE_R = [1.55, 1.15, 1.10, 1.70];
+  var SCENE_R = [1.55, 1.15, 1.10];
   function randomView(){
     var R = SCENE_R[state.scene];
     if(state.fly){
@@ -4185,8 +4054,7 @@ void main(){
     ["warpAmt","warpAmt",100], ["warpFreq","warpFreq",100],
     ["lcRelief","lcRelief",100], ["lcFreq","lcFreq",100],
     ["lcThick","lcThick",2000], ["lcTwirl","lcTwirl",100],
-    ["fHeight","fireHeight",100], ["fTurb","fireTurb",100], ["fRise","fireRise",100],
-    ["fSmoke","fireSmoke",100], ["fWindAz","fireWindAz",180/Math.PI], ["fWindAmt","fireWindAmt",100],
+    ["lcOct","lcOct",1], ["warpOct","warpOct",1],
     ["rSteps","steps",1], ["rEps","eps",10], ["rOmega","omega",100],
     ["rPad","boundPad",100],
     ["sunAz","sunAz",180/Math.PI], ["sunEl","sunEl",180/Math.PI],
@@ -4445,12 +4313,10 @@ void main(){
   numSlider("pHaze",      "haze",           0.01, f2);
   numSlider("pGlow",      "glow",           0.01, f2);
   numSlider("oBall",      "ball",           0.01, f2);
-  numSlider("fHeight", "fireHeight", 0.01, f2);
-  numSlider("fTurb",   "fireTurb",   0.01, f2);
-  numSlider("fRise",   "fireRise",   0.01, f2);
-  numSlider("fSmoke",  "fireSmoke",  0.01, f2);
-  numSlider("fWindAz", "fireWindAz", DEG, degOut, toRad);
-  numSlider("fWindAmt","fireWindAmt",0.01, f2);
+  var fOct = function(v){ return Math.round(v) + (Math.round(v) === 1 ? " octave" : " octaves"); };
+  var toOct = function(v){ return Math.max(1, Math.min(4, Math.round(v))); };
+  numSlider("lcOct",   "lcOct",   1, fOct, toOct);
+  numSlider("warpOct", "warpOct", 1, fOct, toOct);
   // A seed is a whole number, and the slider is a way to flip through rolls
   // rather than a scale: any number can be typed into the reading.
   var fInt = function(v){ return String(Math.round(v)); };
@@ -5028,8 +4894,7 @@ void main(){
   var dmTgt = document.getElementById("dmTgt");
   var DPARTS = [["Everything", "Shell", "Cells"],
                 ["Everything", "Soma", "Dendrites", "Axon"],
-                ["Everything", "Slab", "Cube"],
-                ["Everything", "Core"]];      // the flame is not a surface to aim at
+                ["Everything", "Slab", "Cube"]];
   function setDepthOn(on){
     state.depthOn = on ? 1 : 0;
     dmOnBtn.setAttribute("aria-pressed", on ? "true" : "false");
@@ -6294,8 +6159,7 @@ void main(){
   var SAVE_KEY = "cortical.defaults.v2";
   var SAVE_KEYS = ["scene","mode","fly","aa","resPin","bound","boundPad","omega","eps",
     "steps","stepsPin","warpAmt","warpFreq","warpOn","warpMode","lcOn","lcRelief","lcFreq","lcThick",
-    "lcTwirl","fireHeight","fireTurb","fireRise","fireSmoke","fireWindAz","fireWindAmt",
-    "colors","density","spike","spikeOn","thick","zoom","flySpeed","running","morph",
+    "lcTwirl","lcOct","warpOct","colors","density","spike","spikeOn","thick","zoom","flySpeed","running","morph",
     "flyPos","flyYaw","flyPitch","favs","groups",
     "flyMin","flyMax","lookSmooth","moveSmooth",
     "clock","mClock","pClock","dragAz","dragEl",
