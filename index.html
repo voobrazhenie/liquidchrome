@@ -6223,6 +6223,37 @@ void main(){
       }})
     }).then(function(r){ if(!r.ok) throw 0; return true; });
   }
+  // Every image slot is a position in THIS browser's list, and another browser
+  // has a different list: the same number there is a different picture, or no
+  // picture at all. So a snapshot also writes down what each slot was pointing
+  // at by name, and finds it again by name wherever it lands.
+  var IMG_SLOTS = ["matcap", "normalMc", "shadowMc", "depthMc", "sprite"];
+  function imgNames(){
+    var o = {};
+    for(var i = 0; i < IMG_SLOTS.length; i++){
+      var m = MATCAPS[state[IMG_SLOTS[i]]];
+      if(m) o[IMG_SLOTS[i]] = m.name;
+    }
+    return o;
+  }
+  function imgFind(ref){
+    if(!ref) return;
+    var missing = [];
+    for(var i = 0; i < IMG_SLOTS.length; i++){
+      var k = IMG_SLOTS[i], want = ref[k];
+      if(!want) continue;
+      var here = MATCAPS[state[k]];
+      if(here && here.name === want) continue;          // the slot is already right
+      var at = -1;
+      for(var j = 0; j < MATCAPS.length; j++){ if(MATCAPS[j].name === want){ at = j; break; } }
+      if(at >= 0) state[k] = at;
+      else if(missing.indexOf(want) < 0) missing.push(want);
+    }
+    // Said rather than shown: a template quietly wearing the wrong sphere
+    // because the right one is on another machine is worse than being told.
+    if(missing.length) toast("Not on this machine: " + missing.join(", "));
+  }
+
   function snapshot(){
     var o = {};
     for(var i = 0; i < SAVE_KEYS.length; i++){
@@ -6230,6 +6261,7 @@ void main(){
       o[k] = (typeof state[k] === "object" && state[k] !== null)
            ? JSON.parse(JSON.stringify(state[k])) : state[k];
     }
+    o.imgRef = imgNames();
     return o;
   }
 
@@ -6344,6 +6376,7 @@ void main(){
     // page is not: a saved 1080p default on a machine with no GPU would greet
     // it with a frame that takes a minute, so that one setting is stood down.
     if(software && state.resPin === 3) state.resPin = 1;
+    imgFind(o.imgRef);               // the pictures by name, not by position
     syncUI();
     return true;
   }
@@ -6584,11 +6617,17 @@ void main(){
     try{ localStorage.setItem(TPL_LOCAL, JSON.stringify(TEMPLATES)); return true; }
     catch(e){ return false; }
   }
+  // When it was last touched. Without it there is no way to tell which of two
+  // copies of the same template is the one that was edited, so the merge below
+  // could only ever add and never update.
+  function tplStamp(t){ t.at = Date.now(); return t; }
   function tplCloudKeep(t){
+    if(!t.at) t.at = Date.now();
     return fetch(TPL_URL + "/" + t.id + MC_AUTH, {
       method: "PATCH", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({ fields: { name: {stringValue: t.name},
                                        ord: {integerValue: String(Math.max(0, TEMPLATES.indexOf(t)))},
+                                       at:  {integerValue: String(t.at)},
                                        json: {stringValue: JSON.stringify(t.data)} } })
     }).then(function(r){ if(!r.ok) throw 0; return true; });
   }
@@ -6606,6 +6645,7 @@ void main(){
           return { id: String(doc.name).split("/").pop(),
                    name: (f.name && f.name.stringValue) || "Template",
                    ord: parseInt((f.ord && f.ord.integerValue) || "99", 10),
+                   at: parseInt((f.at && f.at.integerValue) || "0", 10),
                    data: data };
         }).filter(function(t){ return !!t.data; })
           .sort(function(a, b){ return a.ord - b.ord; });
@@ -6660,7 +6700,7 @@ void main(){
     var name = window.prompt("A name for this template", suggested);
     if(name === null) return;
     name = String(name).replace(/\s+/g, " ").trim().slice(0, 18) || suggested;
-    var t = { id: sphereId(), name: name, data: snapshot() };
+    var t = tplStamp({ id: sphereId(), name: name, data: snapshot() });
     TEMPLATES.push(t);
     tplAt = TEMPLATES.length - 1;
     fadeFrom = null;
@@ -6680,7 +6720,7 @@ void main(){
     var here = tplWriteLocal();
     drawTpl(); drawMix(); setDirty(false);
     toast(here ? "Updating " + t.name + "\u2026" : "Cannot keep it on this device");
-    tplCloudKeep(t).then(function(){ toast(t.name + " updated everywhere"); })
+    tplCloudKeep(tplStamp(t)).then(function(){ toast(t.name + " updated everywhere"); })
                    .catch(function(){ toast(here ? t.name + " updated on this device"
                                                  : "Cannot update " + t.name); });
   });
@@ -6697,7 +6737,7 @@ void main(){
     var here = tplWriteLocal();
     drawTpl(); drawMix();
     toast(here ? "Renaming to " + name + "…" : "Cannot keep it on this device");
-    tplCloudKeep(t).then(function(){ toast("Renamed to " + name); })
+    tplCloudKeep(tplStamp(t)).then(function(){ toast("Renamed to " + name); })
                    .catch(function(){ toast(here ? "Renamed on this device" : "Cannot rename it"); });
   });
 
@@ -6804,8 +6844,8 @@ void main(){
     tplWriteLocal(); drawTpl(); drawMix();
     toast(t.name + " is now " + ((j + 1) % 10));
     // both of them have a new place, so both are written back
-    tplCloudKeep(t).catch(function(){});
-    if(other) tplCloudKeep(other).catch(function(){});
+    tplCloudKeep(tplStamp(t)).catch(function(){});
+    if(other) tplCloudKeep(tplStamp(other)).catch(function(){});
   }
   document.getElementById("tplUp").addEventListener("click", function(){ this.blur(); tplMove(-1); });
   document.getElementById("tplDn").addEventListener("click", function(){ this.blur(); tplMove(1); });
@@ -6824,13 +6864,37 @@ void main(){
   try{ TEMPLATES = JSON.parse(localStorage.getItem(TPL_LOCAL)) || []; }catch(e){ TEMPLATES = []; }
   if(!(TEMPLATES instanceof Array)) TEMPLATES = [];
   drawTpl(); drawMix();
+  // Three things at once, and all of them fail soft — no network, no
+  // permission, no cloud, and the page carries on with what is on this device.
+  //
+  //   what the cloud has and this browser does not   -> comes down
+  //   what both have, and the cloud's is newer        -> comes down over it
+  //   what this browser has and the cloud does not    -> goes up
+  //
+  // The third is what makes a browser that has been keeping templates locally
+  // for months hand them over the first time it is allowed to.
   tplCloudRead().then(function(list){
-    var added = 0;
-    (list || []).forEach(function(t){
-      for(var i = 0; i < TEMPLATES.length; i++) if(TEMPLATES[i].id === t.id) return;
-      if(TEMPLATES.length < TPL_MAX){ TEMPLATES.push(t); added++; }
+    var cloud = list || [], changed = 0, sent = 0;
+    cloud.forEach(function(t){
+      var mine = null;
+      for(var i = 0; i < TEMPLATES.length; i++) if(TEMPLATES[i].id === t.id) mine = TEMPLATES[i];
+      if(!mine){
+        if(TEMPLATES.length < TPL_MAX){ TEMPLATES.push(t); changed++; }
+      } else if((t.at || 0) > (mine.at || 0)){
+        mine.name = t.name; mine.data = t.data; mine.at = t.at; changed++;
+      }
     });
-    if(added){ tplWriteLocal(); drawTpl(); }
+    TEMPLATES.forEach(function(t){
+      for(var i = 0; i < cloud.length; i++){
+        if(cloud[i].id === t.id && (cloud[i].at || 0) >= (t.at || 0)) return;
+      }
+      sent++;
+      tplCloudKeep(t).catch(function(){});
+    });
+    if(changed){ tplWriteLocal(); drawTpl(); drawMix(); }
+    if(changed || sent){
+      termSay("Templates: " + changed + " came down, " + sent + " went up");
+    }
   }).catch(function(){});
 
 
