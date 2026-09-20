@@ -26,7 +26,17 @@ Render scale adapts to whatever frame rate the GPU sustains. If the page runs
 slowly, check that hardware acceleration is on — the page says so in the hint
 line when it detects a software renderer.
 
+## What is in here
+
+| | |
+|---|---|
+| `index.html` | The whole page: markup, CSS, both fragment shaders and the renderer, in that order. |
+| `REQUIREMENTS.md` | The written spec — what every control, key, mode and the benchmark do. |
+| `pc/` | The same effect as a native Windows app (Rust + wgpu), with Vulkan / DX12 / OpenGL as a live switch. Built by GitHub Actions; `pc/README.md` says how it differs. |
+| `tools/` | Headless Chromium checks: `node tools/shadows.mjs check` renders all three objects and compares against stored baselines. |
+
 ## Editing
 
-`index.html` is the whole thing: markup, CSS, both fragment shaders and the
-renderer, in that order. Push to `main` and GitHub Pages redeploys.
+Push to `main` and GitHub Pages redeploys. This repository is the only home for
+the project — the page used to be mirrored as `neurons.html` in
+`voobrazhenie/Alphabet`, and that copy has been removed.

@@ -1,0 +1,57 @@
+# Builds the native app in pc/ and leaves a ready-to-run Windows binary on the run,
+# so it can be downloaded without a toolchain.
+name: PC build (Windows)
+
+on:
+  push:
+    paths:
+      - "pc/**"
+      # a note or a README does not change the binary, so it does not need a build
+      - "!pc/**.md"
+      - ".github/workflows/pc-windows.yml"
+  workflow_dispatch:
+
+# a newer push makes the build in flight pointless — the binary people download
+# should be the one from the newest commit
+concurrency:
+  group: pc-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: pc
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust toolchain
+        run: |
+          rustup update stable
+          rustup default stable
+          rustc --version
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            pc/target
+          key: pc-${{ runner.os }}-${{ hashFiles('pc/Cargo.lock') }}
+          restore-keys: pc-${{ runner.os }}-
+
+      # the shader is validated and translated to SPIR-V, HLSL and GLSL here, so a
+      # shader that will not build on one of the three backends fails the run
+      - name: Test
+        run: cargo test --release
+
+      - name: Build
+        run: cargo build --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cortical-flythrough-windows-x64
+          path: pc/target/release/cortical-flythrough.exe
+          if-no-files-found: error
