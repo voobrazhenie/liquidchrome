@@ -879,6 +879,16 @@ they follow the page to another computer. Ten copies of the settings will not
 fit inside the settings, which is why they are not a field in it. **Reset never
 touches them.**
 
+A template carries every setting, including the ones that leave nothing to look
+at, and it is recalled without reading what is in it. One of those reads as a
+broken page rather than as a choice: **Transparent** on with **Opacity** at
+nothing and **Edge** at nothing keeps no part of the surface at any angle (§21),
+so the frame is only whatever shows through it. It is a legitimate thing to ask
+for, so it is never undone — but recalling such a template **says so**, and
+names the switch, because otherwise finding it means knowing in advance which of
+a hundred settings to look at. The notice is appended to the template's name in
+the hint line and in the console log (§33).
+
 ---
 
 ## 24. Depth map

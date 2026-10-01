@@ -6684,6 +6684,20 @@ void main(){
       tplSeg.appendChild(b);
     });
   }
+  // A template carries every setting, the ones that switch the object off
+  // included, and a template is recalled without looking at what is in it. One
+  // of them reads as a broken page rather than as a choice: Transparent on with
+  // nothing kept square on and nothing kept at a grazing angle keeps none of
+  // the surface anywhere, so the frame is only whatever shows through it. It is
+  // a thing someone may well want, so it is said rather than undone — and said
+  // with the switch named, because finding it among a hundred others otherwise
+  // means knowing in advance which one to look at.
+  function hiddenNote(){
+    if(state.glassOn && !state.shadowOnly &&
+       state.glassOpacity <= 0 && state.glassEdge <= 0)
+      return " — Transparent is on with no opacity and no edge, so the surface is invisible";
+    return "";
+  }
   function tplRecall(i){
     var t = TEMPLATES[i];
     if(!t || !t.data){ toast("Nothing on alt+" + ((i + 1) % 10)); return; }
@@ -6691,7 +6705,7 @@ void main(){
     tplAt = i; fadeFrom = null;
     if(mixEl){ mixEl.value = 0; paint(mixEl); }
     drawTpl(); drawMix(); setDirty(false);
-    toast(t.name);
+    toast(t.name + hiddenNote());
   }
   document.getElementById("tplAdd").addEventListener("click", function(){
     this.blur();

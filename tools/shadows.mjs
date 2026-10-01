@@ -1485,6 +1485,14 @@ const spin = await ui.evaluate(() => {
     // its own saved default, and no cloud copy allowed to outrank it
     await old.route("**/firestore.googleapis.com/**", (r) => r.abort());
     await old.addInitScript(() => {
+      // three templates for the check further down, which rides on this page
+      // rather than opening one of its own: a page load is the expensive thing
+      // here, not a recall
+      localStorage.setItem("cortical.templates.v1", JSON.stringify([
+        { id: "a", name: "Ghost",  at: 1, data: { scene: 2, glassOn: 1, glassOpacity: 0, glassEdge: 0 } },
+        { id: "b", name: "Solid",  at: 1, data: { scene: 2, glassOn: 1, glassOpacity: 0, glassEdge: 0.6 } },
+        { id: "c", name: "Opaque", at: 1, data: { scene: 2, glassOn: 0, glassOpacity: 0, glassEdge: 0 } },
+      ]));
       localStorage.setItem("cortical.defaults.v2", JSON.stringify({
         at: Date.now(),
         data: { scene: 1, fly: 1, shadowDark: 0.11, flyPos: [0, 0, 3], flyYaw: 0, flyPitch: 0,
@@ -1517,6 +1525,24 @@ const spin = await ui.evaluate(() => {
         `a picture is found again by name, not by number (slot now ${pics.matcap})`);
     say(/Not on this machine: Nowhere At All/.test(pics.log),
         "and one that is not on this machine is said, not silently swapped");
+
+    // ---- a template that hides the object says which switch did it -------
+    // Transparent on with no opacity and no edge keeps none of the surface, so
+    // the frame is only what shows through it — which looks like a broken page
+    // and not like a setting. It stays allowed; it stops being silent.
+    const recall = (n) => old.evaluate((k) => {
+      document.getElementById("termLog").textContent = "";
+      window.dispatchEvent(new KeyboardEvent("keydown",
+        { key: String(k), code: "Digit" + k, altKey: true, bubbles: true }));
+      return document.getElementById("termLog").textContent;
+    }, n);
+    const ghost = await recall(1), edged = await recall(2), opaque = await recall(3);
+    say(/Ghost/.test(ghost) && /Transparent is on/.test(ghost) && /invisible/.test(ghost),
+        "a template that leaves nothing of the surface says so, and names the switch");
+    say(/Solid/.test(edged) && !/invisible/.test(edged),
+        "an edge that still shows is not called invisible");
+    say(/Opaque/.test(opaque) && !/invisible/.test(opaque),
+        "and neither is the same template with Transparent off");
     await old.close();
   }
 
